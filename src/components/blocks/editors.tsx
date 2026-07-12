@@ -3,6 +3,12 @@
 import { useState, useTransition } from "react";
 import type { AnyBlock, BlockDataMap } from "@/lib/blocks/schema";
 import { updateBlock } from "@/lib/actions/blocks";
+import {
+  VIZ_LABELS,
+  visualizationDataSchema,
+  vizDefaultProps,
+  type VizComponentName,
+} from "@/lib/viz/schemas";
 
 const inputCls =
   "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none";
@@ -147,6 +153,68 @@ function CodeEditorEditor({ block }: { block: { id: string; data: BlockDataMap["
   );
 }
 
+function VisualizationEditor({ block }: { block: { id: string; data: BlockDataMap["VISUALIZATION"] } }) {
+  const [component, setComponent] = useState<VizComponentName>(block.data.component);
+  const [propsText, setPropsText] = useState(JSON.stringify(block.data.props, null, 2));
+  const [error, setError] = useState<string | null>(null);
+  const { pending, saved, save } = useSave(block.id);
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        let props: unknown;
+        try {
+          props = JSON.parse(propsText);
+        } catch {
+          setError("Props must be valid JSON.");
+          return;
+        }
+        const result = visualizationDataSchema.safeParse({ component, props });
+        if (!result.success) {
+          setError(result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+          return;
+        }
+        setError(null);
+        save(result.data);
+      }}
+      className="space-y-2"
+    >
+      <div>
+        <label className={labelCls}>Visualization</label>
+        <select
+          value={component}
+          onChange={(e) => {
+            const name = e.target.value as VizComponentName;
+            setComponent(name);
+            setPropsText(JSON.stringify(vizDefaultProps[name], null, 2));
+            setError(null);
+          }}
+          className={`${inputCls} max-w-64`}
+        >
+          {(Object.keys(VIZ_LABELS) as VizComponentName[]).map((name) => (
+            <option key={name} value={name}>
+              {VIZ_LABELS[name]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className={labelCls}>Props (JSON — validated on save)</label>
+        <textarea
+          value={propsText}
+          onChange={(e) => setPropsText(e.target.value)}
+          rows={8}
+          className={`${inputCls} font-mono`}
+          spellCheck={false}
+        />
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <SaveButton pending={pending} saved={saved} />
+    </form>
+  );
+}
+
 function FileAttachmentEditor({ block }: { block: { data: BlockDataMap["FILE_ATTACHMENT"] } }) {
   return (
     <p className="text-xs text-zinc-500">
@@ -169,6 +237,8 @@ export function BlockEditor({ block }: { block: AnyBlock }) {
       return <FileAttachmentEditor block={block} />;
     case "CODE_EDITOR":
       return <CodeEditorEditor block={block} />;
+    case "VISUALIZATION":
+      return <VisualizationEditor block={block} />;
     default: {
       const _exhaustive: never = block;
       return _exhaustive;

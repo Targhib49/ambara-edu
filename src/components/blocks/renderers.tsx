@@ -8,6 +8,7 @@ import type { AnyBlock } from "@/lib/blocks/schema";
 import { toAnyBlock } from "@/lib/blocks/schema";
 import type { BlockType } from "@/generated/prisma/enums";
 import { CodeEditorBlock } from "./CodeEditorBlock";
+import { VizBlock } from "@/components/viz/VizBlock";
 
 function MarkdownRenderer({ markdown }: { markdown: string }) {
   return (
@@ -118,6 +119,9 @@ export function BlockRenderer({
       // Keyed on the starter code so a tutor's save remounts the preview with
       // the fresh doc (the component itself ignores prop changes after mount).
       return <CodeEditorBlock key={parsed.data.starterCode} starterCode={parsed.data.starterCode} />;
+    case "VISUALIZATION":
+      // Same remount-on-save pattern: viz components seed state from props.
+      return <VizBlock key={JSON.stringify(parsed.data)} data={parsed.data} />;
     default: {
       const _exhaustive: never = parsed;
       return _exhaustive;

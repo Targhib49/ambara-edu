@@ -29,7 +29,8 @@ enum BlockType {
   CODE_SNIPPET
   FILE_ATTACHMENT
   CODE_EDITOR
-  // later phases append: VIDEO_EMBED, VISUALIZATION, QUIZ_REF
+  VISUALIZATION
+  // later phases append: VIDEO_EMBED, QUIZ_REF
 }
 
 enum SessionStatus {

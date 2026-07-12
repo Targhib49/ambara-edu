@@ -18,6 +18,7 @@ const BLOCK_LABELS = {
   CODE_SNIPPET: "Code snippet",
   FILE_ATTACHMENT: "File attachment",
   CODE_EDITOR: "Python scratchpad",
+  VISUALIZATION: "Visualization",
 } as const;
 
 export default async function LessonEditorPage({
@@ -133,7 +134,7 @@ export default async function LessonEditorPage({
       <div className="rounded-xl border border-dashed border-zinc-300 p-4">
         <p className="mb-3 text-sm font-medium text-zinc-600">Add a block</p>
         <div className="flex flex-wrap items-center gap-2">
-          {(["MARKDOWN", "EQUATION", "CODE_SNIPPET", "CODE_EDITOR"] as const).map((type) => (
+          {(["MARKDOWN", "EQUATION", "CODE_SNIPPET", "CODE_EDITOR", "VISUALIZATION"] as const).map((type) => (
             <form key={type} action={addBlock.bind(null, lesson.id, type)}>
               <button className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-100">
                 + {BLOCK_LABELS[type]}

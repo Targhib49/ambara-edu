@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BlockType } from "@/generated/prisma/enums";
+import { defaultVisualizationData, visualizationDataSchema } from "@/lib/viz/schemas";
 
 /**
  * The single registration point for content block data shapes.
@@ -30,6 +31,7 @@ export const blockDataSchemas = {
   CODE_EDITOR: z.object({
     starterCode: z.string(),
   }),
+  VISUALIZATION: visualizationDataSchema,
 } as const satisfies Record<BlockType, z.ZodType>;
 
 export type BlockDataMap = {
@@ -47,6 +49,7 @@ export const defaultBlockData: { [K in Exclude<BlockType, "FILE_ATTACHMENT">]: B
   EQUATION: { latex: "", display: true },
   CODE_SNIPPET: { language: "python", code: "" },
   CODE_EDITOR: { starterCode: 'print("Hello from Python!")\n' },
+  VISUALIZATION: defaultVisualizationData,
 };
 
 export function parseBlockData<K extends BlockType>(type: K, data: unknown): BlockDataMap[K] {
