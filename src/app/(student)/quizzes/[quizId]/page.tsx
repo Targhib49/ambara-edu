@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { gradeQuestion } from "@/lib/quiz/grading";
 import { formatResponse } from "@/lib/quiz/format";
-import { submissionAnswersSchema } from "@/lib/quiz/schema";
+import { parseCorrectAnswer, submissionAnswersSchema } from "@/lib/quiz/schema";
+import { CodeSubmissionView } from "@/components/quiz/CodeSubmissionView";
 import { QuizTakeForm } from "./QuizTakeForm";
 import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
 
@@ -76,6 +77,9 @@ export default async function StudentQuizPage({
             prompt: q.prompt,
             points: q.points,
             options: q.options,
+            // Test cases are deliberately visible to the student (input +
+            // expected output) — only CODE questions have any.
+            testCases: q.type === "CODE" ? parseCorrectAnswer("CODE", q.correctAnswer).testCases : [],
           }))}
         />
       ) : (
@@ -132,9 +136,15 @@ function QuizResults({
               Q{i + 1} · {q.points} pt{q.points === 1 ? "" : "s"}
             </p>
             <p className="mt-1 text-sm font-medium text-zinc-900">{q.prompt}</p>
-            <p className="mt-2 text-sm text-zinc-600">
-              Your answer: {formatResponse(q.type, answer?.response, q.options)}
-            </p>
+            {q.type === "CODE" ? (
+              <div className="mt-2">
+                <CodeSubmissionView correctAnswer={q.correctAnswer} response={answer?.response} />
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-zinc-600">
+                Your answer: {formatResponse(q.type, answer?.response, q.options)}
+              </p>
+            )}
             <div className="mt-2">
               {grade.status === "AUTO_GRADED" ? (
                 <span

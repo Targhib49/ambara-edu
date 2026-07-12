@@ -13,10 +13,11 @@ const PYODIDE_BASE = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/
 
 /** The minimal slice of the Pyodide API this app uses. */
 export interface Pyodide {
-  runPythonAsync(code: string): Promise<unknown>;
+  runPythonAsync(code: string, options?: { globals?: unknown }): Promise<unknown>;
   loadPackagesFromImports(code: string): Promise<unknown>;
   setStdout(options: { batched: (text: string) => void }): void;
   setStderr(options: { batched: (text: string) => void }): void;
+  setStdin(options: { stdin: () => string | null }): void;
 }
 
 declare global {

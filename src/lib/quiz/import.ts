@@ -189,8 +189,39 @@ export function validateRows(rows: Record<string, string>[]): ImportResult {
         correctAnswer = { kind: "exact", value: correctAnswerRaw };
       }
     } else {
-      // CODE: schema-only placeholder in this phase, no runner yet.
-      correctAnswer = {};
+      // CODE: correct_answer is an optional JSON array of test cases, e.g.
+      // [{"input":"3","expected_output":"6"}]. Blank = no auto-run tests,
+      // the question is graded by manual review only.
+      if (!correctAnswerRaw) {
+        correctAnswer = { testCases: [] };
+      } else {
+        let parsedJson: unknown;
+        try {
+          parsedJson = JSON.parse(correctAnswerRaw);
+        } catch {
+          errors.push({
+            rowNumber,
+            message: `correct_answer for code must be blank or a JSON array like [{"input":"3","expected_output":"6"}].`,
+          });
+          return;
+        }
+        if (!Array.isArray(parsedJson)) {
+          errors.push({ rowNumber, message: "correct_answer for code must be a JSON array of test cases." });
+          return;
+        }
+        const testCases = parsedJson.map((tc) => {
+          const obj = (tc ?? {}) as Record<string, unknown>;
+          return {
+            input: String(obj.input ?? ""),
+            expectedOutput: String(obj.expected_output ?? obj.expectedOutput ?? ""),
+          };
+        });
+        if (testCases.some((tc) => tc.expectedOutput === "")) {
+          errors.push({ rowNumber, message: "Every test case needs a non-empty expected_output." });
+          return;
+        }
+        correctAnswer = { testCases };
+      }
     }
 
     const parsed = correctAnswerSchemas[type].safeParse(correctAnswer);

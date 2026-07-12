@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { gradeQuestion } from "@/lib/quiz/grading";
 import { formatCorrectAnswer, formatResponse } from "@/lib/quiz/format";
 import { submissionAnswersSchema } from "@/lib/quiz/schema";
+import { CodeSubmissionView } from "@/components/quiz/CodeSubmissionView";
 import { ReviewForm } from "./ReviewForm";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
@@ -56,18 +57,28 @@ export default async function SubmissionReviewPage({
             </p>
             <p className="mt-1 text-sm text-zinc-900">{question.prompt}</p>
 
-            <div className="mt-3 space-y-1 text-sm">
-              <p>
-                <span className="text-zinc-500">Answer: </span>
-                {formatResponse(question.type, response, question.options)}
-              </p>
-              {question.type !== "CODE" && (
+            {question.type === "CODE" ? (
+              <div className="mt-3">
+                <CodeSubmissionView correctAnswer={question.correctAnswer} response={response} />
+                {grade.earnedPoints > 0 && (
+                  <p className="mt-1.5 text-xs text-zinc-500">
+                    Auto-score from tests: {grade.earnedPoints} / {question.points} pts (already counted
+                    in the auto-graded score below)
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="mt-3 space-y-1 text-sm">
+                <p>
+                  <span className="text-zinc-500">Answer: </span>
+                  {formatResponse(question.type, response, question.options)}
+                </p>
                 <p>
                   <span className="text-zinc-500">Correct answer: </span>
                   {formatCorrectAnswer(question.type, question.correctAnswer, question.options)}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="mt-3">
               {grade.status === "AUTO_GRADED" ? (

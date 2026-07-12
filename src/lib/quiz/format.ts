@@ -36,8 +36,12 @@ export function formatCorrectAnswer(type: QuestionType, correctAnswer: unknown, 
       const a = parseCorrectAnswer(type, correctAnswer);
       return a.kind === "exact" ? a.value : `/${a.pattern}/${a.flags}`;
     }
-    case "CODE":
-      return "(reviewed manually)";
+    case "CODE": {
+      const a = parseCorrectAnswer(type, correctAnswer);
+      return a.testCases.length > 0
+        ? `${a.testCases.length} test case${a.testCases.length === 1 ? "" : "s"} + manual review`
+        : "(reviewed manually)";
+    }
   }
 }
 

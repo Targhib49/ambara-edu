@@ -55,7 +55,12 @@ export function QuizImportPanel({
       <h2 className="font-medium">Import quiz from CSV/Excel</h2>
       <p className="text-xs text-zinc-500">
         One row per question. Columns: lesson (optional), question_type, question_text, option_a..d,
-        correct_answer, points, explanation. Upload to preview before anything is saved.
+        correct_answer, points, explanation. Upload to preview before anything is saved. For code
+        questions, correct_answer is an optional JSON array of test cases, e.g.{" "}
+        <code className="rounded bg-zinc-100 px-1">
+          {'[{"input":"3","expected_output":"6"}]'}
+        </code>{" "}
+        — blank means manual review only.
       </p>
 
       <form

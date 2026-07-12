@@ -35,8 +35,22 @@ export function gradeQuestion(
   const { type, points } = question;
 
   switch (type) {
-    case "CODE":
-      return { status: "PENDING_REVIEW", correct: null, earnedPoints: 0 };
+    case "CODE": {
+      // Test results come from the client-side Pyodide runner (there is no
+      // server-side Python). autoScore = points × fraction passed, but the
+      // question always stays PENDING_REVIEW — the auto-score counts, and the
+      // tutor still reviews code quality and can adjust via manualScore.
+      const correctAnswer = parseCorrectAnswer(type, question.correctAnswer);
+      const parsed = tryParseResponse(type, response);
+      const cases = correctAnswer.testCases;
+      if (!parsed || cases.length === 0) {
+        return { status: "PENDING_REVIEW", correct: null, earnedPoints: 0 };
+      }
+      // Ignore any results beyond the question's own case count.
+      const passed = parsed.testResults.slice(0, cases.length).filter((r) => r.passed).length;
+      const earnedPoints = Math.round(points * (passed / cases.length) * 100) / 100;
+      return { status: "PENDING_REVIEW", correct: null, earnedPoints };
+    }
 
     case "MULTIPLE_CHOICE": {
       const correctAnswer = parseCorrectAnswer(type, question.correctAnswer);

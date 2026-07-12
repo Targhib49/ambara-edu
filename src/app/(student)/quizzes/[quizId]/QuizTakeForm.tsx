@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { submitQuizAnswers } from "@/lib/actions/quizzes";
+import { runTestCases } from "@/lib/quiz/codeRunner";
+import type { TestCase } from "@/lib/quiz/schema";
+import { CodeAnswer } from "@/components/quiz/CodeAnswer";
 import type { QuestionType } from "@/generated/prisma/enums";
 
 type QuestionForForm = {
@@ -11,6 +14,7 @@ type QuestionForForm = {
   prompt: string;
   points: number;
   options: string[];
+  testCases: TestCase[]; // CODE questions only, [] otherwise
 };
 
 const LETTERS = ["A", "B", "C", "D"] as const;
@@ -33,15 +37,32 @@ export function QuizTakeForm({ quizId, questions }: { quizId: string; questions:
   }
 
   function handleSubmit() {
-    const answers = questions
-      .filter((q) => responses[q.id] !== undefined)
-      .map((q) => ({ questionId: q.id, response: responses[q.id] }));
     startTransition(async () => {
+      // CODE answers get their test cases run right here at submit time
+      // (spec §5 v2) — the graded results are always from the submitted code,
+      // never a stale preview run.
+      const answers = [];
+      for (const q of questions) {
+        const response = responses[q.id];
+        if (response === undefined) continue;
+        if (q.type === "CODE") {
+          const code = (response as { code?: string }).code ?? "";
+          const testResults =
+            code.trim() && q.testCases.length > 0 ? await runTestCases(code, q.testCases) : [];
+          answers.push({ questionId: q.id, response: { code, testResults } });
+        } else {
+          answers.push({ questionId: q.id, response });
+        }
+      }
       await submitQuizAnswers(quizId, answers);
       router.push(`/quizzes/${quizId}`);
       router.refresh();
     });
   }
+
+  const hasCodeQuestions = questions.some(
+    (q) => q.type === "CODE" && q.testCases.length > 0 && responses[q.id] !== undefined
+  );
 
   return (
     <div className="space-y-4">
@@ -98,11 +119,9 @@ export function QuizTakeForm({ quizId, questions }: { quizId: string; questions:
             )}
 
             {q.type === "CODE" && (
-              <textarea
-                rows={5}
-                onChange={(e) => setResponse(q.id, { code: e.target.value })}
-                spellCheck={false}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none"
+              <CodeAnswer
+                testCases={q.testCases}
+                onCodeChange={(code) => setResponse(q.id, { code })}
               />
             )}
           </div>
@@ -114,7 +133,7 @@ export function QuizTakeForm({ quizId, questions }: { quizId: string; questions:
         disabled={pending}
         className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
       >
-        {pending ? "Submitting…" : "Submit quiz"}
+        {pending ? (hasCodeQuestions ? "Running tests & submitting…" : "Submitting…") : "Submit quiz"}
       </button>
     </div>
   );
