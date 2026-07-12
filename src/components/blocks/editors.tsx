@@ -120,6 +120,33 @@ function CodeSnippetEditor({ block }: { block: { id: string; data: BlockDataMap[
   );
 }
 
+function CodeEditorEditor({ block }: { block: { id: string; data: BlockDataMap["CODE_EDITOR"] } }) {
+  const [starterCode, setStarterCode] = useState(block.data.starterCode);
+  const { pending, saved, save } = useSave(block.id);
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save({ starterCode });
+      }}
+      className="space-y-2"
+    >
+      <label className={labelCls}>
+        Starter code (Python) — students edit and run it in their browser
+      </label>
+      <textarea
+        value={starterCode}
+        onChange={(e) => setStarterCode(e.target.value)}
+        rows={8}
+        className={`${inputCls} font-mono`}
+        spellCheck={false}
+        placeholder={'print("Hello from Python!")'}
+      />
+      <SaveButton pending={pending} saved={saved} />
+    </form>
+  );
+}
+
 function FileAttachmentEditor({ block }: { block: { data: BlockDataMap["FILE_ATTACHMENT"] } }) {
   return (
     <p className="text-xs text-zinc-500">
@@ -140,6 +167,8 @@ export function BlockEditor({ block }: { block: AnyBlock }) {
       return <CodeSnippetEditor block={block} />;
     case "FILE_ATTACHMENT":
       return <FileAttachmentEditor block={block} />;
+    case "CODE_EDITOR":
+      return <CodeEditorEditor block={block} />;
     default: {
       const _exhaustive: never = block;
       return _exhaustive;

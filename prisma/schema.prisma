@@ -28,7 +28,8 @@ enum BlockType {
   EQUATION
   CODE_SNIPPET
   FILE_ATTACHMENT
-  // later phases append: CODE_EDITOR, VIDEO_EMBED, VISUALIZATION, QUIZ_REF
+  CODE_EDITOR
+  // later phases append: VIDEO_EMBED, VISUALIZATION, QUIZ_REF
 }
 
 enum SessionStatus {

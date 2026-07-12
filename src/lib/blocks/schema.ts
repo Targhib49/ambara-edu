@@ -27,6 +27,9 @@ export const blockDataSchemas = {
     mimeType: z.string(),
     sizeBytes: z.number().int().nonnegative(),
   }),
+  CODE_EDITOR: z.object({
+    starterCode: z.string(),
+  }),
 } as const satisfies Record<BlockType, z.ZodType>;
 
 export type BlockDataMap = {
@@ -43,6 +46,7 @@ export const defaultBlockData: { [K in Exclude<BlockType, "FILE_ATTACHMENT">]: B
   MARKDOWN: { markdown: "" },
   EQUATION: { latex: "", display: true },
   CODE_SNIPPET: { language: "python", code: "" },
+  CODE_EDITOR: { starterCode: 'print("Hello from Python!")\n' },
 };
 
 export function parseBlockData<K extends BlockType>(type: K, data: unknown): BlockDataMap[K] {

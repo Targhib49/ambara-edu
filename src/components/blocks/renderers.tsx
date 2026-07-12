@@ -7,6 +7,7 @@ import { codeToHtml } from "shiki";
 import type { AnyBlock } from "@/lib/blocks/schema";
 import { toAnyBlock } from "@/lib/blocks/schema";
 import type { BlockType } from "@/generated/prisma/enums";
+import { CodeEditorBlock } from "./CodeEditorBlock";
 
 function MarkdownRenderer({ markdown }: { markdown: string }) {
   return (
@@ -113,6 +114,10 @@ export function BlockRenderer({
           sizeBytes={parsed.data.sizeBytes}
         />
       );
+    case "CODE_EDITOR":
+      // Keyed on the starter code so a tutor's save remounts the preview with
+      // the fresh doc (the component itself ignores prop changes after mount).
+      return <CodeEditorBlock key={parsed.data.starterCode} starterCode={parsed.data.starterCode} />;
     default: {
       const _exhaustive: never = parsed;
       return _exhaustive;
