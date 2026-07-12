@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tutor LMS",
-  description: "Private tutoring LMS",
+  title: "AmbaraEdu",
+  description: "AmbaraEdu — private tutoring LMS",
 };
 
 export default function RootLayout({

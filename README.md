@@ -1,4 +1,4 @@
-# Tutor LMS
+# AmbaraEdu
 
 Custom LMS for a private tutoring business. Phase 1: auth, Track → Module → Lesson content model, polymorphic content blocks (markdown / LaTeX equation / code snippet / file attachment), tutor authoring UI, student reading UI.
 

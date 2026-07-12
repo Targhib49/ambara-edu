@@ -19,7 +19,7 @@ export async function sendSessionEmail(opts: {
   }
   try {
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "Tutor LMS <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "AmbaraEdu <onboarding@resend.dev>",
       to: opts.to,
       subject: opts.subject,
       html: `<div style="font-family: sans-serif; font-size: 15px; color: #18181b;">

@@ -6,6 +6,7 @@ import { gradeQuestion } from "@/lib/quiz/grading";
 import { formatResponse } from "@/lib/quiz/format";
 import { submissionAnswersSchema } from "@/lib/quiz/schema";
 import { QuizTakeForm } from "./QuizTakeForm";
+import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
 
 export default async function StudentQuizPage({
   params,
@@ -27,7 +28,13 @@ export default async function StudentQuizPage({
       },
     },
     include: {
-      lesson: { select: { id: true, title: true, module: { select: { trackId: true } } } },
+      lesson: {
+        select: {
+          id: true,
+          title: true,
+          module: { select: { trackId: true, track: { select: { title: true } } } },
+        },
+      },
       questions: { orderBy: { order: "asc" } },
     },
   });
@@ -40,17 +47,20 @@ export default async function StudentQuizPage({
   const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
   const showForm = !submission || retake === "1";
 
+  const crumbs: Crumb[] = quiz.lesson
+    ? [
+        { label: "Home", href: "/tracks" },
+        { label: "My tracks", href: "/tracks" },
+        { label: quiz.lesson.module.track.title, href: `/tracks/${quiz.lesson.module.trackId}` },
+        { label: quiz.lesson.title, href: `/tracks/${quiz.lesson.module.trackId}/lessons/${quiz.lesson.id}` },
+        { label: quiz.title },
+      ]
+    : [{ label: "Home", href: "/tracks" }, { label: quiz.title }];
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
       <div>
-        {quiz.lesson && (
-          <Link
-            href={`/tracks/${quiz.lesson.module.trackId}/lessons/${quiz.lesson.id}`}
-            className="text-sm text-zinc-500 hover:underline"
-          >
-            ← Back to {quiz.lesson.title}
-          </Link>
-        )}
+        <Breadcrumbs items={crumbs} />
         <h1 className="mt-2 text-2xl font-semibold">{quiz.title}</h1>
         <p className="mt-1 text-sm text-zinc-500">
           {quiz.questions.length} questions · {totalPoints} points total

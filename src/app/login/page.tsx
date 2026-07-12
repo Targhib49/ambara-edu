@@ -33,7 +33,7 @@ export default function LoginPage() {
         className="w-full max-w-sm space-y-4 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm"
       >
         <div>
-          <h1 className="text-xl font-semibold">Tutor LMS</h1>
+          <h1 className="text-xl font-semibold">AmbaraEdu</h1>
           <p className="mt-1 text-sm text-zinc-500">Sign in with your account</p>
         </div>
         <div>

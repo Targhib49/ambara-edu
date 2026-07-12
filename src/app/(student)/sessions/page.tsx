@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { StudentSessionRow } from "@/components/sessions/StudentSessionRow";
 import { nowMs } from "@/lib/sessions/format";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 export default async function StudentSessionsPage() {
   const student = await requireStudent();
@@ -32,7 +33,10 @@ export default async function StudentSessionsPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8">
-      <h1 className="text-2xl font-semibold">My sessions</h1>
+      <div className="space-y-2">
+        <Breadcrumbs items={[{ label: "Home", href: "/tracks" }, { label: "My sessions" }]} />
+        <h1 className="text-2xl font-semibold">My sessions</h1>
+      </div>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Upcoming</h2>

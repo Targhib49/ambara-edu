@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { badgeColorFor } from "@/lib/ui/palette";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 export default async function StudentTracksPage() {
   const student = await requireStudent();
@@ -16,35 +17,41 @@ export default async function StudentTracksPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-semibold">My tracks</h1>
+    <div className="mx-auto w-full max-w-5xl px-4 py-8">
+      <div className="space-y-2">
+        <Breadcrumbs items={[{ label: "Home", href: "/tracks" }, { label: "My tracks" }]} />
+        <h1 className="text-2xl font-semibold">My tracks</h1>
+      </div>
+
       {tracks.length === 0 ? (
         <p className="mt-4 text-sm text-zinc-500">
           You aren’t enrolled in any tracks yet — your tutor will add you.
         </p>
       ) : (
-        <div className="mt-6 divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white">
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {tracks.map((track, i) => {
             const lessonCount = track.modules.reduce((n, m) => n + m.lessons.length, 0);
+            const [bg] = badgeColorFor(i).split(" "); // reuse the badge's bg tone for the image placeholder wash
             return (
               <Link
                 key={track.id}
                 href={`/tracks/${track.id}`}
-                className="flex items-center gap-4 px-5 py-4 first:rounded-t-xl last:rounded-b-xl hover:bg-zinc-50"
+                className="group overflow-hidden rounded-xl border border-zinc-200 bg-white hover:border-blue-300 hover:shadow-sm"
               >
-                <span
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-semibold ${badgeColorFor(i)}`}
-                >
-                  {track.title.charAt(0).toUpperCase()}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h2 className="font-medium text-zinc-900">{track.title}</h2>
-                  {track.description && (
-                    <p className="mt-0.5 line-clamp-1 text-sm text-zinc-500">{track.description}</p>
-                  )}
+                <div className={`flex aspect-[4/3] items-center justify-center ${bg}`}>
+                  <span className="text-4xl font-semibold text-zinc-900/20">
+                    {track.title.charAt(0).toUpperCase()}
+                  </span>
                 </div>
-                <span className="shrink-0 text-xs text-zinc-400">{lessonCount} lessons</span>
-                <span className="shrink-0 text-zinc-300">›</span>
+                <div className="p-3">
+                  <h2 className="truncate text-sm font-medium text-zinc-900 group-hover:text-blue-700">
+                    {track.title}
+                  </h2>
+                  {track.description && (
+                    <p className="mt-1 line-clamp-2 text-xs text-zinc-500">{track.description}</p>
+                  )}
+                  <p className="mt-2 text-xs text-zinc-400">{lessonCount} lessons</p>
+                </div>
               </Link>
             );
           })}

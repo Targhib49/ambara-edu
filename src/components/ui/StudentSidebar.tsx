@@ -3,25 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createCollapsibleStore } from "@/lib/ui/collapsibleStore";
-import { HomeIcon, BookIcon, ClipboardIcon, CalendarIcon, UsersIcon, ChevronLeftIcon } from "@/components/ui/icons";
+import { BookIcon, CalendarIcon, ChevronLeftIcon } from "@/components/ui/icons";
 
-const { useOpen, setOpen } = createCollapsibleStore("lms:tutorNavOpen");
+const { useOpen, setOpen } = createCollapsibleStore("lms:studentNavOpen");
 
 const NAV_ITEMS = [
-  { href: "/tutor", label: "Home", icon: HomeIcon, exact: true },
-  { href: "/tutor/tracks", label: "Tracks", icon: BookIcon, exact: false },
-  { href: "/tutor/quizzes", label: "Quizzes", icon: ClipboardIcon, exact: false },
-  { href: "/tutor/sessions", label: "Sessions", icon: CalendarIcon, exact: false },
-  { href: "/tutor/students", label: "Students", icon: UsersIcon, exact: false },
+  { href: "/tracks", label: "My tracks", icon: BookIcon },
+  { href: "/sessions", label: "My sessions", icon: CalendarIcon },
 ] as const;
 
-export function TutorSidebar() {
+// Mirrors TutorSidebar's structure exactly, so both roles share one visual
+// shell language — same collapse behavior, same icon-rail-only mobile rule.
+export function StudentSidebar() {
   const pathname = usePathname();
   const open = useOpen();
 
-  // Below the lg breakpoint the sidebar always renders as the compact icon
-  // rail, regardless of the user's expand/collapse preference — there isn't
-  // room for a 224px sidebar on a phone. The toggle only affects lg+ screens.
   return (
     <aside
       className={`sticky top-0 flex h-screen shrink-0 flex-col bg-slate-900 transition-[width] duration-200 ${
@@ -36,8 +32,8 @@ export function TutorSidebar() {
       </div>
 
       <nav className="flex-1 space-y-0.5 px-2 py-2">
-        {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
-          const active = exact ? pathname === href : pathname.startsWith(href);
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={href}

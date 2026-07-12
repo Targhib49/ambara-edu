@@ -1,18 +1,16 @@
 import { requireStudent } from "@/lib/auth";
-import { StudentTopNav } from "@/components/ui/StudentTopNav";
+import { StudentSidebar } from "@/components/ui/StudentSidebar";
+import { StudentTopBar } from "@/components/ui/StudentTopBar";
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const student = await requireStudent();
   return (
-    <>
-      <StudentTopNav
-        userName={student.name}
-        links={[
-          { href: "/tracks", label: "My tracks" },
-          { href: "/sessions", label: "My sessions" },
-        ]}
-      />
-      <main className="flex w-full flex-1 bg-zinc-100">{children}</main>
-    </>
+    <div className="flex min-h-screen w-full flex-1">
+      <StudentSidebar />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <StudentTopBar userName={student.name} />
+        <main className="flex-1 bg-zinc-50">{children}</main>
+      </div>
+    </div>
   );
 }

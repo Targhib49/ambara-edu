@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { nowMs, formatSessionTime } from "@/lib/sessions/format";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 const UPCOMING_LIMIT = 5;
 
@@ -47,6 +48,13 @@ export default async function StudentTrackPage({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
       <div className="min-w-0 space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: "Home", href: "/tracks" },
+            { label: "My tracks", href: "/tracks" },
+            { label: track.title },
+          ]}
+        />
         <div className="rounded-xl border border-zinc-200 bg-white p-6 lg:p-8">
           <h1 className="text-2xl font-semibold">{track.title}</h1>
           {track.description && <p className="mt-2 text-sm text-zinc-600">{track.description}</p>}

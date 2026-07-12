@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { BlockRenderer } from "@/components/blocks/renderers";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 export default async function StudentLessonPage({
   params,
@@ -22,7 +23,7 @@ export default async function StudentLessonPage({
       },
     },
     include: {
-      module: { select: { title: true } },
+      module: { select: { title: true, track: { select: { title: true } } } },
       blocks: { orderBy: { order: "asc" } },
       quizzes: { select: { id: true, title: true }, orderBy: { createdAt: "asc" } },
     },
@@ -48,9 +49,14 @@ export default async function StudentLessonPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <Link href={`/tracks/${trackId}`} className="text-sm text-zinc-500 hover:underline lg:hidden">
-        ← {lesson.module.title}
-      </Link>
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/tracks" },
+          { label: "My tracks", href: "/tracks" },
+          { label: lesson.module.track.title, href: `/tracks/${trackId}` },
+          { label: lesson.title },
+        ]}
+      />
 
       <article className="rounded-xl border border-zinc-200 bg-white p-6 lg:p-10">
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
