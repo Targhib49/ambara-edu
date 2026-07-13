@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { createTrack } from "@/lib/actions/tracks";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { badgeColorFor } from "@/lib/ui/palette";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
@@ -64,9 +65,12 @@ export default async function TutorTracksPage() {
           placeholder="Description (optional)"
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
         />
-        <button className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
+        <SubmitButton
+          pendingLabel="Creating…"
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+        >
           Create track
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

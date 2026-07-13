@@ -5,6 +5,7 @@ import { updateTrack, deleteTrack, setEnrollment } from "@/lib/actions/tracks";
 import { createModule, renameModule, deleteModule, moveModule } from "@/lib/actions/modules";
 import { createLesson, deleteLesson, moveLesson, setLessonStatus } from "@/lib/actions/lessons";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 const smallBtn =
@@ -56,9 +57,12 @@ export default async function TrackDetailPage({
             className={`${inputCls} w-full`}
           />
           <div className="flex gap-2">
-            <button className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500">
+            <SubmitButton
+              pendingLabel="Saving…"
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+            >
               Save
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </div>
@@ -71,7 +75,7 @@ export default async function TrackDetailPage({
             <div className="flex items-center gap-2">
               <form action={renameModule.bind(null, mod.id)} className="flex flex-1 gap-2">
                 <input name="title" defaultValue={mod.title} required className={`${inputCls} flex-1 font-medium`} />
-                <button className={smallBtn}>Rename</button>
+                <SubmitButton pendingLabel="Renaming…" className={smallBtn}>Rename</SubmitButton>
               </form>
               <form action={moveModule.bind(null, mod.id, "up")}>
                 <button className={smallBtn} disabled={mi === 0} title="Move up">↑</button>
@@ -111,9 +115,9 @@ export default async function TrackDetailPage({
                       lesson.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
                     )}
                   >
-                    <button className={smallBtn}>
+                    <SubmitButton pendingLabel="Updating…" className={smallBtn}>
                       {lesson.status === "PUBLISHED" ? "Unpublish" : "Publish"}
-                    </button>
+                    </SubmitButton>
                   </form>
                   <form action={moveLesson.bind(null, lesson.id, "up")}>
                     <button className={smallBtn} disabled={li === 0} title="Move up">↑</button>
@@ -132,16 +136,19 @@ export default async function TrackDetailPage({
 
             <form action={createLesson.bind(null, mod.id)} className="mt-2 flex gap-2">
               <input name="title" required placeholder="New lesson title" className={`${inputCls} flex-1`} />
-              <button className={smallBtn}>Add lesson</button>
+              <SubmitButton pendingLabel="Adding…" className={smallBtn}>Add lesson</SubmitButton>
             </form>
           </div>
         ))}
 
         <form action={createModule.bind(null, track.id)} className="flex max-w-xl gap-2">
           <input name="title" required placeholder="New module title (e.g. Week 3: Bode Plots)" className={`${inputCls} flex-1`} />
-          <button className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500">
+          <SubmitButton
+            pendingLabel="Adding…"
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+          >
             Add module
-          </button>
+          </SubmitButton>
         </form>
       </section>
 
@@ -164,7 +171,9 @@ export default async function TrackDetailPage({
                 </div>
                 {enrolled && <span className="text-xs text-green-600">Enrolled</span>}
                 <form action={setEnrollment.bind(null, track.id, student.id, !enrolled)}>
-                  <button className={smallBtn}>{enrolled ? "Remove" : "Enroll"}</button>
+                  <SubmitButton pendingLabel="Updating…" className={smallBtn}>
+                    {enrolled ? "Remove" : "Enroll"}
+                  </SubmitButton>
                 </form>
               </li>
             );

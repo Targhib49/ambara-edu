@@ -7,6 +7,7 @@ import { BlockRenderer } from "@/components/blocks/renderers";
 import { BlockEditor } from "@/components/blocks/editors";
 import { toAnyBlock } from "@/lib/blocks/schema";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 const smallBtn =
@@ -57,7 +58,7 @@ export default async function LessonEditorPage({
               required
               className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-lg font-semibold focus:border-zinc-500 focus:outline-none"
             />
-            <button className={smallBtn}>Rename</button>
+            <SubmitButton pendingLabel="Renaming…" className={smallBtn}>Rename</SubmitButton>
           </form>
           <form
             action={setLessonStatus.bind(
@@ -66,15 +67,16 @@ export default async function LessonEditorPage({
               lesson.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
             )}
           >
-            <button
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            <SubmitButton
+              pendingLabel="Updating…"
+              className={`rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
                 lesson.status === "PUBLISHED"
                   ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
                   : "bg-green-600 text-white hover:bg-green-500"
               }`}
             >
               {lesson.status === "PUBLISHED" ? "Unpublish" : "Publish"}
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>
@@ -136,16 +138,22 @@ export default async function LessonEditorPage({
         <div className="flex flex-wrap items-center gap-2">
           {(["MARKDOWN", "EQUATION", "CODE_SNIPPET", "CODE_EDITOR", "VISUALIZATION"] as const).map((type) => (
             <form key={type} action={addBlock.bind(null, lesson.id, type)}>
-              <button className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-100">
+              <SubmitButton
+                pendingLabel="Adding…"
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50"
+              >
                 + {BLOCK_LABELS[type]}
-              </button>
+              </SubmitButton>
             </form>
           ))}
           <form action={addFileBlock.bind(null, lesson.id)} className="flex items-center gap-2">
             <input type="file" name="file" required className="text-sm" />
-            <button className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-100">
+            <SubmitButton
+              pendingLabel="Uploading…"
+              className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50"
+            >
               + {BLOCK_LABELS.FILE_ATTACHMENT}
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>

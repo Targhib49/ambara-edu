@@ -20,14 +20,22 @@ function revalidateSessions() {
   revalidatePath("/sessions");
 }
 
-export async function createSession(formData: FormData) {
+export type CreateSessionState = { error?: string; success?: string };
+
+export async function createSession(
+  _prev: CreateSessionState,
+  formData: FormData
+): Promise<CreateSessionState> {
   const tutor = await requireTutor();
   const studentId = String(formData.get("studentId") ?? "");
   const startTime = new Date(String(formData.get("startTime") ?? ""));
   const durationMinutes = Number(formData.get("durationMinutes") ?? 60);
-  if (!studentId || Number.isNaN(startTime.getTime()) || !durationMinutes) return;
+  if (!studentId) return { error: "Pick a student." };
+  if (Number.isNaN(startTime.getTime())) return { error: "Pick a valid start time." };
+  if (!durationMinutes || durationMinutes < 15) return { error: "Duration must be at least 15 minutes." };
 
-  const student = await db.user.findUniqueOrThrow({ where: { id: studentId } });
+  const student = await db.user.findUnique({ where: { id: studentId } });
+  if (!student) return { error: "That student no longer exists." };
   await db.session.create({
     data: { studentId, tutorId: tutor.id, startTime, durationMinutes, status: "CONFIRMED" },
   });
@@ -40,6 +48,7 @@ export async function createSession(formData: FormData) {
   });
 
   revalidateSessions();
+  return { success: `Session with ${student.name} scheduled ✓` };
 }
 
 export async function updateSessionNotes(sessionId: string, notes: string) {
