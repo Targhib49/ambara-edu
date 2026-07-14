@@ -33,7 +33,10 @@ export function StudentSessionRow({
   const [altValue, setAltValue] = useState("");
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4">
+    <div
+      id={`session-${session.id}`}
+      className="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-4 transition-shadow"
+    >
       <div className="flex flex-wrap items-center gap-3">
         <span
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${badgeColorForKey(session.tutorName)}`}

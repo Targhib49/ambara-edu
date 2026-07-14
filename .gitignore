@@ -54,3 +54,6 @@ AGENTS.md
 HANDOFF.md
 MEMORY.md
 tutoring_lms_spec.md
+
+# real student/course data for import — contains PII, never publish
+/data-import/

@@ -44,7 +44,7 @@ export default async function TutorSessionsPage() {
         <ScheduleSessionForm students={students.map((s) => ({ id: s.id, name: s.name }))} />
       )}
 
-      <SessionsBoard sessions={rows} />
+      <SessionsBoard role="tutor" sessions={rows} />
     </div>
   );
 }

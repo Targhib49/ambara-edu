@@ -18,7 +18,8 @@ const MAX_CHIPS_PER_DAY = 3;
 
 type CalendarSession = {
   id: string;
-  studentName: string;
+  /** Chip text next to the time — the other party's name (student or tutor). */
+  label: string;
   startTime: string;
   status: SessionStatus;
 };
@@ -26,9 +27,11 @@ type CalendarSession = {
 export function SessionCalendar({
   sessions,
   onSelectSession,
+  legendStatuses = ["CONFIRMED", "RESCHEDULE_REQUESTED_BY_STUDENT", "CANCELLED"],
 }: {
   sessions: CalendarSession[];
   onSelectSession: (sessionId: string) => void;
+  legendStatuses?: SessionStatus[];
 }) {
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date(nowMs())));
 
@@ -108,10 +111,10 @@ export function SessionCalendar({
                   <button
                     key={s.id}
                     onClick={() => onSelectSession(s.id)}
-                    title={`${s.studentName} · ${formatTimeOnly(s.startTime)}`}
+                    title={`${s.label} · ${formatTimeOnly(s.startTime)}`}
                     className={`block w-full truncate rounded px-1 py-0.5 text-left text-[11px] ${SESSION_STATUS_BADGE_CLASS[s.status]}`}
                   >
-                    {formatTimeOnly(s.startTime)} {s.studentName}
+                    {formatTimeOnly(s.startTime)} {s.label}
                   </button>
                 ))}
                 {overflow > 0 && <p className="px-1 text-[11px] text-zinc-400">+{overflow} more</p>}
@@ -122,7 +125,7 @@ export function SessionCalendar({
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
-        {(["CONFIRMED", "RESCHEDULE_REQUESTED_BY_STUDENT", "CANCELLED"] as const).map((status) => (
+        {legendStatuses.map((status) => (
           <span key={status} className="flex items-center gap-1.5">
             <span className={`h-2.5 w-2.5 rounded-sm ${SESSION_STATUS_BADGE_CLASS[status].split(" ")[0]}`} />
             {SESSION_STATUS_LABEL[status]}
