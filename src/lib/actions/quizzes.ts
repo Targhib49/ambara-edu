@@ -103,6 +103,28 @@ export async function submitQuizAnswers(quizId: string, rawAnswers: unknown) {
   });
   const { autoScore, status } = aggregateSubmission(grades);
 
+  // Snapshot the outgoing attempt's score before the upsert overwrites it,
+  // so students keep a visible score history across retakes.
+  const existing = await db.submission.findUnique({
+    where: { studentId_quizId: { studentId: student.id, quizId } },
+  });
+  if (existing) {
+    const previousAttempts = await db.submissionAttempt.count({
+      where: { studentId: student.id, quizId },
+    });
+    await db.submissionAttempt.create({
+      data: {
+        studentId: student.id,
+        quizId,
+        attemptNumber: previousAttempts + 1,
+        autoScore: existing.autoScore,
+        manualScore: existing.manualScore,
+        status: existing.status,
+        submittedAt: existing.updatedAt,
+      },
+    });
+  }
+
   await db.submission.upsert({
     where: { studentId_quizId: { studentId: student.id, quizId } },
     create: {

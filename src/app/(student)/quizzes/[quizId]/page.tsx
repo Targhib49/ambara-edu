@@ -6,6 +6,7 @@ import { gradeQuestion } from "@/lib/quiz/grading";
 import { formatResponse } from "@/lib/quiz/format";
 import { parseCorrectAnswer, submissionAnswersSchema } from "@/lib/quiz/schema";
 import { CodeSubmissionView } from "@/components/quiz/CodeSubmissionView";
+import { ScoreHistory } from "@/components/quiz/ScoreHistory";
 import { QuizTakeForm } from "./QuizTakeForm";
 import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
 
@@ -23,10 +24,17 @@ export default async function StudentQuizPage({
   const quiz = await db.quiz.findFirst({
     where: {
       id: quizId,
-      lesson: {
-        status: "PUBLISHED",
-        module: { track: { enrollments: { some: { studentId: student.id } } } },
-      },
+      OR: [
+        // linked quiz: lesson must be published + student enrolled
+        {
+          lesson: {
+            status: "PUBLISHED",
+            module: { track: { enrollments: { some: { studentId: student.id } } } },
+          },
+        },
+        // standalone quiz (try-out): no lesson, open to any signed-in student
+        { lessonId: null },
+      ],
     },
     include: {
       lesson: {
@@ -41,31 +49,56 @@ export default async function StudentQuizPage({
   });
   if (!quiz) notFound();
 
-  const submission = await db.submission.findUnique({
-    where: { studentId_quizId: { studentId: student.id, quizId } },
-  });
+  const [submission, attempts] = await Promise.all([
+    db.submission.findUnique({
+      where: { studentId_quizId: { studentId: student.id, quizId } },
+    }),
+    db.submissionAttempt.findMany({
+      where: { studentId: student.id, quizId },
+      orderBy: { attemptNumber: "desc" },
+    }),
+  ]);
 
   const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
   const showForm = !submission || retake === "1";
 
   const crumbs: Crumb[] = quiz.lesson
     ? [
-        { label: "Home", href: "/tracks" },
+        { label: "Home", href: "/dashboard" },
         { label: "My tracks", href: "/tracks" },
         { label: quiz.lesson.module.track.title, href: `/tracks/${quiz.lesson.module.trackId}` },
         { label: quiz.lesson.title, href: `/tracks/${quiz.lesson.module.trackId}/lessons/${quiz.lesson.id}` },
         { label: quiz.title },
       ]
-    : [{ label: "Home", href: "/tracks" }, { label: quiz.title }];
+    : [
+        { label: "Home", href: "/dashboard" },
+        { label: "Quizzes", href: "/quizzes" },
+        { label: quiz.title },
+      ];
+
+  const backHref = quiz.lesson
+    ? `/tracks/${quiz.lesson.module.trackId}/lessons/${quiz.lesson.id}`
+    : "/quizzes";
+  const backLabel = quiz.lesson ? `Back to lesson: ${quiz.lesson.title}` : "Back to quizzes";
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
       <div>
         <Breadcrumbs items={crumbs} />
-        <h1 className="mt-2 text-2xl font-semibold">{quiz.title}</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          {quiz.questions.length} questions · {totalPoints} points total
-        </p>
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">{quiz.title}</h1>
+            <p className="mt-1 text-sm text-zinc-500">
+              {quiz.questions.length} questions · {totalPoints} points total
+            </p>
+          </div>
+          <Link
+            href={backHref}
+            className="shrink-0 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
+          >
+            ← {backLabel}
+          </Link>
+        </div>
       </div>
 
       {showForm ? (
@@ -85,6 +118,28 @@ export default async function StudentQuizPage({
       ) : (
         <QuizResults quiz={quiz} submission={submission} totalPoints={totalPoints} />
       )}
+
+      <ScoreHistory
+        totalPoints={totalPoints}
+        attempts={attempts.map((a) => ({
+          attemptNumber: a.attemptNumber,
+          autoScore: a.autoScore,
+          manualScore: a.manualScore,
+          status: a.status,
+          submittedAt: a.submittedAt.toISOString(),
+        }))}
+        current={
+          submission
+            ? {
+                attemptNumber: attempts.length + 1,
+                autoScore: submission.autoScore,
+                manualScore: submission.manualScore,
+                status: submission.status,
+                submittedAt: submission.updatedAt.toISOString(),
+              }
+            : null
+        }
+      />
     </div>
   );
 }

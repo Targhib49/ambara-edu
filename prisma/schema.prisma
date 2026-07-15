@@ -66,6 +66,7 @@ model User {
   sessionsAsStudent Session[]     @relation("SessionStudent")
   sessionsAsTutor   Session[]     @relation("SessionTutor")
   submissions       Submission[]
+  submissionAttempts SubmissionAttempt[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 }
@@ -167,6 +168,7 @@ model Quiz {
   importBatchId String?      @db.Uuid
   questions     Question[]
   submissions   Submission[]
+  submissionAttempts SubmissionAttempt[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -211,4 +213,23 @@ model Submission {
   // One live submission per student per quiz — resubmitting overwrites the
   // previous attempt rather than creating a new row.
   @@unique([studentId, quizId])
+}
+
+// Score-history snapshot taken just before a resubmission overwrites the live
+// Submission row. Keeps the "one live submission" model intact while letting
+// students see how their score evolved across attempts. Answers are not
+// snapshotted — only the graded outcome.
+model SubmissionAttempt {
+  id            String           @id @default(uuid()) @db.Uuid
+  studentId     String           @db.Uuid
+  student       User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  quizId        String           @db.Uuid
+  quiz          Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  attemptNumber Int
+  autoScore     Float?
+  manualScore   Float?
+  status        SubmissionStatus
+  submittedAt   DateTime
+
+  @@index([studentId, quizId])
 }
