@@ -8,7 +8,7 @@ export default async function StudentProfilePage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8">
       <div className="space-y-2">
-        <Breadcrumbs items={[{ label: "Home", href: "/tracks" }, { label: "Profile" }]} />
+        <Breadcrumbs items={[{ label: "Home", href: "/dashboard" }, { label: "Profile" }]} />
         <h1 className="text-2xl font-semibold">Profile</h1>
       </div>
       <ProfileForms name={student.name} email={student.email} />

@@ -51,7 +51,7 @@ export default async function StudentLessonPage({
     <div className="mx-auto max-w-3xl space-y-4">
       <Breadcrumbs
         items={[
-          { label: "Home", href: "/tracks" },
+          { label: "Home", href: "/dashboard" },
           { label: "My tracks", href: "/tracks" },
           { label: lesson.module.track.title, href: `/tracks/${trackId}` },
           { label: lesson.title },

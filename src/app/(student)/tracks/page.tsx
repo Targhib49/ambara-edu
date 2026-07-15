@@ -19,7 +19,7 @@ export default async function StudentTracksPage() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="space-y-2">
-        <Breadcrumbs items={[{ label: "Home", href: "/tracks" }, { label: "My tracks" }]} />
+        <Breadcrumbs items={[{ label: "Home", href: "/dashboard" }, { label: "My tracks" }]} />
         <h1 className="text-2xl font-semibold">My tracks</h1>
       </div>
 

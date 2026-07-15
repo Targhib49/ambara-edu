@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createCollapsibleStore } from "@/lib/ui/collapsibleStore";
-import { BookIcon, CalendarIcon, ChevronLeftIcon } from "@/components/ui/icons";
+import { BookIcon, CalendarIcon, ChevronLeftIcon, ClipboardIcon, HomeIcon } from "@/components/ui/icons";
 
 const { useOpen, setOpen } = createCollapsibleStore("lms:studentNavOpen");
 
 const NAV_ITEMS = [
+  { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
   { href: "/tracks", label: "My tracks", icon: BookIcon },
+  { href: "/quizzes", label: "Quizzes", icon: ClipboardIcon },
   { href: "/sessions", label: "My sessions", icon: CalendarIcon },
 ] as const;
 

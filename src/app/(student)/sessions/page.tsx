@@ -25,7 +25,7 @@ export default async function StudentSessionsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8">
       <div className="space-y-2">
-        <Breadcrumbs items={[{ label: "Home", href: "/tracks" }, { label: "My sessions" }]} />
+        <Breadcrumbs items={[{ label: "Home", href: "/dashboard" }, { label: "My sessions" }]} />
         <h1 className="text-2xl font-semibold">My sessions</h1>
       </div>
 

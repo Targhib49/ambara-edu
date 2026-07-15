@@ -50,7 +50,7 @@ export default async function StudentTrackPage({
       <div className="min-w-0 space-y-6">
         <Breadcrumbs
           items={[
-            { label: "Home", href: "/tracks" },
+            { label: "Home", href: "/dashboard" },
             { label: "My tracks", href: "/tracks" },
             { label: track.title },
           ]}
