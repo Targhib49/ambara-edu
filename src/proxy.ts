@@ -7,7 +7,7 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Everything except static assets
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Everything except static assets and the Pyodide worker script
+    "/((?!_next/static|_next/image|favicon.ico|pyodide-worker.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

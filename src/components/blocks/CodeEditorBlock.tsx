@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { python } from "@codemirror/lang-python";
-import { getPyodide } from "@/lib/pyodide";
+import { isPythonReady, runPythonCode } from "@/lib/pyodideWorker";
 
 type OutputLine = { stream: "stdout" | "stderr" | "result"; text: string };
 type RunState = "idle" | "booting" | "running";
@@ -45,23 +45,16 @@ export function CodeEditorBlock({ starterCode }: { starterCode: string }) {
     const lines: OutputLine[] = [];
 
     try {
-      setRunState("booting");
-      const pyodide = await getPyodide();
-
+      setRunState(isPythonReady() ? "running" : "booting");
+      const outcome = await runPythonCode(code);
       setRunState("running");
-      pyodide.setStdout({ batched: (text) => lines.push({ stream: "stdout", text }) });
-      pyodide.setStderr({ batched: (text) => lines.push({ stream: "stderr", text }) });
-      await pyodide.loadPackagesFromImports(code);
-      const result = await pyodide.runPythonAsync(code);
 
-      // REPL-style echo of the final expression's value (None comes back as
-      // undefined). Complex objects arrive as PyProxy — stringify and free it.
-      if (result !== undefined && result !== null) {
-        const proxy = result as { toString(): string; destroy?: () => void };
-        lines.push({ stream: "result", text: proxy.toString() });
-        proxy.destroy?.();
-      }
+      for (const line of outcome.lines) lines.push(line);
+      if (outcome.error) lines.push({ stream: "stderr", text: outcome.error });
+      // REPL-style echo of the final expression's value.
+      if (outcome.resultRepr !== null) lines.push({ stream: "result", text: outcome.resultRepr });
     } catch (err) {
+      // Worker-level failure (download failed, timeout/infinite loop, crash).
       lines.push({ stream: "stderr", text: err instanceof Error ? err.message : String(err) });
     } finally {
       setRunState("idle");
