@@ -52,9 +52,11 @@ export function QuizImportPanel({
 
   return (
     <div className="space-y-4 rounded-xl border border-zinc-200 bg-white p-5">
-      <h2 className="font-medium">Import quiz from CSV/Excel</h2>
+      <h2 className="font-medium">Bulk import from CSV/Excel</h2>
       <p className="text-xs text-zinc-500">
-        One row per question. Columns: lesson (optional), question_type, question_text, option_a..d,
+        For building or fixing one question at a time, use{" "}
+        <span className="font-medium text-zinc-700">+ New quiz</span> above instead — this is for
+        loading many questions at once. One row per question. Columns: lesson (optional), question_type, question_text, option_a..d,
         correct_answer, points, explanation. Upload to preview before anything is saved. For code
         questions, correct_answer is an optional JSON array of test cases, e.g.{" "}
         <code className="rounded bg-zinc-100 px-1">

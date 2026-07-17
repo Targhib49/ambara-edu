@@ -25,7 +25,11 @@ export default async function StudentLessonPage({
     include: {
       module: { select: { title: true, track: { select: { title: true } } } },
       blocks: { orderBy: { order: "asc" } },
-      quizzes: { select: { id: true, title: true }, orderBy: { createdAt: "asc" } },
+      quizzes: {
+        where: { status: "PUBLISHED" },
+        select: { id: true, title: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
   if (!lesson) notFound();

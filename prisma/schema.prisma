@@ -49,6 +49,11 @@ enum QuestionType {
   CODE
 }
 
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+}
+
 enum SubmissionStatus {
   AUTO_GRADED
   PENDING_REVIEW
@@ -67,6 +72,7 @@ model User {
   sessionsAsTutor   Session[]     @relation("SessionTutor")
   submissions       Submission[]
   submissionAttempts SubmissionAttempt[]
+  timedQuizSessions TimedQuizSession[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 }
@@ -162,18 +168,47 @@ model Quiz {
   lessonId      String?      @db.Uuid
   lesson        Lesson?      @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   title         String
+  // Draft quizzes (and their questions, however incomplete) are invisible to
+  // students — mirrors Lesson.status. DB default is PUBLISHED so the
+  // existing pre-this-feature quizzes backfill unaffected; app-level create
+  // paths (createQuiz, CSV commit) explicitly pass DRAFT for new quizzes.
+  status        QuizStatus   @default(PUBLISHED)
   // Ties a quiz to the CSV/XLSX upload that (re-)created its questions —
   // re-uploading a corrected sheet targets the same quiz + batch id rather
   // than creating a duplicate. One upload always maps to exactly one quiz.
   importBatchId String?      @db.Uuid
+  // Timed try-out settings. All three are opt-in (null/false = the classic
+  // untimed, unlimited-retake quiz behavior every existing quiz already has).
+  timeLimitMinutes       Int?     // null = untimed
+  maxAttempts            Int?     // null = unlimited retakes
+  randomizeQuestionOrder Boolean  @default(false)
   questions     Question[]
   submissions   Submission[]
   submissionAttempts SubmissionAttempt[]
+  timedSessions TimedQuizSession[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
   @@index([lessonId])
   @@index([importBatchId])
+}
+
+// A student's in-progress attempt at a timed quiz. Created when they hit
+// "Start" (not on page load — an exam's clock shouldn't run while someone
+// is just reading the instructions), and deleted once they submit. Exists
+// purely so the countdown and the shuffled question order survive a page
+// reload instead of resetting the clock or reshuffling mid-attempt.
+model TimedQuizSession {
+  id            String   @id @default(uuid()) @db.Uuid
+  studentId     String   @db.Uuid
+  student       User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  quizId        String   @db.Uuid
+  quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  startedAt     DateTime @default(now())
+  questionOrder String[] // frozen shuffled Question ids for this attempt
+  createdAt     DateTime @default(now())
+
+  @@unique([studentId, quizId])
 }
 
 model Question {

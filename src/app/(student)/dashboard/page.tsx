@@ -21,7 +21,9 @@ export default async function StudentDashboardPage() {
                 lessons: {
                   where: { status: "PUBLISHED" },
                   orderBy: { order: "asc" },
-                  include: { quizzes: { select: { id: true, title: true } } },
+                  include: {
+                    quizzes: { where: { status: "PUBLISHED" }, select: { id: true, title: true } },
+                  },
                 },
               },
             },
@@ -40,7 +42,7 @@ export default async function StudentDashboardPage() {
       orderBy: { startTime: "asc" },
     }),
     db.quiz.findMany({
-      where: { lessonId: null },
+      where: { lessonId: null, status: "PUBLISHED" },
       select: { id: true, title: true },
     }),
   ]);
