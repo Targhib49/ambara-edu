@@ -126,7 +126,12 @@ export async function runTestCases(code: string, testCases: TestCaseInput[]): Pr
     return testCases.map(() => ({ passed: false, actualOutput: reply.error }));
   }
   return reply.tests!.map((t, i) => {
-    const actualOutput = (t.lines.map((l) => l.text).join("") + (t.error ? t.error : "")).slice(0, 4000);
+    // Pyodide's batched stdout callback strips the newline off every complete
+    // line it hands back (and gives no way to tell a complete line from a
+    // partial one) — https://pyodide.org/en/stable/usage/streams.html. Joining
+    // with "\n" reconstructs the original multi-line output; joining with ""
+    // would silently smash "1\n2\n3" into "123".
+    const actualOutput = (t.lines.map((l) => l.text).join("\n") + (t.error ? t.error : "")).slice(0, 4000);
     return {
       passed: !t.error && normalizeOutput(actualOutput) === normalizeOutput(testCases[i].expectedOutput),
       actualOutput,
