@@ -11,6 +11,7 @@ import { ScoreHistory } from "@/components/quiz/ScoreHistory";
 import { ScoreRing } from "@/components/quiz/ScoreRing";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { QuizTakeForm } from "./QuizTakeForm";
+import { TimedQuizTakeForm } from "./TimedQuizTakeForm";
 import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
 import type { Question } from "@/generated/prisma/client";
 
@@ -143,7 +144,7 @@ export default async function StudentQuizPage({
             />
           )}
           {timedSession && (
-            <QuizTakeForm
+            <TimedQuizTakeForm
               quizId={quiz.id}
               startedAt={timedSession.startedAt.toISOString()}
               timeLimitMinutes={quiz.timeLimitMinutes!}

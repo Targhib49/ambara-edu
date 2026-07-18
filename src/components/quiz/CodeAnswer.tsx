@@ -16,9 +16,14 @@ type RunState = "idle" | "booting" | "running";
  */
 export function CodeAnswer({
   testCases,
+  initialCode,
   onCodeChange,
 }: {
   testCases: TestCase[];
+  /** Restores previously-typed code — needed when this component remounts
+   * (e.g. navigating away from and back to the question in a one-at-a-time
+   * exam flow), since CodeMirror otherwise always starts blank. */
+  initialCode?: string;
   onCodeChange: (code: string) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -29,7 +34,7 @@ export function CodeAnswer({
   useEffect(() => {
     if (!hostRef.current) return;
     const view = new EditorView({
-      doc: "",
+      doc: initialCode ?? "",
       extensions: [
         basicSetup,
         python(),

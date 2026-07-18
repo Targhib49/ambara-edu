@@ -23,6 +23,21 @@ function safeRegexTest(pattern: string, flags: string, value: string) {
   }
 }
 
+/** Parses a plain decimal ("0.5") or simple fraction ("1/2") into a number. */
+function parseNumericAnswer(s: string): number | null {
+  const trimmed = s.trim();
+  const fractionMatch = /^(-?\d+)\s*\/\s*(-?\d+)$/.exec(trimmed);
+  if (fractionMatch) {
+    const num = Number(fractionMatch[1]);
+    const den = Number(fractionMatch[2]);
+    if (den === 0 || !Number.isFinite(num) || !Number.isFinite(den)) return null;
+    return num / den;
+  }
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
+
 /**
  * Grades a single question's response. Never throws on a malformed response —
  * an unparseable answer is simply wrong, not review-worthy, except where the
@@ -82,6 +97,18 @@ export function gradeQuestion(
       const parsed = tryParseResponse(type, response);
       if (!parsed) return { status: "PENDING_REVIEW", correct: null, earnedPoints: 0 };
       const value = parsed.value.trim();
+      // Fraction/decimal answers ("1/2" vs "0.5" vs "2/4") are equivalent —
+      // if both sides parse as numbers we're confident enough to auto-grade
+      // instead of sending an obviously-correct-just-differently-formatted
+      // answer to manual review.
+      if (correctAnswer.kind === "exact") {
+        const studentNum = parseNumericAnswer(value);
+        const correctNum = parseNumericAnswer(correctAnswer.value);
+        if (studentNum !== null && correctNum !== null) {
+          const correct = Math.abs(studentNum - correctNum) <= 1e-6;
+          return { status: "AUTO_GRADED", correct, earnedPoints: correct ? points : 0 };
+        }
+      }
       const matched =
         correctAnswer.kind === "exact"
           ? value.toLowerCase() === correctAnswer.value.trim().toLowerCase()
