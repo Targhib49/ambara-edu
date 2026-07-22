@@ -26,7 +26,7 @@ export default async function TutorTracksPage() {
             <Link
               key={track.id}
               href={`/tutor/tracks/${track.id}`}
-              className="flex items-center gap-4 px-5 py-4 first:rounded-t-xl last:rounded-b-xl hover:bg-zinc-50"
+              className="flex items-start gap-4 px-5 py-4 first:rounded-t-xl last:rounded-b-xl hover:bg-zinc-50"
             >
               <span
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-semibold ${badgeColorFor(i)}`}

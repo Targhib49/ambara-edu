@@ -151,12 +151,12 @@ export default async function StudentDashboardPage() {
             <div className="mt-4 space-y-5">
               {tracks.map((t) => (
                 <div key={t.id}>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <Link href={`/tracks/${t.id}`} className="flex items-center gap-2 font-medium text-zinc-900 hover:underline">
-                      <span className={`h-3 w-3 rounded-sm ${badgeColorForKey(t.title).split(" ")[0]}`} />
-                      {t.title}
+                  <div className="flex items-start justify-between gap-2">
+                    <Link href={`/tracks/${t.id}`} className="flex min-w-0 items-start gap-2 font-medium text-zinc-900 hover:underline">
+                      <span className={`mt-1 h-3 w-3 shrink-0 rounded-sm ${badgeColorForKey(t.title).split(" ")[0]}`} />
+                      <span>{t.title}</span>
                     </Link>
-                    <span className="text-xs text-zinc-500">
+                    <span className="shrink-0 text-xs text-zinc-500">
                       {t.done} / {t.total} materi · {t.pct}%
                     </span>
                   </div>

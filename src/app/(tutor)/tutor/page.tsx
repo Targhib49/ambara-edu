@@ -78,7 +78,7 @@ export default async function TutorDashboardPage() {
             <p className="text-sm text-blue-100/80">
               {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
             </p>
-            <h1 className="truncate text-2xl font-semibold">
+            <h1 className="text-2xl font-semibold">
               {greetingFor(now.getHours())}, {tutor.name.split(" ")[0]}
             </h1>
           </div>

@@ -72,9 +72,9 @@ export default async function TrackDetailPage({
         <h2 className="text-lg font-semibold">Modules</h2>
         {track.modules.map((mod, mi) => (
           <div key={mod.id} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2">
-              <form action={renameModule.bind(null, mod.id)} className="flex flex-1 gap-2">
-                <input name="title" defaultValue={mod.title} required className={`${inputCls} flex-1 font-medium`} />
+            <div className="flex flex-wrap items-center gap-2">
+              <form action={renameModule.bind(null, mod.id)} className="flex min-w-0 flex-1 gap-2">
+                <input name="title" defaultValue={mod.title} required className={`${inputCls} min-w-0 flex-1 font-medium`} />
                 <SubmitButton pendingLabel="Renaming…" className={smallBtn}>Rename</SubmitButton>
               </form>
               <form action={moveModule.bind(null, mod.id, "up")}>
@@ -92,44 +92,46 @@ export default async function TrackDetailPage({
 
             <ul className="mt-3 divide-y divide-zinc-100">
               {mod.lessons.map((lesson, li) => (
-                <li key={lesson.id} className="flex items-center gap-2 py-2">
+                <li key={lesson.id} className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center">
                   <Link
                     href={`/tutor/tracks/${track.id}/lessons/${lesson.id}`}
-                    className="flex-1 text-sm hover:underline"
+                    className="min-w-0 flex-1 text-sm hover:underline"
                   >
                     {lesson.title}
                   </Link>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      lesson.status === "PUBLISHED"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {lesson.status === "PUBLISHED" ? "Published" : "Draft"}
-                  </span>
-                  <form
-                    action={setLessonStatus.bind(
-                      null,
-                      lesson.id,
-                      lesson.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
-                    )}
-                  >
-                    <SubmitButton pendingLabel="Updating…" className={smallBtn}>
-                      {lesson.status === "PUBLISHED" ? "Unpublish" : "Publish"}
-                    </SubmitButton>
-                  </form>
-                  <form action={moveLesson.bind(null, lesson.id, "up")}>
-                    <button className={smallBtn} disabled={li === 0} title="Move up">↑</button>
-                  </form>
-                  <form action={moveLesson.bind(null, lesson.id, "down")}>
-                    <button className={smallBtn} disabled={li === mod.lessons.length - 1} title="Move down">↓</button>
-                  </form>
-                  <form action={deleteLesson.bind(null, lesson.id)}>
-                    <ConfirmButton message={`Delete lesson "${lesson.title}"?`} className={`${smallBtn} text-red-600`}>
-                      Delete
-                    </ConfirmButton>
-                  </form>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        lesson.status === "PUBLISHED"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {lesson.status === "PUBLISHED" ? "Published" : "Draft"}
+                    </span>
+                    <form
+                      action={setLessonStatus.bind(
+                        null,
+                        lesson.id,
+                        lesson.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
+                      )}
+                    >
+                      <SubmitButton pendingLabel="Updating…" className={smallBtn}>
+                        {lesson.status === "PUBLISHED" ? "Unpublish" : "Publish"}
+                      </SubmitButton>
+                    </form>
+                    <form action={moveLesson.bind(null, lesson.id, "up")}>
+                      <button className={smallBtn} disabled={li === 0} title="Move up">↑</button>
+                    </form>
+                    <form action={moveLesson.bind(null, lesson.id, "down")}>
+                      <button className={smallBtn} disabled={li === mod.lessons.length - 1} title="Move down">↓</button>
+                    </form>
+                    <form action={deleteLesson.bind(null, lesson.id)}>
+                      <ConfirmButton message={`Delete lesson "${lesson.title}"?`} className={`${smallBtn} text-red-600`}>
+                        Delete
+                      </ConfirmButton>
+                    </form>
+                  </div>
                 </li>
               ))}
             </ul>

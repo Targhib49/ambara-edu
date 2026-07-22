@@ -121,7 +121,7 @@ export default async function StudentQuizPage({
           </div>
           <Link
             href={backHref}
-            className="shrink-0 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
+            className="block max-w-full truncate rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
           >
             ← {backLabel}
           </Link>

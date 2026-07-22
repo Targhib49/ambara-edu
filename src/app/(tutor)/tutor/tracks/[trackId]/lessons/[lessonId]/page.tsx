@@ -50,13 +50,13 @@ export default async function LessonEditorPage({
           ]}
         />
         <p className="mt-2 text-xs uppercase tracking-wide text-zinc-400">{lesson.module.title}</p>
-        <div className="mt-1 flex items-center gap-3">
-          <form action={renameLesson.bind(null, lesson.id)} className="flex flex-1 gap-2">
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <form action={renameLesson.bind(null, lesson.id)} className="flex min-w-0 flex-1 gap-2">
             <input
               name="title"
               defaultValue={lesson.title}
               required
-              className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-lg font-semibold focus:border-zinc-500 focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-lg font-semibold focus:border-zinc-500 focus:outline-none"
             />
             <SubmitButton pendingLabel="Renaming…" className={smallBtn}>Rename</SubmitButton>
           </form>
