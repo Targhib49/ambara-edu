@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import type { AnyBlock, BlockDataMap } from "@/lib/blocks/schema";
+import { effectiveFileDisplay, isPreviewableFile } from "@/lib/blocks/schema";
 import { updateBlock } from "@/lib/actions/blocks";
+import { VIDEO_URL_HINT, parseVideoUrl } from "@/lib/blocks/video";
 import {
   VIZ_LABELS,
   visualizationDataSchema,
@@ -215,12 +217,98 @@ function VisualizationEditor({ block }: { block: { id: string; data: BlockDataMa
   );
 }
 
-function FileAttachmentEditor({ block }: { block: { data: BlockDataMap["FILE_ATTACHMENT"] } }) {
+function VideoEmbedEditor({ block }: { block: { id: string; data: BlockDataMap["VIDEO_EMBED"] } }) {
+  const [url, setUrl] = useState(block.data.url);
+  const [caption, setCaption] = useState(block.data.caption);
+  const [error, setError] = useState<string | null>(null);
+  const { pending, saved, save } = useSave(block.id);
+  const parsed = url.trim() ? parseVideoUrl(url) : null;
+
   return (
-    <p className="text-xs text-zinc-500">
-      Attached: <span className="font-medium text-zinc-700">{block.data.fileName}</span> — to
-      replace it, delete this block and upload again.
-    </p>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const trimmed = url.trim();
+        if (trimmed && !parseVideoUrl(trimmed)) {
+          setError(VIDEO_URL_HINT);
+          return;
+        }
+        setError(null);
+        save({ url: trimmed, caption });
+      }}
+      className="space-y-2"
+    >
+      <div>
+        <label className={labelCls}>Video link</label>
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className={inputCls}
+          placeholder="https://www.youtube.com/watch?v=..."
+          spellCheck={false}
+        />
+        <p className="mt-1 text-xs text-zinc-500">
+          {parsed
+            ? `Recognised as ${parsed.provider === "youtube" ? "YouTube" : "Vimeo"} — save to preview.`
+            : VIDEO_URL_HINT}
+        </p>
+      </div>
+      <div>
+        <label className={labelCls}>Caption (optional)</label>
+        <input
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          className={inputCls}
+          placeholder="What this video covers"
+        />
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <SaveButton pending={pending} saved={saved} />
+    </form>
+  );
+}
+
+function FileAttachmentEditor({
+  block,
+}: {
+  block: { id: string; data: BlockDataMap["FILE_ATTACHMENT"] };
+}) {
+  const [display, setDisplay] = useState(effectiveFileDisplay(block.data));
+  const { pending, saved, save } = useSave(block.id);
+  const previewable = isPreviewableFile(block.data);
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save({ ...block.data, display });
+      }}
+      className="space-y-2"
+    >
+      <p className="text-xs text-zinc-500">
+        Attached: <span className="font-medium text-zinc-700">{block.data.fileName}</span> — to
+        replace it, delete this block and upload again.
+      </p>
+      <div>
+        <label className={labelCls}>How students see it</label>
+        <select
+          value={display}
+          onChange={(e) => setDisplay(e.target.value as "download" | "inline")}
+          className={`${inputCls} max-w-64`}
+        >
+          <option value="download">Download link only</option>
+          <option value="inline" disabled={!previewable}>
+            Show in page (PDF / image viewer)
+          </option>
+        </select>
+        {!previewable && (
+          <p className="mt-1 text-xs text-zinc-500">
+            Only PDFs and images can be shown in the page — this one is download-only.
+          </p>
+        )}
+      </div>
+      <SaveButton pending={pending} saved={saved} />
+    </form>
   );
 }
 
@@ -239,6 +327,8 @@ export function BlockEditor({ block }: { block: AnyBlock }) {
       return <CodeEditorEditor block={block} />;
     case "VISUALIZATION":
       return <VisualizationEditor block={block} />;
+    case "VIDEO_EMBED":
+      return <VideoEmbedEditor block={block} />;
     default: {
       const _exhaustive: never = block;
       return _exhaustive;

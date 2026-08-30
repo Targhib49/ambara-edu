@@ -4,8 +4,9 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import katex from "katex";
 import { codeToHtml } from "shiki";
-import type { AnyBlock } from "@/lib/blocks/schema";
-import { toAnyBlock } from "@/lib/blocks/schema";
+import type { AnyBlock, BlockDataMap } from "@/lib/blocks/schema";
+import { effectiveFileDisplay, isPdfFile, toAnyBlock } from "@/lib/blocks/schema";
+import { parseVideoUrl } from "@/lib/blocks/video";
 import type { BlockType } from "@/generated/prisma/enums";
 import { CodeEditorBlock } from "./CodeEditorBlock";
 import { VizBlock } from "@/components/viz/VizBlock";
@@ -56,7 +57,11 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function FileAttachmentRenderer({
+const fileBtn =
+  "items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm hover:bg-zinc-100";
+
+/** Compact download row — the shape used for anything we don't preview in place. */
+function FileDownloadRow({
   blockId,
   fileName,
   sizeBytes,
@@ -68,14 +73,155 @@ function FileAttachmentRenderer({
   return (
     <a
       href={`/api/files/${blockId}`}
-      className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 shadow-sm hover:bg-zinc-100"
+      className="group flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 shadow-sm transition hover:border-blue-300 hover:bg-zinc-50"
       target="_blank"
       rel="noopener noreferrer"
     >
-      <span aria-hidden>📎</span>
-      {fileName}
-      <span className="text-xs text-zinc-500">({formatBytes(sizeBytes)})</span>
+      <span aria-hidden className="text-lg">📎</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-zinc-900 group-hover:text-blue-700">
+          {fileName}
+        </span>
+        <span className="block text-xs text-zinc-500">{formatBytes(sizeBytes)}</span>
+      </span>
+      <span className="shrink-0 text-xs font-medium text-blue-700">Download ↓</span>
     </a>
+  );
+}
+
+/**
+ * In-page PDF viewer. The iframe points at the access-checked route in inline
+ * mode, so the signed URL is still short-lived and enrollment-gated. Mobile
+ * browsers render framed PDFs badly (iOS shows page one and stops), so small
+ * screens get an open-in-a-tab button instead of a broken-looking frame.
+ */
+function PdfViewer({
+  blockId,
+  fileName,
+  sizeBytes,
+}: {
+  blockId: string;
+  fileName: string;
+  sizeBytes: number;
+}) {
+  return (
+    <figure className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+      <figcaption className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-4 py-2.5">
+        <span aria-hidden>📄</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-zinc-900">{fileName}</span>
+          <span className="block text-xs whitespace-nowrap text-zinc-500">
+            PDF · {formatBytes(sizeBytes)}
+          </span>
+        </span>
+        {/* Redundant on phones, where the whole card body is an open-in-a-tab
+            button — dropping it leaves room for the file name. */}
+        <a
+          href={`/api/files/${blockId}?inline=1`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`hidden sm:inline-flex ${fileBtn}`}
+        >
+          Open ↗
+        </a>
+        <a
+          href={`/api/files/${blockId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex ${fileBtn}`}
+        >
+          Download ↓
+        </a>
+      </figcaption>
+      <iframe
+        src={`/api/files/${blockId}?inline=1`}
+        title={fileName}
+        loading="lazy"
+        className="hidden h-[70vh] min-h-100 w-full bg-zinc-100 sm:block"
+      />
+      <a
+        href={`/api/files/${blockId}?inline=1`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 bg-zinc-50 px-4 py-6 text-sm font-medium text-blue-700 sm:hidden"
+      >
+        Open PDF ↗
+      </a>
+    </figure>
+  );
+}
+
+function ImagePreview({
+  blockId,
+  fileName,
+  sizeBytes,
+}: {
+  blockId: string;
+  fileName: string;
+  sizeBytes: number;
+}) {
+  return (
+    <figure className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+      {/* Signed, short-lived storage URL behind a redirect — not a static asset
+          next/image can optimize, so a plain img is the right call here. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`/api/files/${blockId}?inline=1`} alt={fileName} className="max-h-[70vh] w-full bg-zinc-50 object-contain" />
+      <figcaption className="flex flex-wrap items-center gap-2 border-t border-zinc-100 px-4 py-2.5">
+        <span className="min-w-0 flex-1 truncate text-xs text-zinc-500">
+          {fileName} · {formatBytes(sizeBytes)}
+        </span>
+        <a
+          href={`/api/files/${blockId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex ${fileBtn}`}
+        >
+          Download ↓
+        </a>
+      </figcaption>
+    </figure>
+  );
+}
+
+function FileAttachmentRenderer({
+  blockId,
+  data,
+}: {
+  blockId: string;
+  data: BlockDataMap["FILE_ATTACHMENT"];
+}) {
+  const props = { blockId, fileName: data.fileName, sizeBytes: data.sizeBytes };
+  if (effectiveFileDisplay(data) === "inline") {
+    if (isPdfFile(data)) return <PdfViewer {...props} />;
+    if (data.mimeType.startsWith("image/")) return <ImagePreview {...props} />;
+  }
+  return <FileDownloadRow {...props} />;
+}
+
+function VideoEmbedRenderer({ url, caption }: { url: string; caption: string }) {
+  const video = url ? parseVideoUrl(url) : null;
+  if (!video) {
+    return (
+      <p className="rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500">
+        {url ? "This video link isn’t a recognised YouTube or Vimeo URL." : "No video linked yet."}
+      </p>
+    );
+  }
+  return (
+    <figure className="space-y-2">
+      <div className="relative aspect-video overflow-hidden rounded-xl border border-zinc-200 bg-black shadow-sm">
+        <iframe
+          src={video.embedUrl}
+          title={caption || "Lesson video"}
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+          className="absolute inset-0 h-full w-full"
+        />
+      </div>
+      {caption && <figcaption className="text-sm text-zinc-500">{caption}</figcaption>}
+    </figure>
   );
 }
 
@@ -108,13 +254,9 @@ export function BlockRenderer({
     case "CODE_SNIPPET":
       return <CodeSnippetRenderer language={parsed.data.language} code={parsed.data.code} />;
     case "FILE_ATTACHMENT":
-      return (
-        <FileAttachmentRenderer
-          blockId={parsed.id}
-          fileName={parsed.data.fileName}
-          sizeBytes={parsed.data.sizeBytes}
-        />
-      );
+      return <FileAttachmentRenderer blockId={parsed.id} data={parsed.data} />;
+    case "VIDEO_EMBED":
+      return <VideoEmbedRenderer url={parsed.data.url} caption={parsed.data.caption} />;
     case "CODE_EDITOR":
       // Keyed on the starter code so a tutor's save remounts the preview with
       // the fresh doc (the component itself ignores prop changes after mount).

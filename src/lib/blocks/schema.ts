@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BlockType } from "@/generated/prisma/enums";
 import { defaultVisualizationData, visualizationDataSchema } from "@/lib/viz/schemas";
+import { VIDEO_URL_HINT, parseVideoUrl } from "@/lib/blocks/video";
 
 /**
  * The single registration point for content block data shapes.
@@ -27,11 +28,20 @@ export const blockDataSchemas = {
     fileName: z.string().min(1),
     mimeType: z.string(),
     sizeBytes: z.number().int().nonnegative(),
+    // How the student sees it. Absent on blocks created before this existed —
+    // `effectiveFileDisplay` below picks the sensible default from the mime type.
+    display: z.enum(["download", "inline"]).optional(),
   }),
   CODE_EDITOR: z.object({
     starterCode: z.string(),
   }),
   VISUALIZATION: visualizationDataSchema,
+  VIDEO_EMBED: z.object({
+    // Empty is allowed so a freshly added block can be saved to the DB before
+    // the tutor has pasted anything; the renderer shows a placeholder for it.
+    url: z.string().refine((u) => u === "" || parseVideoUrl(u) !== null, VIDEO_URL_HINT),
+    caption: z.string().default(""),
+  }),
 } as const satisfies Record<BlockType, z.ZodType>;
 
 export type BlockDataMap = {
@@ -50,7 +60,25 @@ export const defaultBlockData: { [K in Exclude<BlockType, "FILE_ATTACHMENT">]: B
   CODE_SNIPPET: { language: "python", code: "" },
   CODE_EDITOR: { starterCode: 'print("Hello from Python!")\n' },
   VISUALIZATION: defaultVisualizationData,
+  VIDEO_EMBED: { url: "", caption: "" },
 };
+
+/**
+ * PDFs and images are worth showing in place; everything else (docx, zip,
+ * datasets) is a download. A tutor can override either way per block.
+ */
+export function effectiveFileDisplay(data: BlockDataMap["FILE_ATTACHMENT"]): "download" | "inline" {
+  if (data.display) return data.display;
+  return isPreviewableFile(data) ? "inline" : "download";
+}
+
+export function isPreviewableFile(data: { mimeType: string; fileName: string }): boolean {
+  return isPdfFile(data) || data.mimeType.startsWith("image/");
+}
+
+export function isPdfFile(data: { mimeType: string; fileName: string }): boolean {
+  return data.mimeType === "application/pdf" || data.fileName.toLowerCase().endsWith(".pdf");
+}
 
 export function parseBlockData<K extends BlockType>(type: K, data: unknown): BlockDataMap[K] {
   return blockDataSchemas[type].parse(data) as BlockDataMap[K];

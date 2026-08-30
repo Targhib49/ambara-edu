@@ -30,7 +30,8 @@ enum BlockType {
   FILE_ATTACHMENT
   CODE_EDITOR
   VISUALIZATION
-  // later phases append: VIDEO_EMBED, QUIZ_REF
+  VIDEO_EMBED
+  // later phases append: QUIZ_REF
 }
 
 enum SessionStatus {

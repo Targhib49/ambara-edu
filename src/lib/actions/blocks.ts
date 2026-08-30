@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireTutor } from "@/lib/auth";
 import { BlockType } from "@/generated/prisma/enums";
-import { defaultBlockData, parseBlockData } from "@/lib/blocks/schema";
+import { defaultBlockData, isPreviewableFile, parseBlockData } from "@/lib/blocks/schema";
 import { ATTACHMENTS_BUCKET, createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 async function lessonEditorPath(lessonId: string) {
@@ -37,31 +37,39 @@ export async function addBlock(lessonId: string, type: Exclude<BlockType, "FILE_
   revalidatePath(await lessonEditorPath(lessonId));
 }
 
+/** One block per file — the input accepts a multi-select so a batch of
+ *  handouts can be attached in a single upload. */
 export async function addFileBlock(lessonId: string, formData: FormData) {
   await requireTutor();
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return;
+  const files = formData.getAll("file").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) return;
 
   const supabase = createSupabaseAdminClient();
-  const storagePath = `${lessonId}/${crypto.randomUUID()}-${file.name}`;
-  const { error } = await supabase.storage
-    .from(ATTACHMENTS_BUCKET)
-    .upload(storagePath, file, { contentType: file.type || "application/octet-stream" });
-  if (error) throw new Error(`Upload failed: ${error.message}`);
+  let order = await nextBlockOrder(lessonId);
 
-  await db.contentBlock.create({
-    data: {
-      lessonId,
-      type: "FILE_ATTACHMENT",
-      order: await nextBlockOrder(lessonId),
+  for (const file of files) {
+    const mimeType = file.type || "application/octet-stream";
+    const storagePath = `${lessonId}/${crypto.randomUUID()}-${file.name}`;
+    const { error } = await supabase.storage
+      .from(ATTACHMENTS_BUCKET)
+      .upload(storagePath, file, { contentType: mimeType });
+    if (error) throw new Error(`Upload failed for ${file.name}: ${error.message}`);
+
+    await db.contentBlock.create({
       data: {
-        storagePath,
-        fileName: file.name,
-        mimeType: file.type || "application/octet-stream",
-        sizeBytes: file.size,
+        lessonId,
+        type: "FILE_ATTACHMENT",
+        order: order++,
+        data: {
+          storagePath,
+          fileName: file.name,
+          mimeType,
+          sizeBytes: file.size,
+          display: isPreviewableFile({ mimeType, fileName: file.name }) ? "inline" : "download",
+        },
       },
-    },
-  });
+    });
+  }
   revalidatePath(await lessonEditorPath(lessonId));
 }
 
