@@ -5,9 +5,12 @@ import { DashboardHero } from "@/components/student/DashboardHero";
 import { StudentSessionRow } from "@/components/sessions/StudentSessionRow";
 import { SUBMISSION_STATUS_BADGE_CLASS, SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
 import { badgeColorForKey } from "@/lib/ui/palette";
+import { isEnabled } from "@/lib/flags";
+import { summarizeCourseProgress } from "@/lib/progress";
 
 export default async function StudentDashboardPage() {
   const student = await requireStudent();
+  const courseV2 = await isEnabled("course_v2");
 
   const [enrollments, submissions, sessions, standaloneQuizzes] = await Promise.all([
     db.enrollment.findMany({
@@ -23,6 +26,10 @@ export default async function StudentDashboardPage() {
                   orderBy: { order: "asc" },
                   include: {
                     quizzes: { where: { status: "PUBLISHED" }, select: { id: true, title: true } },
+                    progress: {
+                      where: { studentId: student.id },
+                      select: { completedAt: true, lastViewedAt: true },
+                    },
                   },
                 },
               },
@@ -49,10 +56,30 @@ export default async function StudentDashboardPage() {
 
   const submittedQuizIds = new Set(submissions.map((s) => s.quizId));
 
-  // --- per-course progress (quiz-based proxy: a lesson counts as done once
-  // --- every quiz attached to it has a submission)
+  // --- per-course progress. With course_v2 this is real lesson completion.
+  // Without it, the old proxy stands in: a lesson counts as done once every
+  // quiz attached to it has a submission, and lessons with no quiz don't count
+  // at all — which is why the number could read 100% with most of a course
+  // unread.
   const courses = enrollments.map(({ course }) => {
     const lessons = course.chapters.flatMap((m) => m.lessons);
+
+    if (courseV2) {
+      const summary = summarizeCourseProgress(lessons);
+      const resume = summary.resumeLessonId
+        ? lessons.find((l) => l.id === summary.resumeLessonId)
+        : undefined;
+      return {
+        id: course.id,
+        title: course.title,
+        lessonCount: lessons.length,
+        total: summary.total,
+        done: summary.completed,
+        pct: summary.pct,
+        nextUp: resume ? { id: resume.id, title: resume.title } : null,
+      };
+    }
+
     const withQuiz = lessons.filter((l) => l.quizzes.length > 0);
     const done = withQuiz.filter((l) => l.quizzes.every((q) => submittedQuizIds.has(q.id)));
     const nextUp = withQuiz.find((l) => !l.quizzes.every((q) => submittedQuizIds.has(q.id)));
@@ -138,7 +165,7 @@ export default async function StudentDashboardPage() {
         <MetricTile
           label="Progres belajar"
           value={progressSummary(courses)}
-          sub="dari materi ber-kuis"
+          sub={courseV2 ? "materi selesai" : "dari materi ber-kuis"}
         />
         <MetricTile label="Sesi bulan ini" value={`${thisMonth}`} sub={upcoming.length > 0 ? "lanjutkan terus! 🔥" : "belum ada jadwal"} />
       </div>

@@ -73,6 +73,7 @@ model User {
   sessionsAsTutor   Session[]     @relation("SessionTutor")
   submissions       Submission[]
   submissionAttempts SubmissionAttempt[]
+  lessonProgress    LessonProgress[]
   timedQuizSessions TimedQuizSession[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -133,6 +134,7 @@ model Lesson {
   status    LessonStatus   @default(DRAFT)
   blocks    ContentBlock[]
   quizzes   Quiz[]
+  progress  LessonProgress[]
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
@@ -150,6 +152,24 @@ model ContentBlock {
   updatedAt DateTime  @updatedAt
 
   @@index([lessonId, order])
+}
+
+// A student's progress through one lesson. A row exists as soon as they open
+// the lesson; `completedAt` stays null until they actually mark it done, so
+// "started" and "finished" are distinguishable and the course page can offer a
+// resume point rather than only a percentage.
+model LessonProgress {
+  studentId    String    @db.Uuid
+  lessonId     String    @db.Uuid
+  student      User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson       Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completedAt  DateTime? @db.Timestamptz(3)
+  lastViewedAt DateTime  @default(now()) @db.Timestamptz(3)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@id([studentId, lessonId])
+  @@index([lessonId])
 }
 
 model Session {

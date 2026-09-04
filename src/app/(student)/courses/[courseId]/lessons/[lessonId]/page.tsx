@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { BlockRenderer } from "@/components/blocks/renderers";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { LessonCompletion } from "@/components/student/LessonCompletion";
+import { isEnabled } from "@/lib/flags";
 
 export default async function StudentLessonPage({
   params,
@@ -12,6 +14,7 @@ export default async function StudentLessonPage({
 }) {
   const { courseId, lessonId } = await params;
   const student = await requireStudent();
+  const courseV2 = await isEnabled("course_v2");
 
   const lesson = await db.lesson.findFirst({
     where: {
@@ -30,6 +33,7 @@ export default async function StudentLessonPage({
         select: { id: true, title: true },
         orderBy: { createdAt: "asc" },
       },
+      progress: { where: { studentId: student.id }, select: { completedAt: true } },
     },
   });
   if (!lesson) notFound();
@@ -77,6 +81,13 @@ export default async function StudentLessonPage({
           )}
         </div>
       </article>
+
+      {courseV2 && (
+        <LessonCompletion
+          lessonId={lesson.id}
+          initialComplete={lesson.progress[0]?.completedAt != null}
+        />
+      )}
 
       {lesson.quizzes.length > 0 && (
         <section className="rounded-xl border border-zinc-200 bg-white p-5">
