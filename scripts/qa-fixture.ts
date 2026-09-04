@@ -100,18 +100,35 @@ async function create() {
       description: "Disposable QA fixture — safe to delete.",
       ownerId: tutorId,
       chapters: {
-        create: {
-          title: "ZZQA Chapter 1",
-          order: 0,
-          lessons: {
-            create: { title: "ZZQA Media Lesson", order: 0, status: "PUBLISHED" },
+        create: [
+          {
+            title: "ZZQA Chapter 1 — Media",
+            order: 0,
+            lessons: {
+              create: [
+                { title: "ZZQA Media Lesson", order: 0, status: "PUBLISHED" },
+                { title: "ZZQA Reading Lesson", order: 1, status: "PUBLISHED" },
+              ],
+            },
           },
-        },
+          {
+            title: "ZZQA Chapter 2 — Practice",
+            order: 1,
+            lessons: {
+              create: [
+                { title: "ZZQA Python Lesson", order: 0, status: "PUBLISHED" },
+                { title: "ZZQA Draft Lesson", order: 1, status: "DRAFT" },
+              ],
+            },
+          },
+        ],
       },
     },
-    include: { chapters: { include: { lessons: true } } },
+    include: { chapters: { orderBy: { order: "asc" }, include: { lessons: { orderBy: { order: "asc" } } } } },
   });
   const lesson = course.chapters[0].lessons[0];
+  const readingLesson = course.chapters[0].lessons[1];
+  const pythonLesson = course.chapters[1].lessons[0];
   await db.enrollment.create({ data: { studentId, courseId: course.id } });
 
   if (!fs.existsSync(PDF)) writeFixturePdf(PDF);
@@ -132,6 +149,18 @@ async function create() {
 
   await db.contentBlock.createMany({
     data: [
+      {
+        lessonId: readingLesson.id,
+        order: 0,
+        type: "MARKDOWN",
+        data: { markdown: "## Reading only\n\nThis lesson should be labelled a reading." },
+      },
+      {
+        lessonId: pythonLesson.id,
+        order: 0,
+        type: "CODE_EDITOR",
+        data: { starterCode: 'print("hello from the QA fixture")\n' },
+      },
       {
         lessonId: lesson.id,
         order: 0,
@@ -221,6 +250,26 @@ async function create() {
       },
     },
   });
+  await db.quiz.create({
+    data: {
+      title: "ZZQA Chapter 2 Quiz",
+      lessonId: pythonLesson.id,
+      status: "PUBLISHED",
+      questions: {
+        create: [
+          {
+            order: 0,
+            type: "NUMERIC",
+            prompt: "How many chapters does this fixture have?",
+            options: [],
+            correctAnswer: { value: 2, tolerance: 0 },
+            points: 5,
+          },
+        ],
+      },
+    },
+  });
+
   await db.submission.create({
     data: {
       quizId: published.id,

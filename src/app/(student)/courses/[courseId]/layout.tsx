@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { SidebarNav, type SidebarSection } from "@/components/ui/SidebarNav";
 import { SidebarShell } from "@/components/ui/SidebarShell";
+import { isEnabled } from "@/lib/flags";
 
 export default async function StudentTrackLayout({
   children,
@@ -13,6 +14,7 @@ export default async function StudentTrackLayout({
 }) {
   const { courseId } = await params;
   const student = await requireStudent();
+  const courseV2 = await isEnabled("course_v2");
 
   const course = await db.course.findFirst({
     where: { id: courseId, enrollments: { some: { studentId: student.id } } },
@@ -23,7 +25,11 @@ export default async function StudentTrackLayout({
           lessons: {
             where: { status: "PUBLISHED" },
             orderBy: { order: "asc" },
-            select: { id: true, title: true },
+            select: {
+              id: true,
+              title: true,
+              progress: { where: { studentId: student.id }, select: { completedAt: true } },
+            },
           },
         },
       },
@@ -34,14 +40,19 @@ export default async function StudentTrackLayout({
   const sections: SidebarSection[] = [
     { items: [{ href: `/courses/${course.id}`, label: "Overview" }] },
     ...course.chapters
-      .filter((m) => m.lessons.length > 0)
-      .map((m) => ({
-        title: m.title,
-        items: m.lessons.map((l) => ({
-          href: `/courses/${course.id}/lessons/${l.id}`,
-          label: l.title,
-        })),
-      })),
+      .filter((c) => c.lessons.length > 0)
+      .map((c) => {
+        const done = c.lessons.filter((l) => l.progress[0]?.completedAt != null).length;
+        return {
+          title: c.title,
+          meta: courseV2 ? `${done}/${c.lessons.length}` : undefined,
+          items: c.lessons.map((l) => ({
+            href: `/courses/${course.id}/lessons/${l.id}`,
+            label: l.title,
+            done: courseV2 ? l.progress[0]?.completedAt != null : undefined,
+          })),
+        };
+      }),
   ];
 
   return (
