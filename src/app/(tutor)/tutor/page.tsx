@@ -23,12 +23,12 @@ export default async function TutorDashboardPage() {
   const tutor = await requireTutor();
   const now = new Date(nowMs());
 
-  const [tracks, studentCount, sessions] = await Promise.all([
-    db.track.findMany({
+  const [courses, studentCount, sessions] = await Promise.all([
+    db.course.findMany({
       where: { ownerId: tutor.id },
       orderBy: { createdAt: "asc" },
       include: {
-        modules: { include: { lessons: { select: { status: true } } } },
+        chapters: { include: { lessons: { select: { status: true } } } },
         _count: { select: { enrollments: true } },
       },
     }),
@@ -47,9 +47,9 @@ export default async function TutorDashboardPage() {
   const sessionsThisWeek = upcoming.filter((s) => s.startTime.getTime() <= weekFromNow).length;
 
   let draftLessons = 0;
-  for (const track of tracks) {
-    for (const mod of track.modules) {
-      draftLessons += mod.lessons.filter((l) => l.status === "DRAFT").length;
+  for (const course of courses) {
+    for (const chapter of course.chapters) {
+      draftLessons += chapter.lessons.filter((l) => l.status === "DRAFT").length;
     }
   }
 
@@ -84,7 +84,7 @@ export default async function TutorDashboardPage() {
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Pill>{tracks.length} tracks</Pill>
+          <Pill>{courses.length} courses</Pill>
           <Pill>{studentCount} students</Pill>
           <Pill>{sessionsThisWeek} sessions this week</Pill>
           {draftLessons > 0 && (
@@ -110,41 +110,41 @@ export default async function TutorDashboardPage() {
         </Link>
       )}
 
-      {/* Tracks — subject grid */}
+      {/* Courses — subject grid */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-medium text-zinc-900">Your tracks</h2>
-          <Link href="/tutor/tracks" className="text-sm font-medium text-blue-700 hover:underline">
+          <h2 className="font-medium text-zinc-900">Your courses</h2>
+          <Link href="/tutor/courses" className="text-sm font-medium text-blue-700 hover:underline">
             Manage all →
           </Link>
         </div>
-        {tracks.length === 0 ? (
+        {courses.length === 0 ? (
           <p className="rounded-xl border border-dashed border-zinc-300 px-5 py-6 text-center text-sm text-zinc-500">
-            No tracks yet — head to Tracks to create one.
+            No courses yet — head to Courses to create one.
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {tracks.map((track, i) => {
-              const lessonCount = track.modules.reduce((n, m) => n + m.lessons.length, 0);
-              const published = track.modules.reduce(
+            {courses.map((course, i) => {
+              const lessonCount = course.chapters.reduce((n, m) => n + m.lessons.length, 0);
+              const published = course.chapters.reduce(
                 (n, m) => n + m.lessons.filter((l) => l.status === "PUBLISHED").length,
                 0
               );
               return (
                 <Link
-                  key={track.id}
-                  href={`/tutor/tracks/${track.id}`}
+                  key={course.id}
+                  href={`/tutor/courses/${course.id}`}
                   className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 hover:border-blue-300 hover:shadow-sm"
                 >
                   <span
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-semibold ${badgeColorFor(i)}`}
                   >
-                    {track.title.charAt(0).toUpperCase()}
+                    {course.title.charAt(0).toUpperCase()}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-zinc-900">{track.title}</p>
+                    <p className="truncate text-sm font-medium text-zinc-900">{course.title}</p>
                     <p className="truncate text-xs text-zinc-500">
-                      {published}/{lessonCount} published · {track._count.enrollments} students
+                      {published}/{lessonCount} published · {course._count.enrollments} students
                     </p>
                   </div>
                 </Link>

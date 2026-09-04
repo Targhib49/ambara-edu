@@ -8,22 +8,22 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 export default async function StudentLessonPage({
   params,
 }: {
-  params: Promise<{ trackId: string; lessonId: string }>;
+  params: Promise<{ courseId: string; lessonId: string }>;
 }) {
-  const { trackId, lessonId } = await params;
+  const { courseId, lessonId } = await params;
   const student = await requireStudent();
 
   const lesson = await db.lesson.findFirst({
     where: {
       id: lessonId,
       status: "PUBLISHED",
-      module: {
-        trackId,
-        track: { enrollments: { some: { studentId: student.id } } },
+      chapter: {
+        courseId,
+        course: { enrollments: { some: { studentId: student.id } } },
       },
     },
     include: {
-      module: { select: { title: true, track: { select: { title: true } } } },
+      chapter: { select: { title: true, course: { select: { title: true } } } },
       blocks: { orderBy: { order: "asc" } },
       quizzes: {
         where: { status: "PUBLISHED" },
@@ -34,9 +34,9 @@ export default async function StudentLessonPage({
   });
   if (!lesson) notFound();
 
-  // Flattened published-lesson order across the track, for prev/next nav
-  const modules = await db.module.findMany({
-    where: { trackId },
+  // Flattened published-lesson order across the course, for prev/next nav
+  const chapters = await db.chapter.findMany({
+    where: { courseId },
     orderBy: { order: "asc" },
     include: {
       lessons: {
@@ -46,7 +46,7 @@ export default async function StudentLessonPage({
       },
     },
   });
-  const flat = modules.flatMap((m) => m.lessons);
+  const flat = chapters.flatMap((m) => m.lessons);
   const idx = flat.findIndex((l) => l.id === lesson.id);
   const prev = idx > 0 ? flat[idx - 1] : null;
   const next = idx < flat.length - 1 ? flat[idx + 1] : null;
@@ -56,15 +56,15 @@ export default async function StudentLessonPage({
       <Breadcrumbs
         items={[
           { label: "Home", href: "/dashboard" },
-          { label: "My tracks", href: "/tracks" },
-          { label: lesson.module.track.title, href: `/tracks/${trackId}` },
+          { label: "My courses", href: "/courses" },
+          { label: lesson.chapter.course.title, href: `/courses/${courseId}` },
           { label: lesson.title },
         ]}
       />
 
       <article className="rounded-xl border border-zinc-200 bg-white p-6 lg:p-10">
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-          {lesson.module.title}
+          {lesson.chapter.title}
         </p>
         <h1 className="mt-1 text-2xl font-semibold">{lesson.title}</h1>
 
@@ -100,7 +100,7 @@ export default async function StudentLessonPage({
       <nav className="flex items-stretch justify-between gap-4">
         {prev ? (
           <Link
-            href={`/tracks/${trackId}/lessons/${prev.id}`}
+            href={`/courses/${courseId}/lessons/${prev.id}`}
             className="max-w-[48%] rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 hover:border-blue-400 hover:text-blue-700"
           >
             <span className="block text-xs text-zinc-400">← Previous</span>
@@ -111,7 +111,7 @@ export default async function StudentLessonPage({
         )}
         {next ? (
           <Link
-            href={`/tracks/${trackId}/lessons/${next.id}`}
+            href={`/courses/${courseId}/lessons/${next.id}`}
             className="ml-auto max-w-[48%] rounded-lg border border-zinc-200 bg-white px-4 py-3 text-right text-sm text-zinc-700 hover:border-blue-400 hover:text-blue-700"
           >
             <span className="block text-xs text-zinc-400">Next →</span>

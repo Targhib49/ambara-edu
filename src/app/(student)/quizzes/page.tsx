@@ -13,14 +13,14 @@ export default async function StudentQuizzesPage() {
         {
           lesson: {
             status: "PUBLISHED",
-            module: { track: { enrollments: { some: { studentId: student.id } } } },
+            chapter: { course: { enrollments: { some: { studentId: student.id } } } },
           },
         },
         { lessonId: null }, // standalone try-outs
       ],
     },
     include: {
-      lesson: { select: { title: true, module: { select: { track: { select: { title: true } } } } } },
+      lesson: { select: { title: true, chapter: { select: { course: { select: { title: true } } } } } },
       questions: { select: { points: true } },
       submissions: { where: { studentId: student.id } },
       submissionAttempts: { where: { studentId: student.id }, select: { id: true } },
@@ -43,7 +43,7 @@ export default async function StudentQuizzesPage() {
       id: quiz.id,
       title: quiz.title,
       lessonTitle: quiz.lesson?.title ?? null,
-      trackTitle: quiz.lesson?.module.track.title ?? null,
+      trackTitle: quiz.lesson?.chapter.course.title ?? null,
       questionCount: quiz.questions.length,
       totalPoints,
       timeLimitMinutes: quiz.timeLimitMinutes,

@@ -22,7 +22,7 @@ export function StudentTable({
     name: string;
     email: string;
     studentGroup: StudentGroup | null;
-    tracks: string[];
+    courses: string[];
   }[];
 }) {
   if (students.length === 0) {
@@ -36,7 +36,7 @@ export function StudentTable({
             <th className="px-4 py-3">Name</th>
             <th className="px-4 py-3">Email</th>
             <th className="px-4 py-3">Group</th>
-            <th className="px-4 py-3">Tracks</th>
+            <th className="px-4 py-3">Courses</th>
             <th className="px-4 py-3" />
           </tr>
         </thead>
@@ -57,7 +57,7 @@ export function StudentTable({
               <td className="px-4 py-3 text-zinc-600">
                 {s.studentGroup ? GROUP_LABELS[s.studentGroup] : "—"}
               </td>
-              <td className="px-4 py-3 text-zinc-600">{s.tracks.join(", ") || "—"}</td>
+              <td className="px-4 py-3 text-zinc-600">{s.courses.join(", ") || "—"}</td>
               <td className="px-4 py-3 text-right">
                 <button
                   onClick={() => {

@@ -10,15 +10,15 @@ const UPCOMING_LIMIT = 5;
 export default async function StudentTrackPage({
   params,
 }: {
-  params: Promise<{ trackId: string }>;
+  params: Promise<{ courseId: string }>;
 }) {
-  const { trackId } = await params;
+  const { courseId } = await params;
   const student = await requireStudent();
 
-  const track = await db.track.findFirst({
-    where: { id: trackId, enrollments: { some: { studentId: student.id } } },
+  const course = await db.course.findFirst({
+    where: { id: courseId, enrollments: { some: { studentId: student.id } } },
     include: {
-      modules: {
+      chapters: {
         orderBy: { order: "asc" },
         include: {
           lessons: {
@@ -30,7 +30,7 @@ export default async function StudentTrackPage({
       },
     },
   });
-  if (!track) notFound();
+  if (!course) notFound();
 
   const upcomingSessions = await db.session.findMany({
     where: {
@@ -43,7 +43,7 @@ export default async function StudentTrackPage({
     take: UPCOMING_LIMIT,
   });
 
-  const firstLesson = track.modules.flatMap((m) => m.lessons)[0];
+  const firstLesson = course.chapters.flatMap((m) => m.lessons)[0];
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
@@ -51,16 +51,16 @@ export default async function StudentTrackPage({
         <Breadcrumbs
           items={[
             { label: "Home", href: "/dashboard" },
-            { label: "My tracks", href: "/tracks" },
-            { label: track.title },
+            { label: "My courses", href: "/courses" },
+            { label: course.title },
           ]}
         />
         <div className="rounded-xl border border-zinc-200 bg-white p-6 lg:p-8">
-          <h1 className="text-2xl font-semibold">{track.title}</h1>
-          {track.description && <p className="mt-2 text-sm text-zinc-600">{track.description}</p>}
+          <h1 className="text-2xl font-semibold">{course.title}</h1>
+          {course.description && <p className="mt-2 text-sm text-zinc-600">{course.description}</p>}
           {firstLesson && (
             <Link
-              href={`/tracks/${track.id}/lessons/${firstLesson.id}`}
+              href={`/courses/${course.id}/lessons/${firstLesson.id}`}
               className="mt-5 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
             >
               Start learning →
@@ -69,18 +69,18 @@ export default async function StudentTrackPage({
         </div>
 
         <div className="rounded-xl border border-zinc-200 bg-white">
-          {track.modules
+          {course.chapters
             .filter((m) => m.lessons.length > 0)
-            .map((mod, i) => (
-              <div key={mod.id} className={i > 0 ? "border-t border-zinc-200" : ""}>
+            .map((chapter, i) => (
+              <div key={chapter.id} className={i > 0 ? "border-t border-zinc-200" : ""}>
                 <p className="px-6 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                  {mod.title}
+                  {chapter.title}
                 </p>
                 <ul className="px-3 pb-3 pt-1">
-                  {mod.lessons.map((lesson) => (
+                  {chapter.lessons.map((lesson) => (
                     <li key={lesson.id}>
                       <Link
-                        href={`/tracks/${track.id}/lessons/${lesson.id}`}
+                        href={`/courses/${course.id}/lessons/${lesson.id}`}
                         className="block rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-blue-700"
                       >
                         {lesson.title}
@@ -90,7 +90,7 @@ export default async function StudentTrackPage({
                 </ul>
               </div>
             ))}
-          {track.modules.every((m) => m.lessons.length === 0) && (
+          {course.chapters.every((m) => m.lessons.length === 0) && (
             <p className="px-6 py-5 text-sm text-zinc-500">No published lessons yet.</p>
           )}
         </div>

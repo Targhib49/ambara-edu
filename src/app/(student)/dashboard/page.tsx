@@ -13,9 +13,9 @@ export default async function StudentDashboardPage() {
     db.enrollment.findMany({
       where: { studentId: student.id },
       include: {
-        track: {
+        course: {
           include: {
-            modules: {
+            chapters: {
               orderBy: { order: "asc" },
               include: {
                 lessons: {
@@ -49,16 +49,16 @@ export default async function StudentDashboardPage() {
 
   const submittedQuizIds = new Set(submissions.map((s) => s.quizId));
 
-  // --- per-track progress (quiz-based proxy: a lesson counts as done once
+  // --- per-course progress (quiz-based proxy: a lesson counts as done once
   // --- every quiz attached to it has a submission)
-  const tracks = enrollments.map(({ track }) => {
-    const lessons = track.modules.flatMap((m) => m.lessons);
+  const courses = enrollments.map(({ course }) => {
+    const lessons = course.chapters.flatMap((m) => m.lessons);
     const withQuiz = lessons.filter((l) => l.quizzes.length > 0);
     const done = withQuiz.filter((l) => l.quizzes.every((q) => submittedQuizIds.has(q.id)));
     const nextUp = withQuiz.find((l) => !l.quizzes.every((q) => submittedQuizIds.has(q.id)));
     return {
-      id: track.id,
-      title: track.title,
+      id: course.id,
+      title: course.title,
       lessonCount: lessons.length,
       total: withQuiz.length,
       done: done.length,
@@ -68,12 +68,12 @@ export default async function StudentDashboardPage() {
   });
 
   // --- quizzes due (available but never submitted)
-  const lessonQuizzesDue = enrollments.flatMap(({ track }) =>
-    track.modules.flatMap((m) =>
+  const lessonQuizzesDue = enrollments.flatMap(({ course }) =>
+    course.chapters.flatMap((m) =>
       m.lessons.flatMap((l) =>
         l.quizzes
           .filter((q) => !submittedQuizIds.has(q.id))
-          .map((q) => ({ id: q.id, title: q.title, context: `${track.title} · ${l.title}` }))
+          .map((q) => ({ id: q.id, title: q.title, context: `${course.title} · ${l.title}` }))
       )
     )
   );
@@ -121,7 +121,7 @@ export default async function StudentDashboardPage() {
   }).length;
 
   const chips = [
-    `${tracks.length} track${tracks.length === 1 ? "" : "s"}`,
+    `${courses.length} course${courses.length === 1 ? "" : "s"}`,
     `${due.length} kuis menunggu`,
     ...(avgPct !== null ? [`rata-rata nilai ${avgPct}%`] : []),
     `${thisMonth} sesi bulan ini`,
@@ -137,7 +137,7 @@ export default async function StudentDashboardPage() {
         <MetricTile label="Rata-rata nilai" value={avgPct !== null ? `${avgPct}%` : "—"} sub={bestPct !== null ? `terbaik ${bestPct}%` : "belum ada nilai"} />
         <MetricTile
           label="Progres belajar"
-          value={progressSummary(tracks)}
+          value={progressSummary(courses)}
           sub="dari materi ber-kuis"
         />
         <MetricTile label="Sesi bulan ini" value={`${thisMonth}`} sub={upcoming.length > 0 ? "lanjutkan terus! 🔥" : "belum ada jadwal"} />
@@ -145,14 +145,14 @@ export default async function StudentDashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-6">
-          {/* track progress */}
+          {/* course progress */}
           <section className="rounded-xl border border-zinc-200 bg-white p-5">
-            <h2 className="text-sm font-medium text-zinc-700">Progres track</h2>
+            <h2 className="text-sm font-medium text-zinc-700">Progres course</h2>
             <div className="mt-4 space-y-5">
-              {tracks.map((t) => (
+              {courses.map((t) => (
                 <div key={t.id}>
                   <div className="flex items-start justify-between gap-2">
-                    <Link href={`/tracks/${t.id}`} className="flex min-w-0 items-start gap-2 font-medium text-zinc-900 hover:underline">
+                    <Link href={`/courses/${t.id}`} className="flex min-w-0 items-start gap-2 font-medium text-zinc-900 hover:underline">
                       <span className={`mt-1 h-3 w-3 shrink-0 rounded-sm ${badgeColorForKey(t.title).split(" ")[0]}`} />
                       <span>{t.title}</span>
                     </Link>
@@ -166,14 +166,14 @@ export default async function StudentDashboardPage() {
                   {t.nextUp && (
                     <p className="mt-1.5 text-xs text-zinc-500">
                       Lanjut belajar:{" "}
-                      <Link href={`/tracks/${t.id}/lessons/${t.nextUp.id}`} className="text-blue-700 hover:underline">
+                      <Link href={`/courses/${t.id}/lessons/${t.nextUp.id}`} className="text-blue-700 hover:underline">
                         {t.nextUp.title}
                       </Link>
                     </p>
                   )}
                 </div>
               ))}
-              {tracks.length === 0 && <p className="text-sm text-zinc-500">Belum terdaftar di track manapun.</p>}
+              {courses.length === 0 && <p className="text-sm text-zinc-500">Belum terdaftar di course manapun.</p>}
             </div>
           </section>
 
@@ -247,9 +247,9 @@ export default async function StudentDashboardPage() {
   );
 }
 
-function progressSummary(tracks: { done: number; total: number }[]) {
-  const total = tracks.reduce((n, t) => n + t.total, 0);
-  const done = tracks.reduce((n, t) => n + t.done, 0);
+function progressSummary(courses: { done: number; total: number }[]) {
+  const total = courses.reduce((n, t) => n + t.total, 0);
+  const done = courses.reduce((n, t) => n + t.done, 0);
   return total === 0 ? "—" : `${Math.round((done / total) * 100)}%`;
 }
 

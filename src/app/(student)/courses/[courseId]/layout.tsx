@@ -9,15 +9,15 @@ export default async function StudentTrackLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ trackId: string }>;
+  params: Promise<{ courseId: string }>;
 }) {
-  const { trackId } = await params;
+  const { courseId } = await params;
   const student = await requireStudent();
 
-  const track = await db.track.findFirst({
-    where: { id: trackId, enrollments: { some: { studentId: student.id } } },
+  const course = await db.course.findFirst({
+    where: { id: courseId, enrollments: { some: { studentId: student.id } } },
     include: {
-      modules: {
+      chapters: {
         orderBy: { order: "asc" },
         include: {
           lessons: {
@@ -29,23 +29,23 @@ export default async function StudentTrackLayout({
       },
     },
   });
-  if (!track) notFound();
+  if (!course) notFound();
 
   const sections: SidebarSection[] = [
-    { items: [{ href: `/tracks/${track.id}`, label: "Overview" }] },
-    ...track.modules
+    { items: [{ href: `/courses/${course.id}`, label: "Overview" }] },
+    ...course.chapters
       .filter((m) => m.lessons.length > 0)
       .map((m) => ({
         title: m.title,
         items: m.lessons.map((l) => ({
-          href: `/tracks/${track.id}/lessons/${l.id}`,
+          href: `/courses/${course.id}/lessons/${l.id}`,
           label: l.title,
         })),
       })),
   ];
 
   return (
-    <SidebarShell title={track.title} sidebar={<SidebarNav sections={sections} />}>
+    <SidebarShell title={course.title} sidebar={<SidebarNav sections={sections} />}>
       {children}
     </SidebarShell>
   );

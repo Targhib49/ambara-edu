@@ -6,6 +6,7 @@ import { addBlock, addFileBlock, deleteBlock, moveBlock } from "@/lib/actions/bl
 import { BlockRenderer } from "@/components/blocks/renderers";
 import { BlockEditor } from "@/components/blocks/editors";
 import { toAnyBlock } from "@/lib/blocks/schema";
+import type { BlockType } from "@/generated/prisma/enums";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
@@ -26,18 +27,18 @@ const BLOCK_LABELS = {
 export default async function LessonEditorPage({
   params,
 }: {
-  params: Promise<{ trackId: string; lessonId: string }>;
+  params: Promise<{ courseId: string; lessonId: string }>;
 }) {
-  const { trackId, lessonId } = await params;
+  const { courseId, lessonId } = await params;
   const lesson = await db.lesson.findUnique({
     where: { id: lessonId },
     include: {
-      module: { select: { title: true, trackId: true, track: { select: { title: true } } } },
+      chapter: { select: { title: true, courseId: true, course: { select: { title: true } } } },
       blocks: { orderBy: { order: "asc" } },
       quizzes: { select: { id: true, title: true }, orderBy: { createdAt: "asc" } },
     },
   });
-  if (!lesson || lesson.module.trackId !== trackId) notFound();
+  if (!lesson || lesson.chapter.courseId !== courseId) notFound();
 
   return (
     <div className="space-y-8">
@@ -45,12 +46,12 @@ export default async function LessonEditorPage({
         <Breadcrumbs
           items={[
             { label: "Home", href: "/tutor" },
-            { label: "Tracks", href: "/tutor/tracks" },
-            { label: lesson.module.track.title, href: `/tutor/tracks/${trackId}` },
+            { label: "Courses", href: "/tutor/courses" },
+            { label: lesson.chapter.course.title, href: `/tutor/courses/${courseId}` },
             { label: lesson.title },
           ]}
         />
-        <p className="mt-2 text-xs uppercase tracking-wide text-zinc-400">{lesson.module.title}</p>
+        <p className="mt-2 text-xs uppercase tracking-wide text-zinc-400">{lesson.chapter.title}</p>
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <form action={renameLesson.bind(null, lesson.id)} className="flex min-w-0 flex-1 gap-2">
             <input
@@ -104,7 +105,7 @@ export default async function LessonEditorPage({
               </div>
             </div>
             <div className="grid gap-4 p-4 lg:grid-cols-2">
-              <BlockEditor block={toAnyBlock(block)} />
+              <SafeBlockEditor block={block} />
               <div className="rounded-lg bg-zinc-50 p-4">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
                   Preview (saved state)
@@ -162,4 +163,31 @@ export default async function LessonEditorPage({
       </div>
     </div>
   );
+}
+
+
+/**
+ * `toAnyBlock` throws on a payload this build's Zod schemas don't recognise —
+ * which happens whenever the DB holds a block type or visualization component
+ * newer than the running code (a not-yet-deployed feature, or a rollback).
+ * Unguarded, that throw takes down the whole editor page rather than the one
+ * block, so the tutor can't even reach the Delete button to fix it.
+ */
+function SafeBlockEditor({ block }: { block: { id: string; type: BlockType; data: unknown } }) {
+  let parsed;
+  try {
+    parsed = toAnyBlock(block);
+  } catch {
+    return (
+      <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+        <p className="font-medium">This block can’t be edited by this version of the app.</p>
+        <p className="mt-1 text-xs">
+          Its saved data doesn’t match any known <code>{block.type}</code> shape — usually a block
+          created by a newer deploy. Deploying the matching code restores it; deleting it here is safe
+          if you no longer need it.
+        </p>
+      </div>
+    );
+  }
+  return <BlockEditor block={parsed} />;
 }

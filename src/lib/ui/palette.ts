@@ -1,4 +1,4 @@
-// Shared muted badge palette + initials helper, used anywhere a track,
+// Shared muted badge palette + initials helper, used anywhere a course,
 // student, or person needs a colored identity badge (dashboard, list rows).
 export const BADGE_PALETTE = [
   "bg-teal-50 text-teal-700",

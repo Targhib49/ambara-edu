@@ -35,6 +35,11 @@ const TYPE_ALIASES: Record<string, QuestionType> = {
 
 const HEADER_ALIASES: Record<string, string> = {
   lesson: "lesson",
+  course: "lesson",
+  "course/lesson": "lesson",
+  "course / lesson": "lesson",
+  // Kept from when a course was called a track — spreadsheets already written
+  // against the old header keep importing.
   track: "lesson",
   "track/lesson": "lesson",
   "track / lesson": "lesson",

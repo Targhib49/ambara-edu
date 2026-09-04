@@ -21,12 +21,12 @@ export async function requireUser() {
 
 export async function requireTutor() {
   const user = await requireUser();
-  if (user.role !== "TUTOR") redirect("/tracks");
+  if (user.role !== "TUTOR") redirect("/courses");
   return user;
 }
 
 export async function requireStudent() {
   const user = await requireUser();
-  if (user.role !== "STUDENT") redirect("/tutor/tracks");
+  if (user.role !== "STUDENT") redirect("/tutor/courses");
   return user;
 }

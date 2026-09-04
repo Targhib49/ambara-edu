@@ -10,25 +10,25 @@ export default async function TutorQuizzesPage() {
       orderBy: { createdAt: "desc" },
       include: {
         lesson: {
-          select: { title: true, module: { select: { track: { select: { title: true } } } } },
+          select: { title: true, chapter: { select: { course: { select: { title: true } } } } },
         },
         questions: { select: { points: true } },
         submissions: { select: { status: true } },
       },
     }),
     db.lesson.findMany({
-      orderBy: [{ module: { track: { title: "asc" } } }, { module: { order: "asc" } }, { order: "asc" }],
+      orderBy: [{ chapter: { course: { title: "asc" } } }, { chapter: { order: "asc" } }, { order: "asc" }],
       select: {
         id: true,
         title: true,
-        module: { select: { title: true, track: { select: { title: true } } } },
+        chapter: { select: { title: true, course: { select: { title: true } } } },
       },
     }),
   ]);
 
   const lessonOptions = lessons.map((l) => ({
     id: l.id,
-    label: `${l.module.track.title} / ${l.module.title} / ${l.title}`,
+    label: `${l.chapter.course.title} / ${l.chapter.title} / ${l.title}`,
   }));
   const quizOptions = quizzes.map((q) => ({ id: q.id, title: q.title }));
 
@@ -37,7 +37,7 @@ export default async function TutorQuizzesPage() {
     title: quiz.title,
     isDraft: quiz.status === "DRAFT",
     lessonTitle: quiz.lesson?.title ?? null,
-    trackTitle: quiz.lesson?.module.track.title ?? null,
+    trackTitle: quiz.lesson?.chapter.course.title ?? null,
     questionCount: quiz.questions.length,
     totalPoints: quiz.questions.reduce((n, q) => n + q.points, 0),
     timeLimitMinutes: quiz.timeLimitMinutes,

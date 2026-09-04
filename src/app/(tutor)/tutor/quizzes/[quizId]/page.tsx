@@ -28,17 +28,17 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
     db.quiz.findUnique({
       where: { id: quizId },
       include: {
-        lesson: { select: { title: true, moduleId: true } },
+        lesson: { select: { title: true, chapterId: true } },
         questions: { orderBy: { order: "asc" } },
         submissions: { include: { student: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
       },
     }),
     db.lesson.findMany({
-      orderBy: [{ module: { track: { title: "asc" } } }, { module: { order: "asc" } }, { order: "asc" }],
+      orderBy: [{ chapter: { course: { title: "asc" } } }, { chapter: { order: "asc" } }, { order: "asc" }],
       select: {
         id: true,
         title: true,
-        module: { select: { title: true, track: { select: { title: true } } } },
+        chapter: { select: { title: true, course: { select: { title: true } } } },
       },
     }),
   ]);
@@ -47,7 +47,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
   const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
   const lessonOptions = lessons.map((l) => ({
     id: l.id,
-    label: `${l.module.track.title} / ${l.module.title} / ${l.title}`,
+    label: `${l.chapter.course.title} / ${l.chapter.title} / ${l.title}`,
   }));
 
   return (

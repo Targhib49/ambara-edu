@@ -35,7 +35,7 @@ export default async function StudentQuizPage({
         {
           lesson: {
             status: "PUBLISHED",
-            module: { track: { enrollments: { some: { studentId: student.id } } } },
+            chapter: { course: { enrollments: { some: { studentId: student.id } } } },
           },
         },
         // standalone quiz (try-out): no lesson, open to any signed-in student
@@ -47,7 +47,7 @@ export default async function StudentQuizPage({
         select: {
           id: true,
           title: true,
-          module: { select: { trackId: true, track: { select: { title: true } } } },
+          chapter: { select: { courseId: true, course: { select: { title: true } } } },
         },
       },
       questions: { orderBy: { order: "asc" } },
@@ -92,9 +92,9 @@ export default async function StudentQuizPage({
   const crumbs: Crumb[] = quiz.lesson
     ? [
         { label: "Home", href: "/dashboard" },
-        { label: "My tracks", href: "/tracks" },
-        { label: quiz.lesson.module.track.title, href: `/tracks/${quiz.lesson.module.trackId}` },
-        { label: quiz.lesson.title, href: `/tracks/${quiz.lesson.module.trackId}/lessons/${quiz.lesson.id}` },
+        { label: "My courses", href: "/courses" },
+        { label: quiz.lesson.chapter.course.title, href: `/courses/${quiz.lesson.chapter.courseId}` },
+        { label: quiz.lesson.title, href: `/courses/${quiz.lesson.chapter.courseId}/lessons/${quiz.lesson.id}` },
         { label: quiz.title },
       ]
     : [
@@ -104,7 +104,7 @@ export default async function StudentQuizPage({
       ];
 
   const backHref = quiz.lesson
-    ? `/tracks/${quiz.lesson.module.trackId}/lessons/${quiz.lesson.id}`
+    ? `/courses/${quiz.lesson.chapter.courseId}/lessons/${quiz.lesson.id}`
     : "/quizzes";
   const backLabel = quiz.lesson ? `Back to lesson: ${quiz.lesson.title}` : "Back to quizzes";
 

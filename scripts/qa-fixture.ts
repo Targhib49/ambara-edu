@@ -1,10 +1,10 @@
 /**
- * THROWAWAY QA fixtures. `create` makes a disposable tutor + student, a track
+ * THROWAWAY QA fixtures. `create` makes a disposable tutor + student, a course
  * with one lesson exercising every block type, and two lesson-linked quizzes;
  * `destroy` removes all of it (auth users, storage objects, rows).
  *
  * The DB is shared with production, so nothing here may be visible to real
- * students: the fixture track is only enrolled to the fixture student, and no
+ * students: the fixture course is only enrolled to the fixture student, and no
  * PUBLISHED standalone try-out is ever created (those are visible to everyone).
  */
 import "dotenv/config";
@@ -67,7 +67,7 @@ export function writeFixturePdf(path: string) {
 type State = {
   tutorId: string;
   studentId: string;
-  trackId: string;
+  courseId: string;
   tutorEmail: string;
   studentEmail: string;
   storagePaths: string[];
@@ -94,14 +94,14 @@ async function create() {
   const tutorId = await mkUser(tutorEmail, "QA Tutor", "TUTOR");
   const studentId = await mkUser(studentEmail, "QA Student", "STUDENT");
 
-  const track = await db.track.create({
+  const course = await db.course.create({
     data: {
-      title: "ZZQA Fixture Track",
+      title: "ZZQA Fixture Course",
       description: "Disposable QA fixture — safe to delete.",
       ownerId: tutorId,
-      modules: {
+      chapters: {
         create: {
-          title: "ZZQA Module 1",
+          title: "ZZQA Chapter 1",
           order: 0,
           lessons: {
             create: { title: "ZZQA Media Lesson", order: 0, status: "PUBLISHED" },
@@ -109,10 +109,10 @@ async function create() {
         },
       },
     },
-    include: { modules: { include: { lessons: true } } },
+    include: { chapters: { include: { lessons: true } } },
   });
-  const lesson = track.modules[0].lessons[0];
-  await db.enrollment.create({ data: { studentId, trackId: track.id } });
+  const lesson = course.chapters[0].lessons[0];
+  await db.enrollment.create({ data: { studentId, courseId: course.id } });
 
   if (!fs.existsSync(PDF)) writeFixturePdf(PDF);
 
@@ -231,7 +231,7 @@ async function create() {
     },
   });
 
-  const state: State = { tutorId, studentId, trackId: track.id, tutorEmail, studentEmail, storagePaths };
+  const state: State = { tutorId, studentId, courseId: course.id, tutorEmail, studentEmail, storagePaths };
   fs.writeFileSync(STATE, JSON.stringify(state, null, 2));
   console.log(JSON.stringify({ ...state, password: PASSWORD, lessonId: lesson.id }, null, 2));
 }
@@ -242,8 +242,8 @@ async function destroy() {
   await db.submissionAttempt.deleteMany({ where: { studentId: state.studentId } });
   await db.submission.deleteMany({ where: { studentId: state.studentId } });
   await db.timedQuizSession.deleteMany({ where: { studentId: state.studentId } });
-  await db.quiz.deleteMany({ where: { lesson: { module: { trackId: state.trackId } } } });
-  await db.track.delete({ where: { id: state.trackId } });
+  await db.quiz.deleteMany({ where: { lesson: { chapter: { courseId: state.courseId } } } });
+  await db.course.delete({ where: { id: state.courseId } });
   await db.user.deleteMany({ where: { id: { in: [state.tutorId, state.studentId] } } });
   for (const id of [state.tutorId, state.studentId]) {
     const { error } = await supabase.auth.admin.deleteUser(id);

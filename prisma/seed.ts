@@ -92,15 +92,15 @@ async function main() {
   console.log(`Students: ${alice.email}, ${bob.email}`);
 
   // Wipe seed-owned content so re-running gives a clean slate
-  await db.track.deleteMany({ where: { title: { in: ["Junior High Math", "Control Systems"] } } });
+  await db.course.deleteMany({ where: { title: { in: ["Junior High Math", "Control Systems"] } } });
 
-  await db.track.create({
+  await db.course.create({
     data: {
       title: "Junior High Math",
       description: "Fractions, algebra basics, and a first taste of coding.",
       ownerId: tutor.id,
       enrollments: { create: [{ studentId: alice.id }] },
-      modules: {
+      chapters: {
         create: [
           {
             title: "Week 1: Fractions",
@@ -170,13 +170,13 @@ async function main() {
     },
   });
 
-  await db.track.create({
+  await db.course.create({
     data: {
       title: "Control Systems",
       description: "Classical control: transfer functions, time response, frequency response.",
       ownerId: tutor.id,
       enrollments: { create: [{ studentId: bob.id }] },
-      modules: {
+      chapters: {
         create: [
           {
             title: "Week 1: Transfer Functions",
@@ -224,7 +224,7 @@ async function main() {
     },
   });
 
-  console.log("Seeded 2 tracks with modules, lessons and content blocks.");
+  console.log("Seeded 2 courses with chapters, lessons and content blocks.");
 
   // --- Sessions: cover every status reachable in Phase 2 (PROPOSED is schema-only for now) ---
   await db.session.deleteMany({ where: { tutorId: tutor.id } });

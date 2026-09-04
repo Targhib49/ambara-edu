@@ -10,7 +10,7 @@ const { useOpen, setOpen } = createCollapsibleStore("lms:tutorNavOpen");
 
 const NAV_ITEMS = [
   { href: "/tutor", label: "Home", icon: HomeIcon, exact: true },
-  { href: "/tutor/tracks", label: "Tracks", icon: BookIcon, exact: false },
+  { href: "/tutor/courses", label: "Courses", icon: BookIcon, exact: false },
   { href: "/tutor/quizzes", label: "Quizzes", icon: ClipboardIcon, exact: false },
   { href: "/tutor/sessions", label: "Sessions", icon: CalendarIcon, exact: false },
   { href: "/tutor/students", label: "Students", icon: UsersIcon, exact: false },

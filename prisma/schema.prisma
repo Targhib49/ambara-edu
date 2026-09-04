@@ -68,7 +68,7 @@ model User {
   role              Role          @default(STUDENT)
   studentGroup      StudentGroup? // display/defaults only, not an access constraint
   enrollments       Enrollment[]
-  ownedTracks       Track[]       @relation("TrackOwner")
+  ownedCourses      Course[]      @relation("CourseOwner")
   sessionsAsStudent Session[]     @relation("SessionStudent")
   sessionsAsTutor   Session[]     @relation("SessionTutor")
   submissions       Submission[]
@@ -78,46 +78,56 @@ model User {
   updatedAt         DateTime      @updatedAt
 }
 
-model Track {
+
+// Course -> Chapter -> Lesson. The physical tables are still named Track and
+// Module (and the FK columns trackId/moduleId): production shares this
+// database with local dev, so renaming them for real would break the deployed
+// app the instant the migration ran, before the new code shipped. @@map/@map
+// keep the storage exactly as it is while the app speaks the new vocabulary.
+// Renaming the tables themselves is a separate, deliberate exercise.
+model Course {
   id          String       @id @default(uuid()) @db.Uuid
   title       String
   description String       @default("")
   ownerId     String       @db.Uuid
-  owner       User         @relation("TrackOwner", fields: [ownerId], references: [id])
-  modules     Module[]
+  owner       User         @relation("CourseOwner", fields: [ownerId], references: [id])
+  chapters    Chapter[]
   enrollments Enrollment[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  @@map("Track")
 }
 
 model Enrollment {
   studentId String   @db.Uuid
-  trackId   String   @db.Uuid
+  courseId  String   @map("trackId") @db.Uuid
   student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  track     Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  @@id([studentId, trackId])
-  @@index([trackId])
+  @@id([studentId, courseId])
+  @@index([courseId])
 }
 
-model Module {
+model Chapter {
   id        String   @id @default(uuid()) @db.Uuid
-  trackId   String   @db.Uuid
-  track     Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  courseId  String   @map("trackId") @db.Uuid
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   title     String
   order     Int
   lessons   Lesson[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([trackId, order])
+  @@index([courseId, order])
+  @@map("Module")
 }
 
 model Lesson {
   id        String         @id @default(uuid()) @db.Uuid
-  moduleId  String         @db.Uuid
-  module    Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  chapterId String         @map("moduleId") @db.Uuid
+  chapter   Chapter        @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   title     String
   order     Int
   status    LessonStatus   @default(DRAFT)
@@ -126,7 +136,7 @@ model Lesson {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
-  @@index([moduleId, order])
+  @@index([chapterId, order])
 }
 
 model ContentBlock {

@@ -18,7 +18,7 @@ export async function GET(
   const { blockId } = await params;
   const block = await db.contentBlock.findUnique({
     where: { id: blockId },
-    include: { lesson: { select: { status: true, module: { select: { trackId: true } } } } },
+    include: { lesson: { select: { status: true, chapter: { select: { courseId: true } } } } },
   });
   if (!block || block.type !== "FILE_ATTACHMENT") {
     return new NextResponse("Not found", { status: 404 });
@@ -27,7 +27,7 @@ export async function GET(
   if (user.role !== "TUTOR") {
     const enrolled = await db.enrollment.findUnique({
       where: {
-        studentId_trackId: { studentId: user.id, trackId: block.lesson.module.trackId },
+        studentId_courseId: { studentId: user.id, courseId: block.lesson.chapter.courseId },
       },
     });
     if (!enrolled || block.lesson.status !== "PUBLISHED") {

@@ -8,13 +8,13 @@ export default async function TutorTrackLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ trackId: string }>;
+  params: Promise<{ courseId: string }>;
 }) {
-  const { trackId } = await params;
-  const track = await db.track.findUnique({
-    where: { id: trackId },
+  const { courseId } = await params;
+  const course = await db.course.findUnique({
+    where: { id: courseId },
     include: {
-      modules: {
+      chapters: {
         orderBy: { order: "asc" },
         include: {
           lessons: { orderBy: { order: "asc" }, select: { id: true, title: true, status: true } },
@@ -22,14 +22,14 @@ export default async function TutorTrackLayout({
       },
     },
   });
-  if (!track) notFound();
+  if (!course) notFound();
 
   const sections: SidebarSection[] = [
-    { items: [{ href: `/tutor/tracks/${track.id}`, label: "Overview & settings" }] },
-    ...track.modules.map((m) => ({
+    { items: [{ href: `/tutor/courses/${course.id}`, label: "Overview & settings" }] },
+    ...course.chapters.map((m) => ({
       title: m.title,
       items: m.lessons.map((l) => ({
-        href: `/tutor/tracks/${track.id}/lessons/${l.id}`,
+        href: `/tutor/courses/${course.id}/lessons/${l.id}`,
         label: l.title,
         badge: l.status === "DRAFT" ? "Draft" : undefined,
       })),
@@ -37,7 +37,7 @@ export default async function TutorTrackLayout({
   ];
 
   return (
-    <SidebarShell title={track.title} sidebar={<SidebarNav sections={sections} />}>
+    <SidebarShell title={course.title} sidebar={<SidebarNav sections={sections} />}>
       {children}
     </SidebarShell>
   );

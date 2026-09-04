@@ -10,9 +10,9 @@ import { ATTACHMENTS_BUCKET, createSupabaseAdminClient } from "@/lib/supabase/ad
 async function lessonEditorPath(lessonId: string) {
   const lesson = await db.lesson.findUniqueOrThrow({
     where: { id: lessonId },
-    select: { module: { select: { trackId: true } } },
+    select: { chapter: { select: { courseId: true } } },
   });
-  return `/tutor/tracks/${lesson.module.trackId}/lessons/${lessonId}`;
+  return `/tutor/courses/${lesson.chapter.courseId}/lessons/${lessonId}`;
 }
 
 async function nextBlockOrder(lessonId: string) {

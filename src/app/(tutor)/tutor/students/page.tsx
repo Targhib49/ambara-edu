@@ -6,7 +6,7 @@ export default async function StudentsPage() {
   const students = await db.user.findMany({
     where: { role: "STUDENT" },
     orderBy: { name: "asc" },
-    include: { enrollments: { include: { track: { select: { title: true } } } } },
+    include: { enrollments: { include: { course: { select: { title: true } } } } },
   });
 
   return (
@@ -21,7 +21,7 @@ export default async function StudentsPage() {
           name: s.name,
           email: s.email,
           studentGroup: s.studentGroup,
-          tracks: s.enrollments.map((e) => e.track.title),
+          courses: s.enrollments.map((e) => e.course.title),
         }))}
       />
       <CreateStudentForm />
