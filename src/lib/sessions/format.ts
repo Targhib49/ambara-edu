@@ -1,4 +1,5 @@
 import type { SessionStatus } from "@/generated/prisma/enums";
+import { APP_TZ_OFFSET_MINUTES } from "@/lib/scheduling";
 
 export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   PROPOSED: "Proposed",
@@ -67,4 +68,24 @@ export function dateKey(iso: string | Date) {
 export function formatTimeOnly(iso: string | Date) {
   const date = typeof iso === "string" ? new Date(iso) : iso;
   return date.toLocaleString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
+/**
+ * Absolute session time for emails and other places with no browser locale to
+ * lean on. Rendered in the app's timezone rather than UTC — telling someone in
+ * Jakarta their lesson is at "09:00 UTC" is technically true and useless.
+ */
+export function formatSessionInstant(instant: Date) {
+  const shifted = new Date(instant.getTime() + APP_TZ_OFFSET_MINUTES * 60_000);
+  return (
+    shifted.toLocaleString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    }) + " WIB"
+  );
 }

@@ -74,6 +74,10 @@ model User {
   submissions       Submission[]
   submissionAttempts SubmissionAttempt[]
   lessonProgress    LessonProgress[]
+  availability      Availability[]
+  seriesAsTutor     SessionSeries[] @relation("SeriesTutor")
+  seriesAsStudent   SessionSeries[] @relation("SeriesStudent")
+  calendarFeed      CalendarFeedToken?
   timedQuizSessions TimedQuizSession[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -187,11 +191,66 @@ model Session {
   // and vice versa. A counter-proposal overwrites this and flips the status —
   // no history of earlier proposals is kept.
   proposedAltTime DateTime?     @db.Timestamptz(3)
+  // Set when this session was generated from a repeating booking. Occurrences
+  // are edited and cancelled individually — moving one never touches its
+  // siblings — so this is a provenance link, not a source of truth for timing.
+  seriesId        String?       @db.Uuid
+  series          SessionSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   @@index([tutorId, startTime])
   @@index([studentId, startTime])
+  @@index([seriesId])
+}
+
+// A weekly window the tutor is open to teach in, as a weekday plus a start
+// time in minutes from midnight. Interpreted in APP_TZ_OFFSET_MINUTES (see
+// src/lib/scheduling.ts) rather than stored as an instant, because "Tuesdays
+// at 4pm" is the thing being described, not one particular Tuesday.
+model Availability {
+  id              String   @id @default(uuid()) @db.Uuid
+  tutorId         String   @db.Uuid
+  tutor           User     @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  weekday         Int // 0 = Sunday .. 6 = Saturday
+  startMinute     Int // minutes from local midnight
+  durationMinutes Int
+  // Closed rather than deleted, so past bookings keep their context.
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tutorId, weekday])
+}
+
+// The recipe a repeating booking was generated from. Sessions are materialised
+// up front rather than computed on read, so each one can be moved, cancelled
+// or annotated on its own without the series having to model exceptions.
+model SessionSeries {
+  id              String    @id @default(uuid()) @db.Uuid
+  tutorId         String    @db.Uuid
+  studentId       String    @db.Uuid
+  tutor           User      @relation("SeriesTutor", fields: [tutorId], references: [id], onDelete: Cascade)
+  student         User      @relation("SeriesStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  weekday         Int
+  startMinute     Int
+  durationMinutes Int
+  occurrences     Int
+  startsOn        DateTime  @db.Timestamptz(3)
+  sessions        Session[]
+  createdAt       DateTime  @default(now())
+
+  @@index([tutorId])
+  @@index([studentId])
+}
+
+// Bearer token in a personal .ics subscription URL. One per user, regenerated
+// to revoke — anyone holding the link can read that person's schedule.
+model CalendarFeedToken {
+  token     String   @id
+  userId    String   @unique @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 model Quiz {

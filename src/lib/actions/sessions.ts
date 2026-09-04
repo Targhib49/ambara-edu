@@ -4,16 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireTutor, requireStudent } from "@/lib/auth";
 import { sendSessionEmail } from "@/lib/email";
-
-function formatUtc(date: Date) {
-  return (
-    date.toLocaleString("en-US", {
-      dateStyle: "full",
-      timeStyle: "short",
-      timeZone: "UTC",
-    }) + " UTC"
-  );
-}
+import { formatSessionInstant } from "@/lib/sessions/format";
 
 function revalidateSessions() {
   revalidatePath("/tutor/sessions");
@@ -44,7 +35,7 @@ export async function createSession(
     to: student.email,
     subject: "New session scheduled",
     heading: "A new session has been scheduled",
-    body: `${tutor.name} scheduled a ${durationMinutes}-minute session with you for ${formatUtc(startTime)}.`,
+    body: `${tutor.name} scheduled a ${durationMinutes}-minute session with you for ${formatSessionInstant(startTime)}.`,
   });
 
   revalidateSessions();
@@ -72,7 +63,7 @@ export async function moveSession(sessionId: string, newStartTimeIso: string) {
     to: session.student.email,
     subject: "Your session was rescheduled",
     heading: "Your tutor moved a session",
-    body: `${tutor.name} moved your session to ${formatUtc(newStartTime)}.`,
+    body: `${tutor.name} moved your session to ${formatSessionInstant(newStartTime)}.`,
   });
 
   revalidateSessions();
@@ -90,7 +81,7 @@ export async function cancelSession(sessionId: string) {
     to: session.student.email,
     subject: "Your session was cancelled",
     heading: "A session was cancelled",
-    body: `${tutor.name} cancelled your session that was scheduled for ${formatUtc(session.startTime)}.`,
+    body: `${tutor.name} cancelled your session that was scheduled for ${formatSessionInstant(session.startTime)}.`,
   });
 
   revalidateSessions();
@@ -114,7 +105,7 @@ export async function requestReschedule(sessionId: string, altTimeIso: string) {
     to: session.tutor.email,
     subject: "Reschedule requested",
     heading: "A student requested a reschedule",
-    body: `${student.name} asked to move their ${formatUtc(session.startTime)} session to ${formatUtc(altTime)}. Accept or propose another time in the Sessions tab.`,
+    body: `${student.name} asked to move their ${formatSessionInstant(session.startTime)} session to ${formatSessionInstant(altTime)}. Accept or propose another time in the Sessions tab.`,
   });
 
   revalidateSessions();
@@ -142,7 +133,7 @@ export async function tutorRespondToReschedule(
       to: existing.student.email,
       subject: "Reschedule accepted",
       heading: "Your reschedule request was accepted",
-      body: `${tutor.name} confirmed your session for ${formatUtc(session.startTime)}.`,
+      body: `${tutor.name} confirmed your session for ${formatSessionInstant(session.startTime)}.`,
     });
     revalidateSessions();
     return;
@@ -158,7 +149,7 @@ export async function tutorRespondToReschedule(
     to: existing.student.email,
     subject: "Your tutor proposed a different time",
     heading: "A different time was proposed",
-    body: `${tutor.name} proposed moving your session to ${formatUtc(altTime)} instead. Accept or counter-propose in the Sessions tab.`,
+    body: `${tutor.name} proposed moving your session to ${formatSessionInstant(altTime)} instead. Accept or counter-propose in the Sessions tab.`,
   });
   revalidateSessions();
 }
@@ -187,7 +178,7 @@ export async function studentRespondToReschedule(
       to: existing.tutor.email,
       subject: "Reschedule accepted",
       heading: "Your proposed time was accepted",
-      body: `${student.name} confirmed the session for ${formatUtc(session.startTime)}.`,
+      body: `${student.name} confirmed the session for ${formatSessionInstant(session.startTime)}.`,
     });
     revalidateSessions();
     return;
@@ -203,7 +194,7 @@ export async function studentRespondToReschedule(
     to: existing.tutor.email,
     subject: "Student proposed a different time",
     heading: "A different time was proposed",
-    body: `${student.name} countered with ${formatUtc(altTime)} instead. Accept or propose another time in the Sessions tab.`,
+    body: `${student.name} countered with ${formatSessionInstant(altTime)} instead. Accept or propose another time in the Sessions tab.`,
   });
   revalidateSessions();
 }

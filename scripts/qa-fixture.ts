@@ -288,9 +288,22 @@ async function create() {
 async function destroy() {
   const state: State = JSON.parse(fs.readFileSync(STATE, "utf8"));
   await supabase.storage.from(BUCKET).remove(state.storagePaths);
+  const ids = [state.tutorId, state.studentId];
   await db.submissionAttempt.deleteMany({ where: { studentId: state.studentId } });
   await db.submission.deleteMany({ where: { studentId: state.studentId } });
   await db.timedQuizSession.deleteMany({ where: { studentId: state.studentId } });
+  await db.lessonProgress.deleteMany({ where: { studentId: state.studentId } });
+  // Session has no cascade on its user relations, so these must go before the
+  // users do or the delete fails with a foreign-key error — which is exactly
+  // how fixtures once survived a teardown.
+  await db.session.deleteMany({
+    where: { OR: [{ studentId: { in: ids } }, { tutorId: { in: ids } }] },
+  });
+  await db.sessionSeries.deleteMany({
+    where: { OR: [{ studentId: { in: ids } }, { tutorId: { in: ids } }] },
+  });
+  await db.availability.deleteMany({ where: { tutorId: { in: ids } } });
+  await db.calendarFeedToken.deleteMany({ where: { userId: { in: ids } } });
   await db.quiz.deleteMany({ where: { lesson: { chapter: { courseId: state.courseId } } } });
   await db.course.delete({ where: { id: state.courseId } });
   await db.user.deleteMany({ where: { id: { in: [state.tutorId, state.studentId] } } });

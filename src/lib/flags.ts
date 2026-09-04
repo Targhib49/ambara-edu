@@ -32,6 +32,11 @@ export const FEATURE_FLAGS = {
     description:
       "Lesson completion tracking, progress on the course page, and resume-where-you-left-off.",
   },
+  scheduling_v2: {
+    label: "New scheduling",
+    description:
+      "Publish weekly availability, let students book open slots themselves, set up repeating sessions, and subscribe to a calendar feed.",
+  },
 } as const;
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;
