@@ -75,3 +75,13 @@ export function CloseIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function BeakerIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={`${base} ${className ?? ""}`} strokeWidth={1.8}>
+      <path d="M9.5 3v6.2L4.7 17.4A2 2 0 0 0 6.4 20.5h11.2a2 2 0 0 0 1.7-3.1L14.5 9.2V3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8.5 3h7" strokeLinecap="round" />
+      <path d="M7.2 14h9.6" strokeLinecap="round" />
+    </svg>
+  );
+}

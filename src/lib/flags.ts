@@ -32,6 +32,11 @@ export const FEATURE_FLAGS = {
     description:
       "Lesson completion tracking, progress on the course page, and resume-where-you-left-off.",
   },
+  playground: {
+    label: "Playground",
+    description:
+      "A page where students can explore the visualisations and the Python scratchpad outside a lesson.",
+  },
   scheduling_v2: {
     label: "New scheduling",
     description:

@@ -1,12 +1,14 @@
 import { requireStudent } from "@/lib/auth";
 import { StudentSidebar } from "@/components/ui/StudentSidebar";
 import { StudentTopBar } from "@/components/ui/StudentTopBar";
+import { isEnabled } from "@/lib/flags";
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const student = await requireStudent();
+  const playground = await isEnabled("playground");
   return (
     <div className="flex min-h-screen w-full flex-1">
-      <StudentSidebar />
+      <StudentSidebar showPlayground={playground} />
       <div className="flex min-w-0 flex-1 flex-col">
         <StudentTopBar userName={student.name} />
         <main className="flex-1 bg-zinc-50">{children}</main>

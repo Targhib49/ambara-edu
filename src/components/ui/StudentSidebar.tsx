@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createCollapsibleStore } from "@/lib/ui/collapsibleStore";
 import { mobileNav } from "@/lib/ui/mobileNavStore";
-import { BookIcon, CalendarIcon, ChevronLeftIcon, ClipboardIcon, HomeIcon, CloseIcon } from "@/components/ui/icons";
+import { BeakerIcon, BookIcon, CalendarIcon, ChevronLeftIcon, ClipboardIcon, HomeIcon, CloseIcon } from "@/components/ui/icons";
 
 const { useOpen, setOpen } = createCollapsibleStore("lms:studentNavOpen");
 
@@ -15,10 +15,23 @@ const NAV_ITEMS = [
   { href: "/sessions", label: "My sessions", icon: CalendarIcon },
 ] as const;
 
-function NavLinks({ pathname, showLabels, onLinkClick }: { pathname: string; showLabels: boolean; onLinkClick?: () => void }) {
+const PLAYGROUND_ITEM = { href: "/playground", label: "Playground", icon: BeakerIcon } as const;
+
+function NavLinks({
+  pathname,
+  showLabels,
+  showPlayground,
+  onLinkClick,
+}: {
+  pathname: string;
+  showLabels: boolean;
+  showPlayground: boolean;
+  onLinkClick?: () => void;
+}) {
+  const items = showPlayground ? [...NAV_ITEMS, PLAYGROUND_ITEM] : NAV_ITEMS;
   return (
     <nav className="flex-1 space-y-0.5 px-2 py-2">
-      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link
@@ -43,7 +56,7 @@ function NavLinks({ pathname, showLabels, onLinkClick }: { pathname: string; sho
 
 // Mirrors TutorSidebar's structure exactly, so both roles share one visual
 // shell language — same collapse behavior, same mobile drawer.
-export function StudentSidebar() {
+export function StudentSidebar({ showPlayground = false }: { showPlayground?: boolean }) {
   const pathname = usePathname();
   const open = useOpen();
   const mobileOpen = mobileNav.useOpen();
@@ -59,7 +72,7 @@ export function StudentSidebar() {
         <div className="flex h-14 items-center gap-2 px-4">
           <span className="text-lg font-bold text-white">{open ? "AmbaraEdu" : "AE"}</span>
         </div>
-        <NavLinks pathname={pathname} showLabels={open} />
+        <NavLinks pathname={pathname} showLabels={open} showPlayground={showPlayground} />
         <button
           onClick={() => setOpen(!open)}
           aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
@@ -88,7 +101,12 @@ export function StudentSidebar() {
                 <CloseIcon className="h-5 w-5" />
               </button>
             </div>
-            <NavLinks pathname={pathname} showLabels onLinkClick={() => mobileNav.setOpen(false)} />
+            <NavLinks
+              pathname={pathname}
+              showLabels
+              showPlayground={showPlayground}
+              onLinkClick={() => mobileNav.setOpen(false)}
+            />
           </aside>
         </div>
       )}
