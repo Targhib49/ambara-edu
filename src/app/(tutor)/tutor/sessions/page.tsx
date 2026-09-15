@@ -4,99 +4,123 @@ import { SessionsBoard } from "@/components/sessions/SessionsBoard";
 import type { TutorSessionTableRow } from "@/components/sessions/TutorSessionsTable";
 import { formatSessionShort, nowMs } from "@/lib/sessions/format";
 import { ScheduleSessionForm } from "@/components/sessions/ScheduleSessionForm";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { AvailabilityEditor } from "@/components/sessions/AvailabilityEditor";
-import { RecurringSessionForm } from "@/components/sessions/RecurringSessionForm";
 import { CalendarFeedCard } from "@/components/sessions/CalendarFeedCard";
 import { ensureCalendarToken } from "@/lib/actions/booking";
 import { isEnabled } from "@/lib/flags";
 import { toLocalParts } from "@/lib/scheduling";
 import { feedUrlFor } from "@/lib/sessions/feedUrl";
+import { PageHeader, PageTabs } from "@/components/ui/PageHeader";
+import { SlideOverButton } from "@/components/ui/SlideOver";
+import { studentOptions } from "@/lib/students/options";
 
-export default async function TutorSessionsPage() {
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function localDate(instant: Date) {
+  const p = toLocalParts(instant);
+  return `${p.year}-${String(p.month + 1).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+}
+
+export default async function TutorSessionsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const tutor = await requireTutor();
   const schedulingV2 = await isEnabled("scheduling_v2");
+  const { tab: requestedTab } = await searchParams;
+  const tab = schedulingV2 && requestedTab === "availability" ? "availability" : "schedule";
 
-  const [sessions, students] = await Promise.all([
+  const [sessions, students, activeWindows] = await Promise.all([
     db.session.findMany({
       where: { tutorId: tutor.id },
-      include: { student: { select: { id: true, name: true } } },
+      include: { student: { select: { name: true } } },
       orderBy: { startTime: "asc" },
     }),
-    db.user.findMany({ where: { role: "STUDENT" }, orderBy: { name: "asc" } }),
+    studentOptions(),
+    schedulingV2 ? db.availability.count({ where: { tutorId: tutor.id, active: true } }) : 0,
   ]);
 
-  const windows = schedulingV2
-    ? await db.availability.findMany({
-        where: { tutorId: tutor.id },
-        orderBy: [{ weekday: "asc" }, { startMinute: "asc" }],
-      })
-    : [];
-  const feedUrl = schedulingV2 ? await feedUrlFor(await ensureCalendarToken()) : null;
-  // Default for the series start-date input, in the app's timezone rather than
-  // the server's.
-  const local = toLocalParts(new Date());
-  const todayValue = `${local.year}-${String(local.month + 1).padStart(2, "0")}-${String(local.day).padStart(2, "0")}`;
-
   const now = nowMs();
-  const rows: TutorSessionTableRow[] = sessions.map((s) => {
-    const local = toLocalParts(s.startTime);
-    return {
-      id: s.id,
-      studentName: s.student.name,
-      startTime: s.startTime.toISOString(),
-      whenLabel: formatSessionShort(s.startTime),
-      localDate: `${local.year}-${String(local.month + 1).padStart(2, "0")}-${String(local.day).padStart(2, "0")}`,
-      durationMinutes: s.durationMinutes,
-      status: s.status,
-      notes: s.notes,
-      statusReason: s.statusReason,
-      attendance: s.attendance,
-      proposedAltLabel: s.proposedAltTime ? formatSessionShort(s.proposedAltTime) : null,
-      hasStarted: s.startTime.getTime() <= now,
-    };
-  });
+  const rows: TutorSessionTableRow[] = sessions.map((s) => ({
+    id: s.id,
+    studentName: s.student.name,
+    startTime: s.startTime.toISOString(),
+    whenLabel: formatSessionShort(s.startTime),
+    localDate: localDate(s.startTime),
+    durationMinutes: s.durationMinutes,
+    status: s.status,
+    notes: s.notes,
+    statusReason: s.statusReason,
+    attendance: s.attendance,
+    proposedAltLabel: s.proposedAltTime ? formatSessionShort(s.proposedAltTime) : null,
+    hasStarted: s.startTime.getTime() <= now,
+  }));
+
+  const needsAction = rows.filter(
+    (r) => r.status === "RESCHEDULE_REQUESTED_BY_STUDENT" || (r.status === "CONFIRMED" && r.hasStarted)
+  ).length;
+  const thisWeek = sessions.filter(
+    (s) =>
+      (s.status === "CONFIRMED" || s.status === "PROPOSED") &&
+      s.startTime.getTime() >= now &&
+      s.startTime.getTime() < now + WEEK_MS
+  ).length;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8">
-      <div className="space-y-2">
-        <Breadcrumbs items={[{ label: "Home", href: "/tutor" }, { label: "Sessions" }]} />
-        <h1 className="text-2xl font-semibold">Sessions</h1>
-      </div>
-
-      {students.length === 0 ? (
-        <div className="rounded-xl border border-zinc-200 bg-white p-5">
-          <h2 className="font-medium">Schedule a session</h2>
-          <p className="mt-2 text-sm text-zinc-500">
-            No students yet — add one on the Students page first.
-          </p>
-        </div>
-      ) : (
-        <ScheduleSessionForm students={students.map((s) => ({ id: s.id, name: s.name }))} />
-      )}
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
+      <PageHeader
+        crumbs={[{ label: "Home", href: "/tutor" }, { label: "Sessions" }]}
+        title="Sessions"
+        meta={
+          <>
+            {thisWeek} in the next 7 days
+            {needsAction > 0 && <span className="text-amber-700"> · {needsAction} need your action</span>}
+          </>
+        }
+        actions={
+          students.length > 0 ? (
+            <SlideOverButton label="Schedule session" title="Schedule a session" description="All times are WIB.">
+              <ScheduleSessionForm students={students} allowWeekly={schedulingV2} today={localDate(new Date(now))} />
+            </SlideOverButton>
+          ) : null
+        }
+      />
 
       {schedulingV2 && (
-        <>
-          <AvailabilityEditor
-            windows={windows.map((w) => ({
-              id: w.id,
-              weekday: w.weekday,
-              startMinute: w.startMinute,
-              durationMinutes: w.durationMinutes,
-              active: w.active,
-            }))}
-          />
-          {students.length > 0 && (
-            <RecurringSessionForm
-              students={students.map((s) => ({ id: s.id, name: s.name }))}
-              today={todayValue}
-            />
-          )}
-          {feedUrl && <CalendarFeedCard url={feedUrl} />}
-        </>
+        <PageTabs
+          active={tab}
+          tabs={[
+            { key: "schedule", label: "Schedule", href: "/tutor/sessions" },
+            { key: "availability", label: "Availability & calendar", href: "/tutor/sessions?tab=availability", count: activeWindows },
+          ]}
+        />
       )}
 
-      <SessionsBoard role="tutor" sessions={rows} />
+      {tab === "schedule" ? (
+        <SessionsBoard role="tutor" sessions={rows} />
+      ) : (
+        <AvailabilityTab tutorId={tutor.id} />
+      )}
+    </div>
+  );
+}
+
+async function AvailabilityTab({ tutorId }: { tutorId: string }) {
+  const [windows, token] = await Promise.all([
+    db.availability.findMany({ where: { tutorId }, orderBy: [{ weekday: "asc" }, { startMinute: "asc" }] }),
+    ensureCalendarToken(),
+  ]);
+  const feedUrl = await feedUrlFor(token);
+
+  return (
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <AvailabilityEditor
+        windows={windows.map((w) => ({
+          id: w.id,
+          weekday: w.weekday,
+          startMinute: w.startMinute,
+          durationMinutes: w.durationMinutes,
+          active: w.active,
+        }))}
+      />
+      <CalendarFeedCard url={feedUrl} />
     </div>
   );
 }

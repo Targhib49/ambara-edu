@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireTutor, requireStudent } from "@/lib/auth";
 import { sendSessionEmail } from "@/lib/email";
 import { formatSessionInstant } from "@/lib/sessions/format";
-import { BOOKING_HORIZON_DAYS, generateSlots } from "@/lib/scheduling";
+import { BOOKING_HORIZON_DAYS, generateSlots, fromLocalParts } from "@/lib/scheduling";
 
 function revalidateSessions() {
   revalidatePath("/tutor/sessions");
@@ -14,13 +14,24 @@ function revalidateSessions() {
 
 export type CreateSessionState = { error?: string; success?: string };
 
+/**
+ * "2026-09-20T16:00" from the schedule form, read as app time (WIB). `new Date()`
+ * would read it in the server's own zone — UTC on Vercel — and put the session
+ * seven hours later than the tutor picked.
+ */
+function parseAppDateTime(value: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
+  if (!m) return new Date(NaN);
+  return fromLocalParts(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]) * 60 + Number(m[5]));
+}
+
 export async function createSession(
   _prev: CreateSessionState,
   formData: FormData
 ): Promise<CreateSessionState> {
   const tutor = await requireTutor();
   const studentId = String(formData.get("studentId") ?? "");
-  const startTime = new Date(String(formData.get("startTime") ?? ""));
+  const startTime = parseAppDateTime(String(formData.get("startTime") ?? ""));
   const durationMinutes = Number(formData.get("durationMinutes") ?? 60);
   if (!studentId) return { error: "Pick a student." };
   if (Number.isNaN(startTime.getTime())) return { error: "Pick a valid start time." };

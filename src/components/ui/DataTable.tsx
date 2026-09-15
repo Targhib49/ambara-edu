@@ -13,6 +13,7 @@
  */
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from "@/components/ui/icons";
 
 export type Column<T> = {
@@ -28,6 +29,10 @@ export type Column<T> = {
    */
   text?: (row: T) => string | number | null | undefined;
   align?: "left" | "right";
+  /** In the CSV download only — for detail already shown inside another cell. */
+  csvOnly?: boolean;
+  /** Drop the column on narrower screens, header and cells together. Still exported. */
+  hideBelow?: "lg" | "xl";
   /** Extra classes on the cell — widths, wrapping, tabular figures. */
   className?: string;
 };
@@ -37,6 +42,8 @@ export type Tab<T> = {
   label: string;
   match: (row: T) => boolean;
 };
+
+const HIDE_BELOW = { lg: "hidden lg:table-cell", xl: "hidden xl:table-cell" } as const;
 
 const control =
   "rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20";
@@ -66,11 +73,13 @@ export function DataTable<T>({
   actions,
   exportName,
   empty,
-  pageSize = 25,
+  pageSize: initialPageSize = 10,
   minWidth = "720px",
   initialSort,
   expandedKey,
   renderExpanded,
+  rowHref,
+  bulkActions,
 }: {
   rows: T[];
   columns: Column<T>[];
@@ -94,7 +103,15 @@ export function DataTable<T>({
   /** The row currently opened in place, if the screen opens rows. */
   expandedKey?: string | null;
   renderExpanded?: (row: T) => ReactNode;
+  /** Makes the whole row open this page. Buttons and links inside keep working. */
+  rowHref?: (row: T) => string;
+  /**
+   * Turns on row checkboxes. Rendered in a bar above the rows while anything is
+   * ticked; call `clear` once the action has run.
+   */
+  bulkActions?: (selected: T[], clear: () => void) => ReactNode;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState(initialTab ?? tabs?.[0]?.key ?? "all");
   const [q, setQ] = useState("");
   const [from, setFrom] = useState("");
@@ -102,6 +119,8 @@ export function DataTable<T>({
   const [sortKey, setSortKey] = useState(initialSort?.key ?? "");
   const [dir, setDir] = useState<"asc" | "desc">(initialSort?.dir ?? "asc");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(initialPageSize);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
 
   // Every filter change returns to page 1 in the handler itself rather than in
   // an effect — staying on page 7 of a filter with two results is
@@ -194,6 +213,32 @@ export function DataTable<T>({
 
   const hasFilterBar = Boolean(search || dateOf || toolbar || actions || exportName);
 
+  // Read back through the rows rather than trusting the stored keys, so a row
+  // deleted while ticked simply drops out of the selection.
+  const selectedRows = bulkActions ? rows.filter((r) => selectedKeys.has(rowKey(r))) : [];
+  const clearSelection = () => setSelectedKeys(new Set());
+  const pageKeys = shown.map(rowKey);
+  const allOnPageSelected = pageKeys.length > 0 && pageKeys.every((k) => selectedKeys.has(k));
+  const togglePage = () =>
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      for (const k of pageKeys) {
+        if (allOnPageSelected) next.delete(k);
+        else next.add(k);
+      }
+      return next;
+    });
+  const toggleRow = (key: string) =>
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const visibleColumns = columns.filter((c) => !c.csvOnly);
+  const columnCount = visibleColumns.length + (bulkActions ? 1 : 0);
+  const smallestPage = 5;
+
   return (
     <div className="space-y-3">
       {tabs && tabs.length > 0 && (
@@ -222,14 +267,16 @@ export function DataTable<T>({
 
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
         {hasFilterBar && (
-          <div className="flex flex-col gap-3 border-b border-zinc-200 p-4 lg:flex-row lg:items-center">
+          // Wraps rather than squeezing: search keeps a usable width and the
+          // filters drop to a second line when the screen runs out.
+          <div className="flex flex-wrap items-center gap-3 border-b border-zinc-200 p-4">
             {search && (
               <input
                 type="search"
                 value={q}
                 onChange={(e) => changeQuery(e.target.value)}
                 placeholder={search.placeholder}
-                className={`${control} min-w-0 flex-1`}
+                className={`${control} min-w-[14rem] flex-[1_1_16rem]`}
               />
             )}
             {dateOf && (
@@ -240,7 +287,7 @@ export function DataTable<T>({
               </div>
             )}
             {toolbar}
-            <div className="flex shrink-0 items-center gap-2 lg:ml-auto">
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               {exportName && (
                 <button
                   onClick={exportRows}
@@ -254,6 +301,16 @@ export function DataTable<T>({
               )}
               {actions}
             </div>
+          </div>
+        )}
+
+        {bulkActions && selectedRows.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-blue-100 bg-blue-50 px-4 py-2.5">
+            <span className="text-sm font-medium text-blue-900">{selectedRows.length} selected</span>
+            <div className="flex flex-wrap items-center gap-2">{bulkActions(selectedRows, clearSelection)}</div>
+            <button onClick={clearSelection} className="ml-auto text-xs font-medium text-blue-700 hover:underline">
+              Clear
+            </button>
           </div>
         )}
 
@@ -271,12 +328,23 @@ export function DataTable<T>({
             <table className="w-full border-collapse" style={{ minWidth }}>
               <thead className="bg-zinc-50">
                 <tr>
-                  {columns.map((c) => (
+                  {bulkActions && (
+                    <th className="w-10 px-3 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={allOnPageSelected}
+                        onChange={togglePage}
+                        aria-label="Select every row on this page"
+                        className="h-4 w-4 rounded border-zinc-300"
+                      />
+                    </th>
+                  )}
+                  {visibleColumns.map((c) => (
                     <th
                       key={c.key}
                       className={`whitespace-nowrap px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 ${
                         c.align === "right" ? "text-right" : "text-left"
-                      }`}
+                      } ${c.hideBelow ? HIDE_BELOW[c.hideBelow] : ""}`}
                     >
                       {c.sort ? (
                         <button onClick={() => toggleSort(c.key)} className="inline-flex items-center gap-1 uppercase hover:text-zinc-800">
@@ -297,22 +365,49 @@ export function DataTable<T>({
                   const key = rowKey(row);
                   const open = expandedKey === key && renderExpanded;
                   return (
-                    <tr key={key} className="border-t border-zinc-100 align-top hover:bg-zinc-50/70">
+                    <tr
+                      key={key}
+                      onClick={
+                        rowHref && !open
+                          ? (e) => {
+                              // Let controls inside the row do their own thing.
+                              if ((e.target as HTMLElement).closest("a,button,input,select,textarea,label")) return;
+                              router.push(rowHref(row));
+                            }
+                          : undefined
+                      }
+                      className={`border-t border-zinc-100 align-top hover:bg-zinc-50/70 ${rowHref && !open ? "cursor-pointer" : ""} ${
+                        selectedKeys.has(key) ? "bg-blue-50/40" : ""
+                      }`}
+                    >
                       {open ? (
-                        <td colSpan={columns.length} className="bg-zinc-50/70 p-4">
+                        <td colSpan={columnCount} className="bg-zinc-50/70 p-4">
                           {/* Pinned to the left edge of the scroll area, so a panel opened from a
                               column scrolled into view on a narrow screen isn't half off-screen. */}
                           <div className="sticky left-4 max-w-[calc(100vw-3rem)]">{renderExpanded(row)}</div>
                         </td>
                       ) : (
-                        columns.map((c) => (
+                        <>
+                        {bulkActions && (
+                          <td className="w-10 px-3 py-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedKeys.has(key)}
+                              onChange={() => toggleRow(key)}
+                              aria-label="Select row"
+                              className="h-4 w-4 rounded border-zinc-300"
+                            />
+                          </td>
+                        )}
+                        {visibleColumns.map((c) => (
                           <td
                             key={c.key}
-                            className={`px-3 py-3 text-[13px] text-zinc-600 ${c.align === "right" ? "text-right" : ""} ${c.className ?? ""}`}
+                            className={`px-3 py-3 text-[13px] text-zinc-600 ${c.align === "right" ? "text-right" : ""} ${c.hideBelow ? HIDE_BELOW[c.hideBelow] : ""} ${c.className ?? ""}`}
                           >
                             {c.cell(row)}
                           </td>
-                        ))
+                        ))}
+                        </>
                       )}
                     </tr>
                   );
@@ -322,11 +417,30 @@ export function DataTable<T>({
           </div>
         )}
 
-        {sorted.length > pageSize && (
-          <div className="flex items-center justify-between gap-3 border-t border-zinc-200 p-4">
-            <span className="text-xs tabular-nums text-zinc-500">
-              {start + 1}–{Math.min(start + pageSize, sorted.length)} of {sorted.length}
-            </span>
+        {sorted.length > smallestPage && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xs tabular-nums text-zinc-500">
+                {start + 1}–{Math.min(start + pageSize, sorted.length)} of {sorted.length}
+              </span>
+              <label className="flex items-center gap-1.5 text-xs text-zinc-500">
+                Rows
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="rounded-md border border-zinc-300 bg-white px-1.5 py-1 text-xs text-zinc-700"
+                >
+                  {[5, 10].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage(Math.max(1, currentPage - 1))}

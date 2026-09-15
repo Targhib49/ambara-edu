@@ -51,7 +51,28 @@ export async function setEnrollment(courseId: string, studentId: string, enrolle
   } else {
     await db.enrollment.deleteMany({ where: { studentId, courseId } });
   }
+  revalidateEnrollment(courseId, [studentId]);
+}
+
+/** Enroll several students at once — the bulk "Assign course" on the Students list. */
+export async function enrollStudents(courseId: string, studentIds: string[]): Promise<{ error?: string; count?: number }> {
+  await requireTutor();
+  if (!courseId) return { error: "Pick a course." };
+  const students = await db.user.findMany({ where: { id: { in: studentIds }, role: "STUDENT" }, select: { id: true } });
+  if (students.length === 0) return { error: "Pick at least one student." };
+  const { count } = await db.enrollment.createMany({
+    data: students.map((s) => ({ studentId: s.id, courseId })),
+    skipDuplicates: true,
+  });
+  revalidateEnrollment(courseId, students.map((s) => s.id));
+  return { count };
+}
+
+function revalidateEnrollment(courseId: string, studentIds: string[]) {
   revalidatePath(`/tutor/courses/${courseId}`);
+  revalidatePath("/tutor/courses");
+  revalidatePath("/tutor/students");
+  for (const id of studentIds) revalidatePath(`/tutor/students/${id}`);
 }
 
 const MAX_COVER_BYTES = 3 * 1024 * 1024;
