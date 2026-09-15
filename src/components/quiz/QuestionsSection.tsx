@@ -5,6 +5,7 @@ import { QuestionEditor, type QuestionForEdit } from "@/components/quiz/Question
 import { deleteQuestion, moveQuestion } from "@/lib/actions/quizzes";
 import { formatCorrectAnswer } from "@/lib/quiz/format";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import type { QuestionType } from "@/generated/prisma/enums";
 
 const smallBtn =
@@ -68,14 +69,10 @@ export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }
               </button>
               <div className="flex shrink-0 gap-1.5">
                 <form action={moveQuestion.bind(null, q.id, "up")}>
-                  <button className={smallBtn} disabled={i === 0} title="Move up">
-                    ↑
-                  </button>
+                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === 0} title="Move up">↑</SubmitButton>
                 </form>
                 <form action={moveQuestion.bind(null, q.id, "down")}>
-                  <button className={smallBtn} disabled={i === questions.length - 1} title="Move down">
-                    ↓
-                  </button>
+                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === questions.length - 1} title="Move down">↓</SubmitButton>
                 </form>
                 <form action={deleteQuestion.bind(null, q.id)}>
                   <ConfirmButton message="Delete this question?" className={`${smallBtn} text-red-600`}>

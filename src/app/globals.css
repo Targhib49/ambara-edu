@@ -10,3 +10,49 @@ body {
 pre.shiki {
   @apply overflow-x-auto rounded-lg p-4 text-sm;
 }
+
+/*
+ * Tailwind v4 no longer gives buttons a pointer cursor, which left most of the
+ * app's controls looking inert. Anything clickable says so on hover, anything
+ * disabled says it can't be used, and anything busy says it's working.
+ */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="option"],
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  label:has(> input[type="checkbox"]:not(:disabled)),
+  label:has(> input[type="radio"]:not(:disabled)) {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  fieldset:disabled label {
+    cursor: not-allowed;
+  }
+  [aria-busy="true"] {
+    cursor: progress;
+  }
+}
+
+/* The top-of-page bar shown while a page loads after a click: runs quickly to
+   about half-way, then slows so it never looks finished before it is. */
+@keyframes nav-progress {
+  0% {
+    width: 0%;
+  }
+  15% {
+    width: 45%;
+  }
+  60% {
+    width: 80%;
+  }
+  100% {
+    width: 94%;
+  }
+}

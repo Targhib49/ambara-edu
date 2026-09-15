@@ -214,14 +214,10 @@ function SyllabusTab({ course, lessonCount, quizCount }: { course: Course; lesso
             </span>
             <div className="flex items-center gap-1">
               <form action={moveChapter.bind(null, ch.id, "up")}>
-                <button className={btnSmall} disabled={ci === 0} aria-label="Move chapter up">
-                  ↑
-                </button>
+                <SubmitButton pendingLabel="" className={btnSmall} disabled={ci === 0} aria-label="Move chapter up">↑</SubmitButton>
               </form>
               <form action={moveChapter.bind(null, ch.id, "down")}>
-                <button className={btnSmall} disabled={ci === last} aria-label="Move chapter down">
-                  ↓
-                </button>
+                <SubmitButton pendingLabel="" className={btnSmall} disabled={ci === last} aria-label="Move chapter down">↓</SubmitButton>
               </form>
               {ch._count.quizzes > 0 ? (
                 <button className={`${btnSmall} text-zinc-400`} disabled title="Move or delete this chapter's quizzes first">
@@ -264,14 +260,10 @@ function SyllabusTab({ course, lessonCount, quizCount }: { course: Course; lesso
                       <NewQuizForm tree={tree} defaultCourseId={course.id} defaultChapterId={ch.id} defaultLessonId={lesson.id} />
                     </SlideOverButton>
                     <form action={moveLesson.bind(null, lesson.id, "up")}>
-                      <button className={btnSmall} disabled={li === 0} aria-label="Move lesson up">
-                        ↑
-                      </button>
+                      <SubmitButton pendingLabel="" className={btnSmall} disabled={li === 0} aria-label="Move lesson up">↑</SubmitButton>
                     </form>
                     <form action={moveLesson.bind(null, lesson.id, "down")}>
-                      <button className={btnSmall} disabled={li === ch.lessons.length - 1} aria-label="Move lesson down">
-                        ↓
-                      </button>
+                      <SubmitButton pendingLabel="" className={btnSmall} disabled={li === ch.lessons.length - 1} aria-label="Move lesson down">↓</SubmitButton>
                     </form>
                     <form action={deleteLesson.bind(null, lesson.id)}>
                       <ConfirmButton

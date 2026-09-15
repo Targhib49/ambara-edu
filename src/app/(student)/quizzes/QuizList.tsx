@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { startNavigation } from "@/lib/ui/navigationProgress";
 import type { SubmissionStatus } from "@/generated/prisma/enums";
 import { SUBMISSION_STATUS_BADGE_CLASS, SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
 import { ScoreRing } from "@/components/quiz/ScoreRing";
@@ -120,7 +121,10 @@ export function QuizList({ quizzes }: { quizzes: StudentQuizRow[] }) {
             {rows.map((q) => (
               <tr
                 key={q.id}
-                onClick={() => router.push(`/quizzes/${q.id}`)}
+                onClick={() => {
+                  startNavigation(`/quizzes/${q.id}`);
+                  router.push(`/quizzes/${q.id}`);
+                }}
                 className="cursor-pointer transition hover:bg-blue-50/40"
               >
                 <td className="px-4 py-3">

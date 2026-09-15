@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LinkPendingIndicator } from "@/components/ui/LinkPendingIndicator";
 import { usePathname } from "next/navigation";
 import { createCollapsibleStore } from "@/lib/ui/collapsibleStore";
 import { mobileNav } from "@/lib/ui/mobileNavStore";
@@ -47,6 +48,7 @@ function NavLinks({
           >
             <Icon className="h-5 w-5 shrink-0" />
             {showLabels && <span className="truncate">{label}</span>}
+            {showLabels && <LinkPendingIndicator className="ml-auto" />}
           </Link>
         );
       })}

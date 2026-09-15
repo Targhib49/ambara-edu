@@ -12,9 +12,10 @@
  * interface need not change.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from "@/components/ui/icons";
+import { startNavigation } from "@/lib/ui/navigationProgress";
 
 export type Column<T> = {
   key: string;
@@ -112,6 +113,9 @@ export function DataTable<T>({
   bulkActions?: (selected: T[], clear: () => void) => ReactNode;
 }) {
   const router = useRouter();
+  // The row being opened, so it can show it's loading until the page arrives.
+  const [opening, startOpening] = useTransition();
+  const [openingKey, setOpeningKey] = useState<string | null>(null);
   const [tab, setTab] = useState(initialTab ?? tabs?.[0]?.key ?? "all");
   const [q, setQ] = useState("");
   const [from, setFrom] = useState("");
@@ -372,13 +376,17 @@ export function DataTable<T>({
                           ? (e) => {
                               // Let controls inside the row do their own thing.
                               if ((e.target as HTMLElement).closest("a,button,input,select,textarea,label")) return;
-                              router.push(rowHref(row));
+                              const href = rowHref(row);
+                              setOpeningKey(key);
+                              startNavigation(href);
+                              startOpening(() => router.push(href));
                             }
                           : undefined
                       }
                       className={`border-t border-zinc-100 align-top hover:bg-zinc-50/70 ${rowHref && !open ? "cursor-pointer" : ""} ${
                         selectedKeys.has(key) ? "bg-blue-50/40" : ""
-                      }`}
+                      } ${opening && openingKey === key ? "animate-pulse bg-blue-50/70" : ""}`}
+                      aria-busy={opening && openingKey === key ? true : undefined}
                     >
                       {open ? (
                         <td colSpan={columnCount} className="bg-zinc-50/70 p-4">

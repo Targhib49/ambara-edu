@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
+import { LinkPendingIndicator } from "@/components/ui/LinkPendingIndicator";
 
 /**
  * The top of every tutor page: where you are, what this is, and the page's
@@ -64,6 +65,7 @@ export function PageTabs({ tabs, active }: { tabs: PageTab[]; active: string }) 
                 {t.count}
               </span>
             )}
+            <LinkPendingIndicator />
           </Link>
         );
       })}

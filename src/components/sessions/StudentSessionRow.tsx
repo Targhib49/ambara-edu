@@ -43,6 +43,8 @@ export function StudentSessionRow({
   rescheduleSlots?: OpenSlot[];
 }) {
   const [pending, startTransition] = useTransition();
+  // The slot just picked, so only that button says it is booking.
+  const [pickedSlot, setPickedSlot] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [altValue, setAltValue] = useState("");
   const [pickError, setPickError] = useState<string | null>(null);
@@ -100,6 +102,7 @@ export function StudentSessionRow({
                         disabled={pending}
                         onClick={() =>
                           startTransition(async () => {
+                            setPickedSlot(slot.startIso);
                             setPickError(null);
                             const result = await studentPickRescheduleSlot(session.id, slot.availabilityId, slot.startIso);
                             if (result.error) setPickError(result.error);
@@ -107,7 +110,7 @@ export function StudentSessionRow({
                         }
                         className="rounded-md border border-violet-300 bg-white px-2.5 py-1 text-sm text-violet-900 hover:border-violet-500 hover:bg-violet-100 disabled:opacity-50"
                       >
-                        {slot.timeLabel}
+                        {pending && pickedSlot === slot.startIso ? "Booking…" : slot.timeLabel}
                       </button>
                     ))}
                   </div>
@@ -154,7 +157,7 @@ export function StudentSessionRow({
                   })
                 }
               >
-                Send request
+                {pending ? "Sending…" : "Send request"}
               </button>
               <button className={smallBtn} onClick={() => setFormOpen(false)}>
                 Cancel
@@ -180,7 +183,7 @@ export function StudentSessionRow({
               className={primaryBtn}
               onClick={() => startTransition(() => studentRespondToReschedule(session.id, "accept"))}
             >
-              Accept
+              {pending ? "Accepting…" : "Accept"}
             </button>
             {formOpen ? (
               <span className="flex items-center gap-1.5">
@@ -200,7 +203,7 @@ export function StudentSessionRow({
                     })
                   }
                 >
-                  Send
+                  {pending ? "Sending…" : "Send"}
                 </button>
                 <button className={smallBtn} onClick={() => setFormOpen(false)}>
                   Cancel

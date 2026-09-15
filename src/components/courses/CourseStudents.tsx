@@ -20,6 +20,7 @@ export type CourseStudentRow = {
 
 export function CourseStudentsTable({ courseId, students }: { courseId: string; students: CourseStudentRow[] }) {
   const [pending, startTransition] = useTransition();
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const columns: Column<CourseStudentRow>[] = [
     {
@@ -68,12 +69,13 @@ export function CourseStudentsTable({ courseId, students }: { courseId: string; 
           disabled={pending}
           onClick={() => {
             if (confirm(`Remove ${s.name} from this course? Their progress is kept if you add them back.`)) {
+              setRemovingId(s.id);
               startTransition(() => setEnrollment(courseId, s.id, false));
             }
           }}
           className={`${btnSmall} text-red-600`}
         >
-          Remove
+          {pending && removingId === s.id ? "Removing…" : "Remove"}
         </button>
       ),
     },

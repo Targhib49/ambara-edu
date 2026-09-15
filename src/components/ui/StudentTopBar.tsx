@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { signOut } from "@/lib/actions/auth";
 import { mobileNav } from "@/lib/ui/mobileNavStore";
 import { MenuIcon } from "@/components/ui/icons";
@@ -26,7 +27,9 @@ export function StudentTopBar({ userName }: { userName: string }) {
           {userName}
         </Link>
         <form action={signOut}>
-          <button className="text-sm text-zinc-600 underline-offset-2 hover:underline">Sign out</button>
+          <SubmitButton pendingLabel="Signing out…" className="text-sm text-zinc-600 underline-offset-2 hover:underline">
+            Sign out
+          </SubmitButton>
         </form>
       </div>
     </header>

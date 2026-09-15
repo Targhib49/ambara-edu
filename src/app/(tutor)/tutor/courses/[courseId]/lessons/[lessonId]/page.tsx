@@ -103,10 +103,10 @@ export default async function LessonEditorPage({
               </span>
               <div className="ml-auto flex gap-1.5">
                 <form action={moveBlock.bind(null, block.id, "up")}>
-                  <button className={smallBtn} disabled={i === 0} title="Move up">↑</button>
+                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === 0} title="Move up">↑</SubmitButton>
                 </form>
                 <form action={moveBlock.bind(null, block.id, "down")}>
-                  <button className={smallBtn} disabled={i === lesson.blocks.length - 1} title="Move down">↓</button>
+                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === lesson.blocks.length - 1} title="Move down">↓</SubmitButton>
                 </form>
                 <form action={deleteBlock.bind(null, block.id)}>
                   <ConfirmButton message="Delete this block?" className={`${smallBtn} text-red-600`}>

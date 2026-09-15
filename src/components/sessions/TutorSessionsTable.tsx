@@ -337,7 +337,7 @@ export function TutorSessionsTable({ sessions }: { sessions: TutorSessionTableRo
                   disabled={pending}
                   onClick={() => startTransition(() => tutorRespondToReschedule(s.id, "accept"))}
                 >
-                  Accept
+                  {pending ? "Accepting…" : "Accept"}
                 </button>
                 <button className={smallBtn} onClick={() => setOpen({ id: s.id, mode: "counter" })}>
                   Counter
