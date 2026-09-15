@@ -12,7 +12,9 @@ import { ScoreRing } from "@/components/quiz/ScoreRing";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { QuizTakeForm } from "./QuizTakeForm";
 import { TimedQuizTakeForm } from "./TimedQuizTakeForm";
-import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
+import { type Crumb } from "@/components/ui/Breadcrumbs";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { btnSecondary } from "@/components/ui/styles";
 import type { Question } from "@/generated/prisma/client";
 
 export default async function StudentQuizPage({
@@ -94,23 +96,16 @@ export default async function StudentQuizPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
-      <div>
-        <Breadcrumbs items={crumbs} />
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">{quiz.title}</h1>
-            <p className="mt-1 text-sm text-zinc-500">
-              {quiz.questions.length} questions · {totalPoints} points total
-            </p>
-          </div>
-          <Link
-            href={backHref}
-            className="block max-w-full truncate rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
-          >
-            ← {backLabel}
+      <PageHeader
+        crumbs={crumbs}
+        title={quiz.title}
+        meta={`${quiz.questions.length} questions · ${totalPoints} points total`}
+        actions={
+          <Link href={backHref} className={`${btnSecondary} max-w-full`}>
+            <span className="truncate">← {backLabel}</span>
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {isTimed ? (
         <>
@@ -209,7 +204,10 @@ function QuizResults({
   /** Timed quizzes render their own "start next attempt" card instead. */
   hideRetakeLink?: boolean;
 }) {
-  const answers = submissionAnswersSchema.parse(submission.answers);
+  // A submission whose stored answers don't parse shouldn't take the whole page
+  // down — show the questions with nothing filled in rather than an error.
+  const parsedAnswers = submissionAnswersSchema.safeParse(submission.answers);
+  const answers = parsedAnswers.success ? parsedAnswers.data : [];
   const pendingCount = quiz.questions.filter((q) => {
     const answer = answers.find((a) => a.questionId === q.id);
     return gradeQuestion(q, answer?.response ?? null).status === "PENDING_REVIEW";

@@ -30,13 +30,7 @@ export function BookingPanel({ slots }: { slots: OpenSlot[] }) {
   const days = groupByDay(slots);
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5">
-      <h2 className="font-medium text-zinc-900">Book a session</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        Open times over the next four weeks, shown in WIB. Booking one confirms it straight away —
-        no waiting for a reply.
-      </p>
-
+    <section>
       {state.error && <p className="mt-3 text-sm text-red-600">{state.error}</p>}
       {state.success && <p className="mt-3 text-sm text-green-700">{state.success}</p>}
 

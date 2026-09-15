@@ -296,13 +296,24 @@ async function create() {
     },
   });
 
+  // Answers are stored as an array of { questionId, response } — the same shape
+  // submitQuizAnswers writes and the results view parses. One right, one wrong,
+  // so the results page exercises both.
+  const publishedQuestions = await db.question.findMany({
+    where: { quizId: published.id },
+    orderBy: { order: "asc" },
+    select: { id: true },
+  });
   await db.submission.create({
     data: {
       quizId: published.id,
       studentId,
       status: "AUTO_GRADED",
-      autoScore: 15,
-      answers: {},
+      autoScore: 10,
+      answers: [
+        { questionId: publishedQuestions[0].id, response: { letter: "B" } },
+        { questionId: publishedQuestions[1].id, response: { value: 8 } },
+      ],
     },
   });
 

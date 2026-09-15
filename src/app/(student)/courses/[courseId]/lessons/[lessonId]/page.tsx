@@ -5,6 +5,7 @@ import { requireStudent } from "@/lib/auth";
 import { BlockRenderer } from "@/components/blocks/renderers";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { LessonCompletion } from "@/components/student/LessonCompletion";
+import { cardCls } from "@/components/ui/styles";
 import { isEnabled } from "@/lib/flags";
 
 export default async function StudentLessonPage({
@@ -66,7 +67,7 @@ export default async function StudentLessonPage({
         ]}
       />
 
-      <article className="rounded-xl border border-zinc-200 bg-white p-6 lg:p-10">
+      <article className={`${cardCls} p-6 lg:p-10`}>
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
           {lesson.chapter.title}
         </p>
@@ -90,7 +91,7 @@ export default async function StudentLessonPage({
       )}
 
       {lesson.quizzes.length > 0 && (
-        <section className="rounded-xl border border-zinc-200 bg-white p-5">
+        <section className={`${cardCls} p-5`}>
           <h2 className="mb-3 font-medium text-zinc-900">Quizzes</h2>
           <ul className="space-y-2">
             {lesson.quizzes.map((quiz) => (

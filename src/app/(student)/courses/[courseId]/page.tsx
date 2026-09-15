@@ -8,6 +8,7 @@ import { isEnabled } from "@/lib/flags";
 import { summarizeCourseProgress } from "@/lib/progress";
 import { buildChapterItems, chapterStatus } from "@/lib/courseItems";
 import { ChapterSection } from "@/components/student/ChapterSection";
+import { btnPrimary, cardCls } from "@/components/ui/styles";
 
 const UPCOMING_LIMIT = 5;
 
@@ -118,7 +119,7 @@ export default async function StudentTrackPage({
             { label: course.title },
           ]}
         />
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white p-6 lg:p-8">
+        <div className={`${cardCls} overflow-hidden p-6 lg:p-8`}>
           {course.coverImagePath && (
             // Signed URL behind a redirect — not something next/image can optimise.
             // eslint-disable-next-line @next/next/no-img-element
@@ -149,9 +150,11 @@ export default async function StudentTrackPage({
           {courseV2 && resumeLesson ? (
             <Link
               href={`/courses/${course.id}/lessons/${resumeLesson.id}`}
-              className="mt-5 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+              className={`${btnPrimary} mt-5 max-w-full`}
             >
-              {progress.started ? "Continue" : "Start learning"}: {resumeLesson.title} →
+              <span className="truncate">
+                {progress.started ? "Continue" : "Start learning"}: {resumeLesson.title} →
+              </span>
             </Link>
           ) : courseV2 && progress.total > 0 ? (
             <p className="mt-5 inline-block rounded-md bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
@@ -161,7 +164,7 @@ export default async function StudentTrackPage({
             firstLesson && (
               <Link
                 href={`/courses/${course.id}/lessons/${firstLesson.id}`}
-                className="mt-5 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                className={`${btnPrimary} mt-5`}
               >
                 Start learning →
               </Link>
@@ -169,7 +172,7 @@ export default async function StudentTrackPage({
           )}
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <div className={`${cardCls} overflow-hidden`}>
           {courseV2
             ? chapterViews.map((chapter) => (
                 <ChapterSection
@@ -208,7 +211,7 @@ export default async function StudentTrackPage({
       </div>
 
       <aside className="xl:sticky xl:top-14 xl:self-start">
-        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+        <div className={`${cardCls} p-5`}>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">Upcoming</h2>
           {upcomingSessions.length === 0 ? (
             <p className="text-sm text-zinc-500">No upcoming sessions.</p>

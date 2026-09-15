@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { SessionsBoard } from "@/components/sessions/SessionsBoard";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SlideOverButton } from "@/components/ui/SlideOver";
+import { nowMs } from "@/lib/sessions/format";
 import { BookingPanel } from "@/components/sessions/BookingPanel";
 import { CalendarFeedCard } from "@/components/sessions/CalendarFeedCard";
 import { ensureCalendarToken } from "@/lib/actions/booking";
@@ -62,6 +64,14 @@ export default async function StudentSessionsPage() {
   }
   if (schedulingV2) feedUrl = await feedUrlFor(await ensureCalendarToken());
 
+  const now = nowMs();
+  const upcomingCount = sessions.filter(
+    (s) => s.startTime.getTime() >= now && (s.status === "CONFIRMED" || s.status === "PROPOSED")
+  ).length;
+  const needsResponse = sessions.filter(
+    (s) => s.status === "RESCHEDULE_REQUESTED_BY_TUTOR" || s.status === "AWAITING_RESCHEDULE"
+  ).length;
+
   const rows = sessions.map((s) => ({
     id: s.id,
     tutorId: s.tutorId,
@@ -75,17 +85,42 @@ export default async function StudentSessionsPage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8">
-      <div className="space-y-2">
-        <Breadcrumbs items={[{ label: "Home", href: "/dashboard" }, { label: "My sessions" }]} />
-        <h1 className="text-2xl font-semibold">My sessions</h1>
-      </div>
-
-      {schedulingV2 && <BookingPanel slots={openSlots} />}
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
+      <PageHeader
+        crumbs={[{ label: "Home", href: "/dashboard" }, { label: "My sessions" }]}
+        title="My sessions"
+        meta={
+          <>
+            {upcomingCount} upcoming
+            {needsResponse > 0 && <span className="text-amber-700"> · {needsResponse} needs your response</span>}
+          </>
+        }
+        actions={
+          schedulingV2 ? (
+            <>
+              {feedUrl && (
+                <SlideOverButton
+                  label="Calendar feed"
+                  title="Add your sessions to a calendar"
+                  variant="secondary"
+                  icon="none"
+                >
+                  <CalendarFeedCard url={feedUrl} />
+                </SlideOverButton>
+              )}
+              <SlideOverButton
+                label="Book a session"
+                title="Book a session"
+                description="Open times over the next four weeks, in WIB. Booking confirms it straight away."
+              >
+                <BookingPanel slots={openSlots} />
+              </SlideOverButton>
+            </>
+          ) : null
+        }
+      />
 
       <SessionsBoard role="student" sessions={rows} rescheduleSlots={openSlots} />
-
-      {schedulingV2 && feedUrl && <CalendarFeedCard url={feedUrl} />}
     </div>
   );
 }

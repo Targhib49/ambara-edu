@@ -1,70 +1,58 @@
-import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
-import { badgeColorFor } from "@/lib/ui/palette";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { isEnabled } from "@/lib/flags";
+import { summarizeCourseProgress } from "@/lib/progress";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StudentCourseGrid, type StudentCourseCard } from "@/components/student/StudentCourseGrid";
 
-export default async function StudentTracksPage() {
+export default async function StudentCoursesPage() {
   const student = await requireStudent();
+  const courseV2 = await isEnabled("course_v2");
+
   const courses = await db.course.findMany({
     where: { status: "PUBLISHED", enrollments: { some: { studentId: student.id } } },
     orderBy: { title: "asc" },
     include: {
       chapters: {
-        select: { lessons: { where: { status: "PUBLISHED" }, select: { id: true } } },
+        select: {
+          lessons: {
+            where: { status: "PUBLISHED" },
+            select: { id: true, progress: { where: { studentId: student.id }, select: { completedAt: true, lastViewedAt: true } } },
+          },
+        },
       },
     },
   });
 
-  return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8">
-      <div className="space-y-2">
-        <Breadcrumbs items={[{ label: "Home", href: "/dashboard" }, { label: "My courses" }]} />
-        <h1 className="text-2xl font-semibold">My courses</h1>
-      </div>
+  const cards: StudentCourseCard[] = courses.map((course) => {
+    const lessons = course.chapters.flatMap((c) => c.lessons);
+    const progress = summarizeCourseProgress(lessons);
+    return {
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      subject: [course.subject, course.level].filter(Boolean).join(" · "),
+      coverSrc: course.coverImagePath ? `/api/courses/${course.id}/cover?v=${encodeURIComponent(course.coverImagePath)}` : null,
+      lessonCount: lessons.length,
+      // Without course_v2 there is no lesson completion to report.
+      completed: courseV2 ? progress.completed : null,
+      pct: courseV2 ? progress.pct : null,
+    };
+  });
+  const inProgress = cards.filter((c) => (c.pct ?? 0) > 0 && (c.pct ?? 0) < 100).length;
 
-      {courses.length === 0 ? (
-        <p className="mt-4 text-sm text-zinc-500">
-          You aren’t enrolled in any courses yet — your tutor will add you.
-        </p>
-      ) : (
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {courses.map((course, i) => {
-            const lessonCount = course.chapters.reduce((n, m) => n + m.lessons.length, 0);
-            const [bg] = badgeColorFor(i).split(" "); // reuse the badge's bg tone for the image placeholder wash
-            return (
-              <Link
-                key={course.id}
-                href={`/courses/${course.id}`}
-                className="group overflow-hidden rounded-xl border border-zinc-200 bg-white hover:border-blue-300 hover:shadow-sm"
-              >
-                {course.coverImagePath ? (
-                  // Signed URL behind a redirect — not something next/image can optimise.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`/api/courses/${course.id}/cover?v=${encodeURIComponent(course.coverImagePath)}`}
-                    alt=""
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                ) : (
-                  <div className={`flex aspect-[4/3] items-center justify-center ${bg}`}>
-                    <span className="text-4xl font-semibold text-zinc-900/20">{course.title.charAt(0).toUpperCase()}</span>
-                  </div>
-                )}
-                <div className="p-3">
-                  <h2 className="truncate text-sm font-medium text-zinc-900 group-hover:text-blue-700">
-                    {course.title}
-                  </h2>
-                  {course.description && (
-                    <p className="mt-1 line-clamp-2 text-xs text-zinc-500">{course.description}</p>
-                  )}
-                  <p className="mt-2 text-xs text-zinc-400">{lessonCount} lessons</p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+  return (
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
+      <PageHeader
+        crumbs={[{ label: "Home", href: "/dashboard" }, { label: "My courses" }]}
+        title="My courses"
+        meta={
+          cards.length === 0
+            ? "Nothing yet"
+            : `${cards.length} course${cards.length === 1 ? "" : "s"}${inProgress ? ` · ${inProgress} in progress` : ""}`
+        }
+      />
+      <StudentCourseGrid courses={cards} />
     </div>
   );
 }

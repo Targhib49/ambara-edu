@@ -10,6 +10,9 @@
  */
 export const APP_TZ_OFFSET_MINUTES = 7 * 60;
 
+/** The same zone by name, for Intl formatting. */
+export const APP_TZ = "Asia/Jakarta";
+
 /** How far ahead students may book. */
 export const BOOKING_HORIZON_DAYS = 28;
 

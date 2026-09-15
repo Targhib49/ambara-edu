@@ -1,10 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { startNavigation } from "@/lib/ui/navigationProgress";
 import type { SubmissionStatus } from "@/generated/prisma/enums";
+import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { SUBMISSION_STATUS_BADGE_CLASS, SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
 import { ScoreRing } from "@/components/quiz/ScoreRing";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
@@ -24,202 +22,140 @@ export type StudentQuizRow = {
   scorePct: number | null;
 };
 
-type Filter = "all" | "todo" | "done" | "tryout" | "lesson";
-
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "todo", label: "Not started" },
-  { key: "done", label: "Completed" },
-  { key: "tryout", label: "Chapter tests" },
-  { key: "lesson", label: "From lessons" },
+const TABS: Tab<StudentQuizRow>[] = [
+  { key: "all", label: "All", match: () => true },
+  { key: "todo", label: "Not started", match: (q) => q.status === null },
+  { key: "done", label: "Completed", match: (q) => q.status !== null },
+  { key: "tryout", label: "Chapter tests", match: (q) => q.lessonTitle === null },
+  { key: "lesson", label: "From lessons", match: (q) => q.lessonTitle !== null },
 ];
 
-function matches(row: StudentQuizRow, filter: Filter) {
-  switch (filter) {
-    case "all":
-      return true;
-    case "todo":
-      return row.status === null;
-    case "done":
-      return row.status !== null;
-    case "tryout":
-      return row.lessonTitle === null;
-    case "lesson":
-      return row.lessonTitle !== null;
-  }
-}
+const statusLabel = (q: StudentQuizRow) => (q.status ? SUBMISSION_STATUS_LABEL[q.status] : "Not started");
 
-export function QuizList({ quizzes }: { quizzes: StudentQuizRow[] }) {
-  const router = useRouter();
-  const [filter, setFilter] = useState<Filter>("all");
-  const [query, setQuery] = useState("");
-
-  const counts = useMemo(
-    () =>
-      Object.fromEntries(
-        FILTERS.map((f) => [f.key, quizzes.filter((q) => matches(q, f.key)).length])
-      ) as Record<Filter, number>,
-    [quizzes]
-  );
-
-  const rows = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return quizzes.filter((q) => {
-      if (!matches(q, filter)) return false;
-      if (!needle) return true;
-      return [q.title, q.lessonTitle, q.trackTitle]
-        .filter(Boolean)
-        .some((s) => s!.toLowerCase().includes(needle));
-    });
-  }, [quizzes, filter, query]);
-
-  if (quizzes.length === 0) {
-    return <p className="text-sm text-zinc-500">No quizzes available yet.</p>;
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1.5">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                filter === f.key
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50"
-              }`}
-            >
-              {f.label}
-              <span className={filter === f.key ? "ml-1.5 opacity-70" : "ml-1.5 text-zinc-400"}>
-                {counts[f.key]}
-              </span>
-            </button>
-          ))}
-        </div>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search…"
-          className="ml-auto w-full min-w-0 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none sm:w-48"
-        />
+const COLUMNS: Column<StudentQuizRow>[] = [
+  {
+    key: "title",
+    header: "Quiz",
+    sort: (q) => q.title.toLowerCase(),
+    text: (q) => q.title,
+    className: "min-w-[200px]",
+    cell: (q) => (
+      <div className="flex items-center gap-3">
+        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-semibold ${badgeColorForKey(q.trackTitle ?? q.title)}`}>
+          {initialsFor(q.title) || "Q"}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate font-medium text-zinc-900">{q.title}</span>
+          {/* The columns below are hidden on a phone — fold the essentials under the title. */}
+          <span className="block truncate text-xs text-zinc-500 sm:hidden">
+            {statusLabel(q)} · {q.lessonTitle ?? "Chapter test"} · {q.questionCount} questions
+            {q.scorePct !== null && ` · ${Math.round(q.scorePct)}%`}
+          </span>
+        </span>
       </div>
-
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-        <table className="w-full table-fixed text-left text-sm">
-          <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-400">
-            <tr>
-              <th className="w-[34%] px-4 py-3 font-medium">Quiz</th>
-              <th className="hidden w-[21%] px-4 py-3 font-medium sm:table-cell">Where it’s from</th>
-              <th className="hidden w-[20%] px-4 py-3 font-medium md:table-cell">Details</th>
-              <th className="hidden w-[13%] px-4 py-3 font-medium sm:table-cell">Status</th>
-              <th className="w-[12%] px-4 py-3 text-right font-medium">Score</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100">
-            {rows.map((q) => (
-              <tr
-                key={q.id}
-                onClick={() => {
-                  startNavigation(`/quizzes/${q.id}`);
-                  router.push(`/quizzes/${q.id}`);
-                }}
-                className="cursor-pointer transition hover:bg-blue-50/40"
-              >
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-semibold ${badgeColorForKey(q.trackTitle ?? q.title)}`}
-                    >
-                      {initialsFor(q.title) || "Q"}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <Link
-                        href={`/quizzes/${q.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="block truncate font-medium text-zinc-900 hover:text-blue-700"
-                      >
-                        {q.title}
-                      </Link>
-                      {/* On narrow screens the source/details columns are hidden —
-                          fold the essentials under the title instead. */}
-                      <span className="block truncate text-xs text-zinc-500 sm:hidden">
-                        {q.status ? SUBMISSION_STATUS_LABEL[q.status] : "Not started"} ·{" "}
-                        {q.lessonTitle ?? "Chapter test"} · {q.questionCount} questions
-                        {q.timeLimitMinutes ? ` · ⏱ ${q.timeLimitMinutes} min` : ""}
-                      </span>
-                    </span>
-                  </div>
-                </td>
-                <td className="hidden px-4 py-3 text-zinc-600 sm:table-cell">
-                  {q.lessonTitle ? (
-                    <span className="block truncate">
-                      {q.lessonTitle}
-                      {q.trackTitle && (
-                        <span className="block truncate text-xs text-zinc-400">{q.trackTitle}</span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="block truncate">
-                      <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
-                        Chapter test
-                      </span>
-                      <span className="mt-1 block truncate text-xs text-zinc-400">
-                        {[q.trackTitle, q.chapterTitle].filter(Boolean).join(" › ")}
-                      </span>
-                    </span>
-                  )}
-                </td>
-                <td className="hidden px-4 py-3 text-xs whitespace-nowrap text-zinc-500 md:table-cell">
-                  <span className="block">
-                    {q.questionCount} questions · {q.totalPoints} pts
-                  </span>
-                  {(q.timeLimitMinutes || q.attemptsRemaining !== null) && (
-                    <span className="block">
-                      {q.timeLimitMinutes && `⏱ ${q.timeLimitMinutes} min`}
-                      {q.timeLimitMinutes && q.attemptsRemaining !== null && " · "}
-                      {q.attemptsRemaining !== null &&
-                        `${q.attemptsRemaining} attempt${q.attemptsRemaining === 1 ? "" : "s"} left`}
-                    </span>
-                  )}
-                </td>
-                <td className="hidden px-4 py-3 text-xs sm:table-cell">
-                  {q.status ? (
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${SUBMISSION_STATUS_BADGE_CLASS[q.status]}`}
-                    >
-                      {SUBMISSION_STATUS_LABEL[q.status]}
-                    </span>
-                  ) : (
-                    <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
-                      Not started
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex justify-end">
-                    {q.scorePct !== null ? (
-                      <ScoreRing pct={q.scorePct} size={38} />
-                    ) : (
-                      <Link
-                        href={`/quizzes/${q.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-white hover:bg-blue-500"
-                      >
-                        Start →
-                      </Link>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {rows.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-zinc-500">No quizzes match that filter.</p>
+    ),
+  },
+  {
+    key: "from",
+    header: "Where it's from",
+    sort: (q) => `${q.trackTitle ?? ""} ${q.lessonTitle ?? ""}`.toLowerCase(),
+    text: (q) => [q.trackTitle, q.chapterTitle, q.lessonTitle ?? "Chapter test"].filter(Boolean).join(" › "),
+    hideBelow: "lg",
+    className: "min-w-[180px]",
+    cell: (q) =>
+      q.lessonTitle ? (
+        <span className="block max-w-[240px]">
+          <span className="block truncate text-zinc-700">{q.lessonTitle}</span>
+          {q.trackTitle && <span className="block truncate text-xs text-zinc-400">{q.trackTitle}</span>}
+        </span>
+      ) : (
+        <span className="block max-w-[240px]">
+          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700">Chapter test</span>
+          <span className="mt-1 block truncate text-xs text-zinc-400">{[q.trackTitle, q.chapterTitle].filter(Boolean).join(" › ")}</span>
+        </span>
+      ),
+  },
+  {
+    key: "details",
+    header: "Details",
+    sort: (q) => q.questionCount,
+    text: (q) =>
+      [
+        `${q.questionCount} questions`,
+        `${q.totalPoints} pts`,
+        q.timeLimitMinutes ? `${q.timeLimitMinutes} min` : null,
+        q.attemptsRemaining !== null ? `${q.attemptsRemaining} attempts left` : null,
+      ]
+        .filter(Boolean)
+        .join(", "),
+    hideBelow: "xl",
+    className: "whitespace-nowrap text-xs",
+    cell: (q) => (
+      <span className="text-zinc-500">
+        <span className="block">
+          {q.questionCount} questions · {q.totalPoints} pts
+        </span>
+        {(q.timeLimitMinutes || q.attemptsRemaining !== null) && (
+          <span className="block">
+            {q.timeLimitMinutes && `⏱ ${q.timeLimitMinutes} min`}
+            {q.timeLimitMinutes && q.attemptsRemaining !== null && " · "}
+            {q.attemptsRemaining !== null && `${q.attemptsRemaining} attempt${q.attemptsRemaining === 1 ? "" : "s"} left`}
+          </span>
+        )}
+      </span>
+    ),
+  },
+  {
+    key: "status",
+    header: "Status",
+    sort: (q) => statusLabel(q),
+    text: statusLabel,
+    hideBelow: "xl",
+    cell: (q) => (
+      <span
+        className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+          q.status ? SUBMISSION_STATUS_BADGE_CLASS[q.status] : "bg-zinc-100 text-zinc-600"
+        }`}
+      >
+        {statusLabel(q)}
+      </span>
+    ),
+  },
+  {
+    key: "score",
+    header: "Score",
+    align: "right",
+    sort: (q) => q.scorePct ?? -1,
+    text: (q) => (q.scorePct === null ? "" : `${Math.round(q.scorePct)}%`),
+    cell: (q) => (
+      <div className="flex justify-end">
+        {q.scorePct !== null ? (
+          <ScoreRing pct={q.scorePct} size={38} />
+        ) : (
+          <Link
+            href={`/quizzes/${q.id}`}
+            className="whitespace-nowrap rounded-full bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+          >
+            Start →
+          </Link>
         )}
       </div>
-    </div>
+    ),
+  },
+];
+
+export function QuizList({ quizzes }: { quizzes: StudentQuizRow[] }) {
+  return (
+    <DataTable
+      rows={quizzes}
+      columns={COLUMNS}
+      rowKey={(q) => q.id}
+      rowHref={(q) => `/quizzes/${q.id}`}
+      tabs={TABS}
+      search={{ placeholder: "Search quizzes", of: (q) => `${q.title} ${q.trackTitle ?? ""} ${q.chapterTitle ?? ""} ${q.lessonTitle ?? ""}` }}
+      initialSort={{ key: "title", dir: "asc" }}
+      minWidth="560px"
+      empty={{ title: "No quizzes yet", hint: "They'll appear here as your lessons add them." }}
+    />
   );
 }

@@ -13,9 +13,8 @@ export function CalendarFeedCard({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5">
-      <h2 className="font-medium text-zinc-900">Calendar subscription</h2>
-      <p className="mt-1 text-sm text-zinc-500">
+    <section>
+      <p className="text-sm text-zinc-500">
         Add this to Google, Apple or Outlook Calendar and your sessions appear there, updating
         themselves as things change. Treat it like a password — anyone with the link can read your
         schedule.

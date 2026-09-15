@@ -1,29 +1,32 @@
-"use client";
+import { APP_TZ } from "@/lib/scheduling";
 
-import { useEffect, useState } from "react";
+const GREETINGS: [hour: number, text: string][] = [
+  [11, "Selamat pagi"],
+  [15, "Selamat siang"],
+  [19, "Selamat sore"],
+  [24, "Selamat malam"],
+];
 
-// Client component: the greeting must follow the student's clock — the
-// server (Vercel) runs in UTC and would say "Good morning" at 7 PM WIB.
-export function DashboardHero({
-  name,
-  chips,
-}: {
-  name: string;
-  chips: string[];
-}) {
-  // Rendered after mount to avoid a server/client hydration mismatch on time.
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => setNow(new Date()), []);
-
-  const hour = now?.getHours() ?? 12;
-  const greeting = hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 19 ? "Selamat sore" : "Selamat malam";
-  const dateLabel = now
-    ? now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })
-    : "";
+/**
+ * Greets by the student's clock. Both the hour and the date are formatted in
+ * the app's timezone rather than the server's (Vercel runs in UTC, which would
+ * say "Selamat pagi" at 7 PM WIB), so this renders on the server with no
+ * hydration dance.
+ */
+export function DashboardHero({ name, chips }: { name: string; chips: string[] }) {
+  const now = new Date();
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: APP_TZ }).format(now));
+  const greeting = GREETINGS.find(([until]) => hour < until)?.[1] ?? "Selamat malam";
+  const dateLabel = new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: APP_TZ,
+  }).format(now);
 
   return (
     <div className="rounded-2xl bg-gradient-to-r from-blue-950 to-blue-800 p-6 text-white">
-      <p className="min-h-4 text-sm text-blue-200">{dateLabel}</p>
+      <p className="text-sm text-blue-200">{dateLabel}</p>
       <h1 className="mt-1 text-2xl font-semibold">
         {greeting}, {name.split(" ")[0]}! 👋
       </h1>

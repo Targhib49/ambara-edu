@@ -11,6 +11,7 @@ import { isEnabled } from "@/lib/flags";
 import { toLocalParts } from "@/lib/scheduling";
 import { feedUrlFor } from "@/lib/sessions/feedUrl";
 import { PageHeader, PageTabs } from "@/components/ui/PageHeader";
+import { cardCls } from "@/components/ui/styles";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { studentOptions } from "@/lib/students/options";
 
@@ -120,7 +121,12 @@ async function AvailabilityTab({ tutorId }: { tutorId: string }) {
           active: w.active,
         }))}
       />
-      <CalendarFeedCard url={feedUrl} />
+      <section className={`${cardCls} p-5`}>
+        <h2 className="text-sm font-semibold text-zinc-900">Calendar subscription</h2>
+        <div className="mt-2">
+          <CalendarFeedCard url={feedUrl} />
+        </div>
+      </section>
     </div>
   );
 }

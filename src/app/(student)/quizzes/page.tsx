@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { QuizList, type StudentQuizRow } from "./QuizList";
 
 export default async function StudentQuizzesPage() {
@@ -54,16 +54,12 @@ export default async function StudentQuizzesPage() {
   const done = rows.filter((r) => r.status !== null).length;
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">
-      <div className="space-y-2">
-        <Breadcrumbs items={[{ label: "Home", href: "/dashboard" }, { label: "Quizzes" }]} />
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="text-2xl font-semibold">Quizzes</h1>
-          <p className="text-sm text-zinc-500">
-            {done} of {rows.length} attempted
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
+      <PageHeader
+        crumbs={[{ label: "Home", href: "/dashboard" }, { label: "Quizzes" }]}
+        title="Quizzes"
+        meta={`${done} of ${rows.length} attempted`}
+      />
 
       <QuizList quizzes={rows} />
     </div>

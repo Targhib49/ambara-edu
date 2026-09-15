@@ -5,8 +5,10 @@ import { DashboardHero } from "@/components/student/DashboardHero";
 import { StudentSessionRow } from "@/components/sessions/StudentSessionRow";
 import { SUBMISSION_STATUS_BADGE_CLASS, SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
 import { badgeColorForKey } from "@/lib/ui/palette";
+import { cardCls } from "@/components/ui/styles";
 import { isEnabled } from "@/lib/flags";
 import { summarizeCourseProgress } from "@/lib/progress";
+import { nowMs } from "@/lib/sessions/format";
 
 export default async function StudentDashboardPage() {
   const student = await requireStudent();
@@ -133,7 +135,7 @@ export default async function StudentDashboardPage() {
   const recent = [...scored].reverse().slice(0, 5);
 
   // --- sessions
-  const now = Date.now();
+  const now = nowMs();
   const upcoming = sessions
     .filter((s) => s.startTime.getTime() >= now)
     .slice(0, 3)
@@ -162,7 +164,7 @@ export default async function StudentDashboardPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <DashboardHero name={student.name} chips={chips} />
 
       {/* metric tiles */}
@@ -180,7 +182,7 @@ export default async function StudentDashboardPage() {
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-6">
           {/* course progress */}
-          <section className="rounded-xl border border-zinc-200 bg-white p-5">
+          <section className={`${cardCls} p-5`}>
             <h2 className="text-sm font-medium text-zinc-700">Progres course</h2>
             <div className="mt-4 space-y-5">
               {courses.map((t) => (
@@ -212,7 +214,7 @@ export default async function StudentDashboardPage() {
           </section>
 
           {/* recent scores + sparkline */}
-          <section className="rounded-xl border border-zinc-200 bg-white p-5">
+          <section className={`${cardCls} p-5`}>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-zinc-700">Nilai terbaru</h2>
               {scored.length >= 2 && <ScoreSparkline points={scored.map((s) => s.pct)} />}
@@ -270,7 +272,7 @@ export default async function StudentDashboardPage() {
               <StudentSessionRow key={s.id} session={s} isPast={false} />
             ))}
             {upcoming.length === 0 && (
-              <p className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500">
+              <p className={`${cardCls} p-4 text-sm text-zinc-500`}>
                 Belum ada sesi terjadwal.
               </p>
             )}
@@ -289,8 +291,8 @@ function progressSummary(courses: { done: number; total: number }[]) {
 
 function MetricTile({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">{label}</p>
+    <div className={`${cardCls} p-4`}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-zinc-900">{value}</p>
       <p className="mt-0.5 text-xs text-zinc-500">{sub}</p>
     </div>
