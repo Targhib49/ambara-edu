@@ -1,0 +1,46 @@
+/**
+ * The playground's games. Games are general — open to anyone signed in, not
+ * tied to a course — and, like visualizations, are built in code: adding one
+ * means a component plus an entry here.
+ */
+export type Game = {
+  slug: string;
+  title: string;
+  blurb: string;
+  /** Short tags shown on the card. */
+  tags: string[];
+  status: "live" | "coming_soon";
+  /** Tailwind gradient for the card's header band. */
+  accent: string;
+};
+
+export const GAMES: Game[] = [
+  {
+    slug: "mental-math",
+    title: "Mental Math Sprint",
+    blurb: "Sixty seconds, as many right answers as you can. Pick a level: warm-up, integers, times tables or fractions.",
+    tags: ["Math", "60 seconds"],
+    status: "live",
+    accent: "from-blue-600 to-indigo-600",
+  },
+  {
+    slug: "python-wars",
+    title: "Python Wars",
+    blurb: "Coming soon.",
+    tags: ["Python"],
+    status: "coming_soon",
+    accent: "from-emerald-600 to-teal-600",
+  },
+  {
+    slug: "data-sleuth",
+    title: "Data Sleuth",
+    blurb: "Coming soon.",
+    tags: ["Data"],
+    status: "coming_soon",
+    accent: "from-amber-500 to-orange-600",
+  },
+];
+
+export function findLiveGame(slug: string): Game | undefined {
+  return GAMES.find((g) => g.slug === slug && g.status === "live");
+}

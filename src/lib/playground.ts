@@ -32,7 +32,7 @@ const VIZ_BLURBS: Record<string, string> = {
   em_widget: "Vector algebra visualisations from the Electromagnetics course.",
 };
 
-const PYTHON_ITEM: PlaygroundItem = {
+export const PYTHON_ITEM: PlaygroundItem = {
   slug: "python",
   title: "Python scratchpad",
   blurb: "Write and run Python in the browser. Nothing is saved or marked — experiment freely.",
@@ -55,3 +55,6 @@ export const PLAYGROUND_ITEMS: PlaygroundItem[] = [
 export function findPlaygroundItem(slug: string): PlaygroundItem | undefined {
   return PLAYGROUND_ITEMS.find((item) => item.slug === slug);
 }
+
+/** Every registered visualization with its default settings — the tutor's library. */
+export const VIZ_LIBRARY = PLAYGROUND_ITEMS.filter((item) => item.kind === "viz");

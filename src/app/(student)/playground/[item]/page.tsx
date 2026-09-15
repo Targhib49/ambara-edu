@@ -1,7 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireStudent } from "@/lib/auth";
 import { isEnabled } from "@/lib/flags";
-import { findPlaygroundItem } from "@/lib/playground";
+import { PYTHON_ITEM } from "@/lib/playground";
 import { PlaygroundItemView } from "@/components/playground/PlaygroundItemView";
 
 export default async function PlaygroundItemPage({ params }: { params: Promise<{ item: string }> }) {
@@ -9,8 +9,9 @@ export default async function PlaygroundItemPage({ params }: { params: Promise<{
   if (!(await isEnabled("playground"))) notFound();
 
   const { item: slug } = await params;
-  const item = findPlaygroundItem(slug);
-  if (!item) notFound();
+  // Animations now open from the course they belong to; older links to a bare
+  // animation land on the playground instead of a dead end.
+  if (slug !== PYTHON_ITEM.slug) redirect("/playground");
 
-  return <PlaygroundItemView item={item} basePath="/playground" homeHref="/dashboard" />;
+  return <PlaygroundItemView item={PYTHON_ITEM} basePath="/playground" homeHref="/dashboard" />;
 }

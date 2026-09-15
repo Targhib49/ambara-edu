@@ -162,6 +162,13 @@ async function create() {
         data: { starterCode: 'print("hello from the QA fixture")\n' },
       },
       {
+        // An animation, so the playground's "From your courses" has something to list.
+        lessonId: pythonLesson.id,
+        order: 1,
+        type: "VISUALIZATION",
+        data: { component: "loop_stepper", props: { start: 1, end: 5, step: 1, operation: "sum" } },
+      },
+      {
         lessonId: lesson.id,
         order: 0,
         type: "MARKDOWN",

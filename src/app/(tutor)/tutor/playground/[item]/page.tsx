@@ -4,6 +4,7 @@ import { isEnabled } from "@/lib/flags";
 import { findPlaygroundItem } from "@/lib/playground";
 import { PlaygroundItemView } from "@/components/playground/PlaygroundItemView";
 
+/** The Python tool, or a library visualization previewed with its default settings. */
 export default async function TutorPlaygroundItemPage({ params }: { params: Promise<{ item: string }> }) {
   await requireTutor();
   if (!(await isEnabled("playground"))) notFound();
