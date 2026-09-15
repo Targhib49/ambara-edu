@@ -304,6 +304,7 @@ async function main() {
   const fractionsCheck = await db.quiz.create({
     data: {
       title: "Fractions Check",
+      chapterId: fractionsLesson.chapterId,
       lessonId: fractionsLesson.id,
       importBatchId: randomUUID(),
       questions: {
@@ -361,6 +362,7 @@ async function main() {
   const fractionsChallenge = await db.quiz.create({
     data: {
       title: "Fractions Challenge",
+      chapterId: fractionsLesson.chapterId,
       lessonId: fractionsLesson.id,
       importBatchId: randomUUID(),
       questions: {
@@ -417,6 +419,7 @@ async function main() {
   const systemsQuiz = await db.quiz.create({
     data: {
       title: "Systems Quiz",
+      chapterId: systemsLesson.chapterId,
       lessonId: systemsLesson.id,
       importBatchId: randomUUID(),
       questions: {

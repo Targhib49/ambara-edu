@@ -291,11 +291,9 @@ model Quiz {
   // Every quiz belongs to a chapter of the syllabus. With a lesson as well it is
   // that lesson's quiz and sits right after it; without one it is the chapter's
   // own assessment (a try-out) and sits after the chapter's last lesson.
-  // Nullable in the database only until the code that always sets it is live —
-  // the app treats it as required. Restrict, so deleting a chapter can never
-  // take students' quiz results with it.
-  chapterId     String?      @db.Uuid
-  chapter       Chapter?     @relation(fields: [chapterId], references: [id], onDelete: Restrict)
+  // Restrict, so deleting a chapter can never take students' quiz results with it.
+  chapterId     String       @db.Uuid
+  chapter       Chapter      @relation(fields: [chapterId], references: [id], onDelete: Restrict)
   lessonId      String?      @db.Uuid
   lesson        Lesson?      @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   title         String
