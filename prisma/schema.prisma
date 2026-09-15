@@ -52,6 +52,12 @@ enum Attendance {
   NO_SHOW
 }
 
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum QuestionType {
   MULTIPLE_CHOICE
   MULTI_SELECT
@@ -107,6 +113,14 @@ model Course {
   // Storage path of the uploaded cover in the attachments bucket. Served through
   // an access-checked route, never linked directly; null shows the letter tile.
   coverImagePath String?
+  // Catalogue facets for finding a course among hundreds. Free text on purpose:
+  // the catalogue spans curricula (Kurikulum Merdeka, Cambridge…) and general
+  // courses (Excel for beginners…) that nobody can enumerate up front. The
+  // tutor UI suggests values already in use so they stay consistent.
+  subject     String?
+  curriculum  String?
+  level       String?
+  status      CourseStatus @default(PUBLISHED)
   ownerId     String       @db.Uuid
   owner       User         @relation("CourseOwner", fields: [ownerId], references: [id])
   chapters    Chapter[]
@@ -135,6 +149,7 @@ model Chapter {
   title     String
   order     Int
   lessons   Lesson[]
+  quizzes   Quiz[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -273,6 +288,14 @@ model CalendarFeedToken {
 
 model Quiz {
   id            String       @id @default(uuid()) @db.Uuid
+  // Every quiz belongs to a chapter of the syllabus. With a lesson as well it is
+  // that lesson's quiz and sits right after it; without one it is the chapter's
+  // own assessment (a try-out) and sits after the chapter's last lesson.
+  // Nullable in the database only until the code that always sets it is live —
+  // the app treats it as required. Restrict, so deleting a chapter can never
+  // take students' quiz results with it.
+  chapterId     String?      @db.Uuid
+  chapter       Chapter?     @relation(fields: [chapterId], references: [id], onDelete: Restrict)
   lessonId      String?      @db.Uuid
   lesson        Lesson?      @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   title         String
@@ -297,6 +320,7 @@ model Quiz {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
+  @@index([chapterId])
   @@index([lessonId])
   @@index([importBatchId])
 }
