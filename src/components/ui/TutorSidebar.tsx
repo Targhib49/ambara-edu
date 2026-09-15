@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createCollapsibleStore } from "@/lib/ui/collapsibleStore";
 import { mobileNav } from "@/lib/ui/mobileNavStore";
-import { HomeIcon, BookIcon, ClipboardIcon, CalendarIcon, UsersIcon, ChevronLeftIcon, CloseIcon } from "@/components/ui/icons";
+import { BeakerIcon, HomeIcon, BookIcon, ClipboardIcon, CalendarIcon, UsersIcon, ChevronLeftIcon, CloseIcon } from "@/components/ui/icons";
 
 const { useOpen, setOpen } = createCollapsibleStore("lms:tutorNavOpen");
 
@@ -16,10 +16,23 @@ const NAV_ITEMS = [
   { href: "/tutor/students", label: "Students", icon: UsersIcon, exact: false },
 ] as const;
 
-function NavLinks({ pathname, showLabels, onLinkClick }: { pathname: string; showLabels: boolean; onLinkClick?: () => void }) {
+const PLAYGROUND_ITEM = { href: "/tutor/playground", label: "Playground", icon: BeakerIcon, exact: false } as const;
+
+function NavLinks({
+  pathname,
+  showLabels,
+  showPlayground,
+  onLinkClick,
+}: {
+  pathname: string;
+  showLabels: boolean;
+  showPlayground: boolean;
+  onLinkClick?: () => void;
+}) {
+  const items = showPlayground ? [...NAV_ITEMS, PLAYGROUND_ITEM] : NAV_ITEMS;
   return (
     <nav className="flex-1 space-y-0.5 px-2 py-2">
-      {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
+      {items.map(({ href, label, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
         return (
           <Link
@@ -42,7 +55,7 @@ function NavLinks({ pathname, showLabels, onLinkClick }: { pathname: string; sho
   );
 }
 
-export function TutorSidebar() {
+export function TutorSidebar({ showPlayground = false }: { showPlayground?: boolean }) {
   const pathname = usePathname();
   const open = useOpen();
   const mobileOpen = mobileNav.useOpen();
@@ -58,7 +71,7 @@ export function TutorSidebar() {
         <div className="flex h-14 items-center gap-2 px-4">
           <span className="text-lg font-bold text-white">{open ? "AmbaraEdu" : "AE"}</span>
         </div>
-        <NavLinks pathname={pathname} showLabels={open} />
+        <NavLinks pathname={pathname} showLabels={open} showPlayground={showPlayground} />
         <button
           onClick={() => setOpen(!open)}
           aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
@@ -87,7 +100,12 @@ export function TutorSidebar() {
                 <CloseIcon className="h-5 w-5" />
               </button>
             </div>
-            <NavLinks pathname={pathname} showLabels onLinkClick={() => mobileNav.setOpen(false)} />
+            <NavLinks
+              pathname={pathname}
+              showLabels
+              showPlayground={showPlayground}
+              onLinkClick={() => mobileNav.setOpen(false)}
+            />
           </aside>
         </div>
       )}
