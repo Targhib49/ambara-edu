@@ -29,6 +29,10 @@ export async function renameChapter(chapterId: string, formData: FormData) {
 
 export async function deleteChapter(chapterId: string) {
   await requireTutor();
+  // Quizzes hold students' results, so a chapter never takes them down with it —
+  // the database refuses too. The editor disables the button in this case.
+  const quizzes = await db.quiz.count({ where: { chapterId } });
+  if (quizzes > 0) throw new Error("Move or delete this chapter's quizzes before deleting it.");
   const chapter = await db.chapter.delete({ where: { id: chapterId } });
   revalidatePath(`/tutor/courses/${chapter.courseId}`);
 }

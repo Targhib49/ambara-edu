@@ -1,10 +1,9 @@
 import type { BlockType, SubmissionStatus } from "@/generated/prisma/enums";
 
 /**
- * A chapter's contents as one ordered list: lessons and the quizzes attached to
- * them, interleaved. Quizzes stay children of a lesson in the data model — this
- * only flattens them for display, so a quiz always sits directly beneath the
- * lesson it belongs to.
+ * A chapter's contents as one ordered list, the way the syllabus reads: each
+ * lesson followed by its own quizzes, then the chapter's tests (quizzes not
+ * tied to one lesson) after the last lesson.
  */
 export type CourseItem = {
   key: string;
@@ -39,21 +38,44 @@ export function lessonTypeLabel(blockTypes: BlockType[]): string {
   return "Lesson";
 }
 
+type QuizInput = {
+  id: string;
+  title: string;
+  questions: { points: number }[];
+  submissions: { status: SubmissionStatus; autoScore: number | null; manualScore: number | null }[];
+};
+
 type LessonInput = {
   id: string;
   title: string;
   blocks: { type: BlockType }[];
   progress: { completedAt: Date | null }[];
-  quizzes: {
-    id: string;
-    title: string;
-    questions: { points: number }[];
-    submissions: { status: SubmissionStatus; autoScore: number | null; manualScore: number | null }[];
-  }[];
+  quizzes: QuizInput[];
 };
 
-export function buildChapterItems(courseId: string, lessons: LessonInput[]): CourseItem[] {
-  return lessons.flatMap((lesson) => {
+function quizItem(quiz: QuizInput, label: string): CourseItem {
+  const submission = quiz.submissions[0] ?? null;
+  const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
+  const score =
+    submission === null
+      ? null
+      : submission.status === "REVIEWED"
+        ? (submission.autoScore ?? 0) + (submission.manualScore ?? 0)
+        : (submission.autoScore ?? 0);
+  return {
+    key: `quiz-${quiz.id}`,
+    kind: "quiz",
+    title: quiz.title,
+    href: `/quizzes/${quiz.id}`,
+    label,
+    complete: submission !== null,
+    scorePct: submission !== null && totalPoints > 0 ? ((score ?? 0) / totalPoints) * 100 : null,
+    status: submission?.status ?? null,
+  };
+}
+
+export function buildChapterItems(courseId: string, lessons: LessonInput[], chapterTests: QuizInput[] = []): CourseItem[] {
+  const lessonItems = lessons.flatMap((lesson) => {
     const lessonItem: CourseItem = {
       key: `lesson-${lesson.id}`,
       kind: "lesson",
@@ -65,30 +87,9 @@ export function buildChapterItems(courseId: string, lessons: LessonInput[]): Cou
       status: null,
     };
 
-    const quizItems: CourseItem[] = lesson.quizzes.map((quiz) => {
-      const submission = quiz.submissions[0] ?? null;
-      const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
-      const score =
-        submission === null
-          ? null
-          : submission.status === "REVIEWED"
-            ? (submission.autoScore ?? 0) + (submission.manualScore ?? 0)
-            : (submission.autoScore ?? 0);
-      return {
-        key: `quiz-${quiz.id}`,
-        kind: "quiz",
-        title: quiz.title,
-        href: `/quizzes/${quiz.id}`,
-        label: "Quiz",
-        complete: submission !== null,
-        scorePct:
-          submission !== null && totalPoints > 0 ? ((score ?? 0) / totalPoints) * 100 : null,
-        status: submission?.status ?? null,
-      };
-    });
-
-    return [lessonItem, ...quizItems];
+    return [lessonItem, ...lesson.quizzes.map((quiz) => quizItem(quiz, "Quiz"))];
   });
+  return [...lessonItems, ...chapterTests.map((quiz) => quizItem(quiz, "Chapter test"))];
 }
 
 /**

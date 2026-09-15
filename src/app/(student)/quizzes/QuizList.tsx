@@ -13,6 +13,8 @@ export type StudentQuizRow = {
   title: string;
   lessonTitle: string | null;
   trackTitle: string | null;
+  /** Set for every quiz; a quiz with no lesson is the chapter's own test. */
+  chapterTitle: string | null;
   questionCount: number;
   totalPoints: number;
   timeLimitMinutes: number | null;
@@ -27,7 +29,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "todo", label: "Not started" },
   { key: "done", label: "Completed" },
-  { key: "tryout", label: "Try-outs" },
+  { key: "tryout", label: "Chapter tests" },
   { key: "lesson", label: "From lessons" },
 ];
 
@@ -140,7 +142,7 @@ export function QuizList({ quizzes }: { quizzes: StudentQuizRow[] }) {
                           fold the essentials under the title instead. */}
                       <span className="block truncate text-xs text-zinc-500 sm:hidden">
                         {q.status ? SUBMISSION_STATUS_LABEL[q.status] : "Not started"} ·{" "}
-                        {q.lessonTitle ?? "Try-out"} · {q.questionCount} questions
+                        {q.lessonTitle ?? "Chapter test"} · {q.questionCount} questions
                         {q.timeLimitMinutes ? ` · ⏱ ${q.timeLimitMinutes} min` : ""}
                       </span>
                     </span>
@@ -155,8 +157,13 @@ export function QuizList({ quizzes }: { quizzes: StudentQuizRow[] }) {
                       )}
                     </span>
                   ) : (
-                    <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
-                      ⚡ Open anytime
+                    <span className="block truncate">
+                      <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
+                        Chapter test
+                      </span>
+                      <span className="mt-1 block truncate text-xs text-zinc-400">
+                        {[q.trackTitle, q.chapterTitle].filter(Boolean).join(" › ")}
+                      </span>
                     </span>
                   )}
                 </td>

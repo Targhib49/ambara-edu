@@ -7,7 +7,7 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 export default async function StudentTracksPage() {
   const student = await requireStudent();
   const courses = await db.course.findMany({
-    where: { enrollments: { some: { studentId: student.id } } },
+    where: { status: "PUBLISHED", enrollments: { some: { studentId: student.id } } },
     orderBy: { title: "asc" },
     include: {
       chapters: {

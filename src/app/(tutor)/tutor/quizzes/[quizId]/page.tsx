@@ -7,7 +7,9 @@ import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { QuestionsSection } from "@/components/quiz/QuestionsSection";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { QuizPlacementFields } from "@/components/quiz/QuizPlacementFields";
+import { placementTree } from "@/lib/courses/placement";
 import type { QuestionType } from "@/generated/prisma/enums";
 
 const inputCls =
@@ -24,56 +26,51 @@ const QUESTION_TYPE_BUTTONS: { type: QuestionType; label: string }[] = [
 
 export default async function TutorQuizDetailPage({ params }: { params: Promise<{ quizId: string }> }) {
   const { quizId } = await params;
-  const [quiz, lessons] = await Promise.all([
+  const [quiz, tree] = await Promise.all([
     db.quiz.findUnique({
       where: { id: quizId },
       include: {
-        lesson: { select: { title: true, chapterId: true } },
+        lesson: { select: { title: true } },
+        chapter: { select: { title: true, course: { select: { id: true, title: true } } } },
         questions: { orderBy: { order: "asc" } },
         submissions: { include: { student: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
       },
     }),
-    db.lesson.findMany({
-      orderBy: [{ chapter: { course: { title: "asc" } } }, { chapter: { order: "asc" } }, { order: "asc" }],
-      select: {
-        id: true,
-        title: true,
-        chapter: { select: { title: true, course: { select: { title: true } } } },
-      },
-    }),
+    placementTree(),
   ]);
   if (!quiz) notFound();
 
   const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
-  const lessonOptions = lessons.map((l) => ({
-    id: l.id,
-    label: `${l.chapter.course.title} / ${l.chapter.title} / ${l.title}`,
-  }));
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8">
-      <div className="space-y-3">
-        <Breadcrumbs
-          items={[
-            { label: "Home", href: "/tutor" },
-            { label: "Quizzes", href: "/tutor/quizzes" },
-            { label: quiz.title },
-          ]}
-        />
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold">{quiz.title}</h1>
-          <span
-            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-              quiz.status === "PUBLISHED" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-            }`}
-          >
-            {quiz.status === "PUBLISHED" ? "Published" : "Draft"}
+      <PageHeader
+        crumbs={[
+          { label: "Home", href: "/tutor" },
+          { label: "Quizzes", href: "/tutor/quizzes" },
+          ...(quiz.chapter ? [{ label: quiz.chapter.course.title, href: `/tutor/courses/${quiz.chapter.course.id}` }] : []),
+          { label: quiz.title },
+        ]}
+        title={
+          <span className="flex flex-wrap items-center gap-3">
+            {quiz.title}
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                quiz.status === "PUBLISHED" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {quiz.status === "PUBLISHED" ? "Published" : "Draft"}
+            </span>
           </span>
-        </div>
-        <p className="text-sm text-zinc-500">
-          {quiz.questions.length} questions · {totalPoints} points total
-        </p>
-      </div>
+        }
+        meta={
+          <>
+            {quiz.chapter ? `${quiz.chapter.title} › ${quiz.lesson ? `after “${quiz.lesson.title}”` : "end of chapter"}` : "Not placed in a chapter"}
+            {" · "}
+            {quiz.questions.length} questions · {totalPoints} points
+          </>
+        }
+      />
 
       <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-5">
         <h2 className="font-medium">Settings</h2>
@@ -82,17 +79,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
             <label className={labelCls}>Title</label>
             <input name="title" defaultValue={quiz.title} required className={inputCls} />
           </div>
-          <div>
-            <label className={labelCls}>Lesson</label>
-            <select name="lessonId" defaultValue={quiz.lessonId ?? ""} className={inputCls}>
-              <option value="">Standalone (try-out — open at /quizzes)</option>
-              {lessonOptions.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <QuizPlacementFields tree={tree} defaultChapterId={quiz.chapterId} defaultLessonId={quiz.lessonId} />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div>
               <label className={labelCls}>Time limit (minutes)</label>

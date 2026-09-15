@@ -14,7 +14,7 @@ export default async function StudentDashboardPage() {
 
   const [enrollments, submissions, sessions, standaloneQuizzes] = await Promise.all([
     db.enrollment.findMany({
-      where: { studentId: student.id },
+      where: { studentId: student.id, course: { status: "PUBLISHED" } },
       include: {
         course: {
           include: {
@@ -48,9 +48,14 @@ export default async function StudentDashboardPage() {
       include: { tutor: { select: { name: true } } },
       orderBy: { startTime: "asc" },
     }),
+    // Chapter tests in the student's courses (lesson quizzes come from the enrollments above).
     db.quiz.findMany({
-      where: { lessonId: null, status: "PUBLISHED" },
-      select: { id: true, title: true },
+      where: {
+        lessonId: null,
+        status: "PUBLISHED",
+        chapter: { course: { status: "PUBLISHED", enrollments: { some: { studentId: student.id } } } },
+      },
+      select: { id: true, title: true, chapter: { select: { title: true, course: { select: { title: true } } } } },
     }),
   ]);
 
@@ -106,7 +111,7 @@ export default async function StudentDashboardPage() {
   );
   const tryOutsDue = standaloneQuizzes
     .filter((q) => !submittedQuizIds.has(q.id))
-    .map((q) => ({ id: q.id, title: q.title, context: "Try-out" }));
+    .map((q) => ({ id: q.id, title: q.title, context: q.chapter ? `${q.chapter.course.title} · ${q.chapter.title}` : "Chapter test" }));
   const due = [...tryOutsDue, ...lessonQuizzesDue];
 
   // --- scores

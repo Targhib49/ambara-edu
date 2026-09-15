@@ -1,16 +1,22 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
-import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
+import { Combobox } from "@/components/ui/Combobox";
+import { controlCls } from "@/components/ui/styles";
 
 export type TutorQuizRow = {
   id: string;
   title: string;
   isDraft: boolean;
-  /** Lesson it hangs off, or null for a standalone try-out. */
+  courseId: string | null;
+  courseTitle: string | null;
+  chapterId: string | null;
+  chapterTitle: string | null;
+  /** The lesson it follows, or null for a chapter test at the end of the chapter. */
   lessonTitle: string | null;
-  trackTitle: string | null;
+  placementSort: string;
   questionCount: number;
   totalPoints: number;
   timeLimitMinutes: number | null;
@@ -19,6 +25,8 @@ export type TutorQuizRow = {
   pendingCount: number;
   createdAt: string;
 };
+
+type CourseFilter = { id: string; title: string; chapters: { id: string; title: string }[] };
 
 const TABS: Tab<TutorQuizRow>[] = [
   { key: "all", label: "All", match: () => true },
@@ -33,39 +41,36 @@ const COLUMNS: Column<TutorQuizRow>[] = [
     header: "Quiz",
     sort: (q) => q.title.toLowerCase(),
     text: (q) => q.title,
-    className: "min-w-[240px]",
+    className: "min-w-[220px]",
     cell: (q) => (
-      <div className="flex items-center gap-3">
-        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-semibold ${badgeColorForKey(q.title)}`}>
-          {initialsFor(q.title) || "Q"}
-        </span>
-        <span className="min-w-0">
-          <Link href={`/tutor/quizzes/${q.id}`} className="block font-medium text-zinc-900 hover:text-blue-700">
-            {q.title}
-          </Link>
-          {q.isDraft && (
-            <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-              Draft
-            </span>
-          )}
-        </span>
-      </div>
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Link href={`/tutor/quizzes/${q.id}`} className="font-medium text-zinc-900 hover:text-blue-700">
+          {q.title}
+        </Link>
+        {q.isDraft && <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">Draft</span>}
+      </span>
     ),
   },
   {
-    key: "attached",
-    header: "Attached to",
-    sort: (q) => (q.lessonTitle ?? "").toLowerCase(),
-    text: (q) => (q.lessonTitle ? `${q.lessonTitle}${q.trackTitle ? ` (${q.trackTitle})` : ""}` : "Try-out"),
-    cell: (q) =>
-      q.lessonTitle ? (
-        <span>
-          <span className="block text-zinc-700">{q.lessonTitle}</span>
-          {q.trackTitle && <span className="block text-xs text-zinc-400">{q.trackTitle}</span>}
+    key: "placement",
+    header: "In the syllabus",
+    sort: (q) => q.placementSort,
+    text: (q) => [q.courseTitle, q.chapterTitle, q.lessonTitle ?? "End of chapter"].filter(Boolean).join(" › "),
+    className: "min-w-[220px]",
+    cell: (q) => (
+      <span className="block max-w-[300px]">
+        <span className="block truncate text-zinc-800">{q.courseTitle ?? "—"}</span>
+        <span className="block truncate text-xs text-zinc-500">
+          {q.chapterTitle}
+          {" › "}
+          {q.lessonTitle ? (
+            q.lessonTitle
+          ) : (
+            <span className="font-medium text-violet-700">End of chapter</span>
+          )}
         </span>
-      ) : (
-        <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700">Try-out</span>
-      ),
+      </span>
+    ),
   },
   {
     key: "questions",
@@ -74,9 +79,16 @@ const COLUMNS: Column<TutorQuizRow>[] = [
     text: (q) => q.questionCount,
     className: "whitespace-nowrap tabular-nums",
     cell: (q) => (
-      <span>
-        {q.questionCount}
-        <span className="text-zinc-400"> · {q.totalPoints} pts</span>
+      <span className="block">
+        <span className="block">
+          {q.questionCount}
+          <span className="text-zinc-400"> · {q.totalPoints} pts</span>
+        </span>
+        <span className="block text-xs text-zinc-500">
+          {[q.timeLimitMinutes ? `${q.timeLimitMinutes} min` : null, q.maxAttempts ? `${q.maxAttempts} attempt${q.maxAttempts === 1 ? "" : "s"}` : null]
+            .filter(Boolean)
+            .join(" · ") || "Untimed"}
+        </span>
       </span>
     ),
   },
@@ -84,49 +96,24 @@ const COLUMNS: Column<TutorQuizRow>[] = [
     key: "format",
     header: "Format",
     text: (q) =>
-      [q.timeLimitMinutes ? `${q.timeLimitMinutes} min` : "", q.maxAttempts ? `${q.maxAttempts} attempts` : ""]
-        .filter(Boolean)
-        .join(", ") || "Untimed",
-    className: "whitespace-nowrap text-xs",
-    cell: (q) =>
-      q.timeLimitMinutes || q.maxAttempts ? (
-        <span className="text-zinc-500">
-          {q.timeLimitMinutes && <span className="block">⏱ {q.timeLimitMinutes} min</span>}
-          {q.maxAttempts && (
-            <span className="block">
-              {q.maxAttempts} attempt{q.maxAttempts === 1 ? "" : "s"}
-            </span>
-          )}
-        </span>
-      ) : (
-        <span className="text-zinc-400">Untimed</span>
-      ),
+      [q.timeLimitMinutes ? `${q.timeLimitMinutes} min` : "", q.maxAttempts ? `${q.maxAttempts} attempts` : ""].filter(Boolean).join(", ") || "Untimed",
+    csvOnly: true,
+    cell: () => null,
   },
   {
-    key: "submissions",
-    header: "Submissions",
-    sort: (q) => q.submissionCount,
-    text: (q) => q.submissionCount,
-    align: "right",
-    className: "tabular-nums",
-    cell: (q) => q.submissionCount,
-  },
-  {
-    key: "pending",
-    header: "Needs review",
-    sort: (q) => q.pendingCount,
-    text: (q) => q.pendingCount,
-    cell: (q) =>
-      q.pendingCount > 0 ? (
-        <Link
-          href={`/tutor/quizzes/${q.id}`}
-          className="inline-block whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 hover:bg-amber-200"
-        >
-          {q.pendingCount} to grade →
-        </Link>
-      ) : (
-        <span className="text-zinc-400">—</span>
-      ),
+    key: "results",
+    header: "Results",
+    sort: (q) => q.pendingCount * 10000 + q.submissionCount,
+    text: (q) => `${q.submissionCount} (${q.pendingCount} to review)`,
+    className: "whitespace-nowrap",
+    cell: (q) => (
+      <span className="flex items-center gap-2">
+        <span className="tabular-nums">{q.submissionCount}</span>
+        {q.pendingCount > 0 && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{q.pendingCount} to review</span>
+        )}
+      </span>
+    ),
   },
   {
     key: "createdAt",
@@ -138,21 +125,80 @@ const COLUMNS: Column<TutorQuizRow>[] = [
   },
 ];
 
-export function QuizTable({ quizzes }: { quizzes: TutorQuizRow[] }) {
+export function QuizTable({
+  quizzes,
+  courses,
+  initialCourseId,
+}: {
+  quizzes: TutorQuizRow[];
+  courses: CourseFilter[];
+  initialCourseId?: string;
+}) {
+  const [courseId, setCourseId] = useState(initialCourseId ?? "");
+  const [chapterId, setChapterId] = useState("");
+  const [kind, setKind] = useState<"" | "lesson" | "chapter">("");
+
+  const course = courses.find((c) => c.id === courseId) ?? null;
+  const rows = useMemo(
+    () =>
+      quizzes.filter(
+        (q) =>
+          (!courseId || q.courseId === courseId) &&
+          (!chapterId || q.chapterId === chapterId) &&
+          (!kind || (kind === "lesson" ? q.lessonTitle !== null : q.lessonTitle === null))
+      ),
+    [quizzes, courseId, chapterId, kind]
+  );
+
   return (
     <DataTable
-      rows={quizzes}
+      // Remount on filter change so paging starts again from the first page.
+      key={`${courseId}|${chapterId}|${kind}`}
+      rows={rows}
       columns={COLUMNS}
       rowKey={(q) => q.id}
+      rowHref={(q) => `/tutor/quizzes/${q.id}`}
       tabs={TABS}
-      search={{
-        placeholder: "Search quiz, lesson or course",
-        of: (q) => `${q.title} ${q.lessonTitle ?? ""} ${q.trackTitle ?? ""}`,
-      }}
-      initialSort={{ key: "createdAt", dir: "desc" }}
+      search={{ placeholder: "Search quizzes", of: (q) => `${q.title} ${q.courseTitle ?? ""} ${q.chapterTitle ?? ""} ${q.lessonTitle ?? ""}` }}
+      toolbar={
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-56">
+            <Combobox
+              options={courses.map((c) => ({ value: c.id, label: c.title }))}
+              value={courseId}
+              onChange={(v) => {
+                setCourseId(v);
+                setChapterId("");
+              }}
+              placeholder="All courses"
+              aria-label="Filter by course"
+            />
+          </div>
+          <select
+            value={chapterId}
+            onChange={(e) => setChapterId(e.target.value)}
+            disabled={!course}
+            aria-label="Filter by chapter"
+            className={`${controlCls} w-48 disabled:text-zinc-400`}
+          >
+            <option value="">{course ? "All chapters" : "Pick a course first"}</option>
+            {course?.chapters.map((ch) => (
+              <option key={ch.id} value={ch.id}>
+                {ch.title}
+              </option>
+            ))}
+          </select>
+          <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} aria-label="Filter by kind" className={`${controlCls} w-44`}>
+            <option value="">Any position</option>
+            <option value="lesson">After a lesson</option>
+            <option value="chapter">End of chapter</option>
+          </select>
+        </div>
+      }
+      initialSort={{ key: courseId ? "placement" : "createdAt", dir: courseId ? "asc" : "desc" }}
       exportName="quizzes"
-      minWidth="900px"
-      empty={{ title: "No quizzes yet", hint: "Create one above, or import from CSV below." }}
+      minWidth="760px"
+      empty={{ title: "No quizzes yet", hint: "Create one with “New quiz”, or import questions from a sheet." }}
     />
   );
 }

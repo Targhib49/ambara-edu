@@ -5,6 +5,15 @@ import { ATTACHMENTS_BUCKET, createSupabaseAdminClient } from "@/lib/supabase/ad
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireTutor } from "@/lib/auth";
+import type { CourseStatus } from "@/generated/prisma/enums";
+
+/** A catalogue facet from a form: trimmed, and empty means "not set". */
+function facet(formData: FormData, key: string): string | null {
+  const value = String(formData.get(key) ?? "").trim().replace(/\s+/g, " ");
+  return value || null;
+}
+
+const COURSE_STATUSES: CourseStatus[] = ["DRAFT", "PUBLISHED", "ARCHIVED"];
 
 export async function createCourse(formData: FormData) {
   const tutor = await requireTutor();
@@ -14,9 +23,15 @@ export async function createCourse(formData: FormData) {
     data: {
       title,
       description: String(formData.get("description") ?? "").trim(),
+      subject: facet(formData, "subject"),
+      curriculum: facet(formData, "curriculum"),
+      level: facet(formData, "level"),
+      // Starts hidden from students until the tutor publishes it.
+      status: "DRAFT",
       ownerId: tutor.id,
     },
   });
+  revalidatePath("/tutor/courses");
   redirect(`/tutor/courses/${course.id}`);
 }
 
@@ -24,19 +39,38 @@ export async function updateCourse(courseId: string, formData: FormData) {
   await requireTutor();
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return;
+  const statusRaw = String(formData.get("status") ?? "");
   await db.course.update({
     where: { id: courseId },
     data: {
       title,
       description: String(formData.get("description") ?? "").trim(),
+      subject: facet(formData, "subject"),
+      curriculum: facet(formData, "curriculum"),
+      level: facet(formData, "level"),
+      ...((COURSE_STATUSES as string[]).includes(statusRaw) ? { status: statusRaw as CourseStatus } : {}),
     },
   });
-  revalidatePath(`/tutor/courses/${courseId}`);
+  revalidateCourse(courseId);
+}
+
+export async function setCourseStatus(courseId: string, status: CourseStatus) {
+  await requireTutor();
+  await db.course.update({ where: { id: courseId }, data: { status } });
+  revalidateCourse(courseId);
 }
 
 export async function deleteCourse(courseId: string) {
   await requireTutor();
-  await db.course.delete({ where: { id: courseId } });
+  // Chapters refuse to go while they hold quizzes (so results are never lost by
+  // accident). Deleting a whole course is the deliberate case: the tutor has
+  // confirmed it takes the quizzes and their results too.
+  await db.$transaction([
+    db.quiz.deleteMany({ where: { chapter: { courseId } } }),
+    db.course.delete({ where: { id: courseId } }),
+  ]);
+  revalidatePath("/tutor/quizzes");
+  revalidatePath("/tutor/courses");
   redirect("/tutor/courses");
 }
 

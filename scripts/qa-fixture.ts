@@ -5,7 +5,7 @@
  *
  * The DB is shared with production, so nothing here may be visible to real
  * students: the fixture course is only enrolled to the fixture student, and no
- * PUBLISHED standalone try-out is ever created (those are visible to everyone).
+ * quiz is visible outside the fixture course (quizzes are scoped to course enrollment).
  */
 import "dotenv/config";
 import fs from "fs";
@@ -202,9 +202,26 @@ async function create() {
 
   // Two lesson-linked quizzes: one published (with a graded submission so the
   // score ring renders) and one draft, so both table states are exercised.
+  // A chapter test: belongs to the chapter, not a lesson, so it sits after the
+  // chapter's last lesson. Scoped to the fixture course's enrollments like every
+  // quiz now, so publishing it exposes nothing to real students.
+  await db.quiz.create({
+    data: {
+      title: "ZZQA Chapter Test",
+      chapterId: lesson.chapterId,
+      status: "PUBLISHED",
+      timeLimitMinutes: 20,
+      questions: {
+        create: [
+          { order: 0, type: "MULTIPLE_CHOICE", prompt: "3 × 3 = ?", options: ["6", "9", "12", "33"], correctAnswer: { letter: "B" }, points: 5 },
+        ],
+      },
+    },
+  });
   const published = await db.quiz.create({
     data: {
       title: "ZZQA Published Quiz",
+      chapterId: lesson.chapterId,
       lessonId: lesson.id,
       status: "PUBLISHED",
       timeLimitMinutes: 30,
@@ -234,6 +251,7 @@ async function create() {
   await db.quiz.create({
     data: {
       title: "ZZQA Draft Quiz",
+      chapterId: lesson.chapterId,
       lessonId: lesson.id,
       status: "DRAFT",
       questions: {
@@ -253,6 +271,7 @@ async function create() {
   await db.quiz.create({
     data: {
       title: "ZZQA Chapter 2 Quiz",
+      chapterId: pythonLesson.chapterId,
       lessonId: pythonLesson.id,
       status: "PUBLISHED",
       questions: {
@@ -304,7 +323,8 @@ async function destroy() {
   });
   await db.availability.deleteMany({ where: { tutorId: { in: ids } } });
   await db.calendarFeedToken.deleteMany({ where: { userId: { in: ids } } });
-  await db.quiz.deleteMany({ where: { lesson: { chapter: { courseId: state.courseId } } } });
+  // By chapter, not lesson: chapter tests have no lesson, and chapters refuse to be deleted while quizzes remain.
+  await db.quiz.deleteMany({ where: { chapter: { courseId: state.courseId } } });
   await db.course.delete({ where: { id: state.courseId } });
   await db.user.deleteMany({ where: { id: { in: [state.tutorId, state.studentId] } } });
   for (const id of [state.tutorId, state.studentId]) {

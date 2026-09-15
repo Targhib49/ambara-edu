@@ -21,7 +21,7 @@ export default async function StudentTrackPage({
   const courseV2 = await isEnabled("course_v2");
 
   const course = await db.course.findFirst({
-    where: { id: courseId, enrollments: { some: { studentId: student.id } } },
+    where: { id: courseId, status: "PUBLISHED", enrollments: { some: { studentId: student.id } } },
     include: {
       chapters: {
         orderBy: { order: "asc" },
@@ -60,6 +60,25 @@ export default async function StudentTrackPage({
   });
   if (!course) notFound();
 
+  // The chapters' own tests — quizzes not tied to one lesson — shown after each
+  // chapter's last lesson.
+  const chapterTests = await db.quiz.findMany({
+    where: { lessonId: null, status: "PUBLISHED", chapter: { courseId: course.id } },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      title: true,
+      chapterId: true,
+      questions: { select: { points: true } },
+      submissions: { where: { studentId: student.id }, select: { status: true, autoScore: true, manualScore: true } },
+    },
+  });
+  const testsByChapter = new Map<string, typeof chapterTests>();
+  for (const test of chapterTests) {
+    if (!test.chapterId) continue;
+    testsByChapter.set(test.chapterId, [...(testsByChapter.get(test.chapterId) ?? []), test]);
+  }
+
   const upcomingSessions = await db.session.findMany({
     where: {
       studentId: student.id,
@@ -81,9 +100,9 @@ export default async function StudentTrackPage({
   // Chapters as interleaved item lists, plus the single item the student should
   // pick up next — the first unfinished thing in course order.
   const chapterViews = course.chapters
-    .filter((c) => c.lessons.length > 0)
+    .filter((c) => c.lessons.length > 0 || testsByChapter.has(c.id))
     .map((chapter) => {
-      const items = buildChapterItems(course.id, chapter.lessons);
+      const items = buildChapterItems(course.id, chapter.lessons, testsByChapter.get(chapter.id) ?? []);
       return { id: chapter.id, title: chapter.title, items, status: chapterStatus(items) };
     });
   const nextItemKey =

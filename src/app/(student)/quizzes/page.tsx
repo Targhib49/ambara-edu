@@ -9,18 +9,14 @@ export default async function StudentQuizzesPage() {
   const quizzes = await db.quiz.findMany({
     where: {
       status: "PUBLISHED",
-      OR: [
-        {
-          lesson: {
-            status: "PUBLISHED",
-            chapter: { course: { enrollments: { some: { studentId: student.id } } } },
-          },
-        },
-        { lessonId: null }, // standalone try-outs
-      ],
+      // Every quiz belongs to a chapter; the student must be enrolled in that
+      // chapter's (published) course, and a lesson quiz also needs its lesson live.
+      chapter: { course: { status: "PUBLISHED", enrollments: { some: { studentId: student.id } } } },
+      OR: [{ lessonId: null }, { lesson: { status: "PUBLISHED" } }],
     },
     include: {
-      lesson: { select: { title: true, chapter: { select: { course: { select: { title: true } } } } } },
+      lesson: { select: { title: true } },
+      chapter: { select: { title: true, course: { select: { title: true } } } },
       questions: { select: { points: true } },
       submissions: { where: { studentId: student.id } },
       submissionAttempts: { where: { studentId: student.id }, select: { id: true } },
@@ -43,7 +39,8 @@ export default async function StudentQuizzesPage() {
       id: quiz.id,
       title: quiz.title,
       lessonTitle: quiz.lesson?.title ?? null,
-      trackTitle: quiz.lesson?.chapter.course.title ?? null,
+      trackTitle: quiz.chapter?.course.title ?? null,
+      chapterTitle: quiz.chapter?.title ?? null,
       questionCount: quiz.questions.length,
       totalPoints,
       timeLimitMinutes: quiz.timeLimitMinutes,

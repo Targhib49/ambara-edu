@@ -22,7 +22,7 @@ export default async function StudentLessonPage({
       status: "PUBLISHED",
       chapter: {
         courseId,
-        course: { enrollments: { some: { studentId: student.id } } },
+        course: { status: "PUBLISHED", enrollments: { some: { studentId: student.id } } },
       },
     },
     include: {

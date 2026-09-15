@@ -30,26 +30,14 @@ export default async function StudentQuizPage({
     where: {
       id: quizId,
       status: "PUBLISHED",
-      OR: [
-        // linked quiz: lesson must be published + student enrolled
-        {
-          lesson: {
-            status: "PUBLISHED",
-            chapter: { course: { enrollments: { some: { studentId: student.id } } } },
-          },
-        },
-        // standalone quiz (try-out): no lesson, open to any signed-in student
-        { lessonId: null },
-      ],
+      // Every quiz belongs to a chapter; the student must be enrolled in that
+      // chapter's (published) course, and a lesson quiz also needs its lesson live.
+      chapter: { course: { status: "PUBLISHED", enrollments: { some: { studentId: student.id } } } },
+      OR: [{ lessonId: null }, { lesson: { status: "PUBLISHED" } }],
     },
     include: {
-      lesson: {
-        select: {
-          id: true,
-          title: true,
-          chapter: { select: { courseId: true, course: { select: { title: true } } } },
-        },
-      },
+      lesson: { select: { id: true, title: true } },
+      chapter: { select: { courseId: true, title: true, course: { select: { title: true } } } },
       questions: { orderBy: { order: "asc" } },
     },
   });
@@ -89,24 +77,20 @@ export default async function StudentQuizPage({
           .filter((q): q is Question => !!q))
       : quiz.questions;
 
-  const crumbs: Crumb[] = quiz.lesson
-    ? [
-        { label: "Home", href: "/dashboard" },
-        { label: "My courses", href: "/courses" },
-        { label: quiz.lesson.chapter.course.title, href: `/courses/${quiz.lesson.chapter.courseId}` },
-        { label: quiz.lesson.title, href: `/courses/${quiz.lesson.chapter.courseId}/lessons/${quiz.lesson.id}` },
-        { label: quiz.title },
-      ]
-    : [
-        { label: "Home", href: "/dashboard" },
-        { label: "Quizzes", href: "/quizzes" },
-        { label: quiz.title },
-      ];
+  // The access filter guarantees a chapter; the fallbacks only keep types honest.
+  const courseHref = quiz.chapter ? `/courses/${quiz.chapter.courseId}` : "/courses";
+  const crumbs: Crumb[] = [
+    { label: "Home", href: "/dashboard" },
+    { label: "My courses", href: "/courses" },
+    ...(quiz.chapter ? [{ label: quiz.chapter.course.title, href: courseHref }] : []),
+    ...(quiz.lesson ? [{ label: quiz.lesson.title, href: `${courseHref}/lessons/${quiz.lesson.id}` }] : []),
+    { label: quiz.title },
+  ];
 
-  const backHref = quiz.lesson
-    ? `/courses/${quiz.lesson.chapter.courseId}/lessons/${quiz.lesson.id}`
-    : "/quizzes";
-  const backLabel = quiz.lesson ? `Back to lesson: ${quiz.lesson.title}` : "Back to quizzes";
+  const backHref = quiz.lesson ? `${courseHref}/lessons/${quiz.lesson.id}` : courseHref;
+  const backLabel = quiz.lesson
+    ? `Back to lesson: ${quiz.lesson.title}`
+    : `Back to ${quiz.chapter?.course.title ?? "course"}`;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">

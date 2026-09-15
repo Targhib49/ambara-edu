@@ -26,8 +26,41 @@ export async function previewImport(formData: FormData): Promise<ImportResult> {
   return validateRows(rows);
 }
 
+/**
+ * Where a quiz sits in the syllabus: always a chapter, and optionally a lesson
+ * inside it. Checked on the server so a quiz can never point at a lesson from
+ * some other chapter.
+ */
+async function resolvePlacement(
+  chapterIdRaw: unknown,
+  lessonIdRaw: unknown
+): Promise<{ chapterId: string; lessonId: string | null } | { error: string }> {
+  const chapterId = String(chapterIdRaw ?? "");
+  const lessonId = String(lessonIdRaw ?? "") || null;
+  const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+  if (!chapterId || !isUuid(chapterId)) return { error: "Choose the course and chapter this quiz belongs to." };
+  // Also catches the picker's "After a lesson, but none chosen" marker.
+  if (lessonId && !isUuid(lessonId)) {
+    return { error: "Choose the lesson this quiz follows, or put it at the end of the chapter." };
+  }
+  const chapter = await db.chapter.findUnique({ where: { id: chapterId }, select: { id: true } });
+  if (!chapter) return { error: "That chapter no longer exists." };
+  if (lessonId) {
+    const lesson = await db.lesson.findFirst({ where: { id: lessonId, chapterId }, select: { id: true } });
+    if (!lesson) return { error: "That lesson isn't part of the chosen chapter." };
+  }
+  return { chapterId, lessonId };
+}
+
+function revalidateQuizLists() {
+  revalidatePath("/tutor/quizzes");
+  // Course editors show each chapter's quizzes.
+  revalidatePath("/tutor/courses", "layout");
+  revalidatePath("/quizzes");
+}
+
 export type CommitImportTarget =
-  | { mode: "new"; title: string; lessonId: string | null }
+  | { mode: "new"; title: string; chapterId: string; lessonId: string | null }
   | { mode: "update"; quizId: string };
 
 export type DraftQuestionInput = {
@@ -39,19 +72,30 @@ export type DraftQuestionInput = {
   correctAnswer: unknown;
 };
 
-export async function commitImport(target: CommitImportTarget, drafts: DraftQuestionInput[]) {
+export async function commitImport(
+  target: CommitImportTarget,
+  drafts: DraftQuestionInput[]
+): Promise<{ error?: string } | undefined> {
   await requireTutor();
-  if (drafts.length === 0) return;
+  if (drafts.length === 0) return { error: "There are no questions to import." };
+  if (target.mode === "new" && !target.title.trim()) return { error: "Give the quiz a title." };
 
-  if (target.mode === "new" && !target.title.trim()) return;
+  let placement: { chapterId: string; lessonId: string | null } | null = null;
+  if (target.mode === "new") {
+    const resolved = await resolvePlacement(target.chapterId, target.lessonId);
+    if ("error" in resolved) return { error: resolved.error };
+    placement = resolved;
+  }
 
   const quizId = await db.$transaction(async (tx) => {
     let id: string;
     if (target.mode === "new") {
+      if (!placement) throw new Error("A new quiz needs a placement.");
       const quiz = await tx.quiz.create({
         data: {
           title: target.title.trim(),
-          lessonId: target.lessonId,
+          chapterId: placement.chapterId,
+          lessonId: placement.lessonId,
           importBatchId: randomUUID(),
           status: "DRAFT",
         },
@@ -79,14 +123,14 @@ export async function commitImport(target: CommitImportTarget, drafts: DraftQues
     return id;
   });
 
-  revalidatePath("/tutor/quizzes");
+  revalidateQuizLists();
   redirect(`/tutor/quizzes/${quizId}`);
 }
 
 export async function deleteQuiz(quizId: string) {
   await requireTutor();
   await db.quiz.delete({ where: { id: quizId } });
-  revalidatePath("/tutor/quizzes");
+  revalidateQuizLists();
   redirect("/tutor/quizzes");
 }
 
@@ -95,19 +139,22 @@ export type CreateQuizState = { error?: string };
 export async function createQuiz(_prev: CreateQuizState, formData: FormData): Promise<CreateQuizState> {
   await requireTutor();
   const title = String(formData.get("title") ?? "").trim();
-  const lessonId = String(formData.get("lessonId") ?? "") || null;
-  if (!title) return { error: "Title is required." };
+  if (!title) return { error: "Give the quiz a title." };
+  const placement = await resolvePlacement(formData.get("chapterId"), formData.get("lessonId"));
+  if ("error" in placement) return { error: placement.error };
 
-  const quiz = await db.quiz.create({ data: { title, lessonId, status: "DRAFT" } });
-  revalidatePath("/tutor/quizzes");
+  const quiz = await db.quiz.create({ data: { title, ...placement, status: "DRAFT" } });
+  revalidateQuizLists();
   redirect(`/tutor/quizzes/${quiz.id}`);
 }
 
 export async function updateQuizMeta(quizId: string, formData: FormData) {
   await requireTutor();
   const title = String(formData.get("title") ?? "").trim();
-  const lessonId = String(formData.get("lessonId") ?? "") || null;
   if (!title) return;
+  // The picker only offers valid placements; a stale one (a lesson deleted
+  // meanwhile) keeps the quiz where it was rather than failing the whole save.
+  const placement = await resolvePlacement(formData.get("chapterId"), formData.get("lessonId"));
 
   const timeLimitRaw = String(formData.get("timeLimitMinutes") ?? "").trim();
   const maxAttemptsRaw = String(formData.get("maxAttempts") ?? "").trim();
@@ -117,11 +164,16 @@ export async function updateQuizMeta(quizId: string, formData: FormData) {
 
   await db.quiz.update({
     where: { id: quizId },
-    data: { title, lessonId, timeLimitMinutes, maxAttempts, randomizeQuestionOrder },
+    data: {
+      title,
+      timeLimitMinutes,
+      maxAttempts,
+      randomizeQuestionOrder,
+      ...("error" in placement ? {} : placement),
+    },
   });
   revalidatePath(`/tutor/quizzes/${quizId}`);
-  revalidatePath("/tutor/quizzes");
-  revalidatePath("/quizzes");
+  revalidateQuizLists();
 }
 
 export async function setQuizStatus(quizId: string, status: QuizStatus) {
