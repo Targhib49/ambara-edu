@@ -38,11 +38,19 @@ export default async function StudentTracksPage() {
                 href={`/courses/${course.id}`}
                 className="group overflow-hidden rounded-xl border border-zinc-200 bg-white hover:border-blue-300 hover:shadow-sm"
               >
-                <div className={`flex aspect-[4/3] items-center justify-center ${bg}`}>
-                  <span className="text-4xl font-semibold text-zinc-900/20">
-                    {course.title.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                {course.coverImagePath ? (
+                  // Signed URL behind a redirect — not something next/image can optimise.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/api/courses/${course.id}/cover?v=${encodeURIComponent(course.coverImagePath)}`}
+                    alt=""
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                ) : (
+                  <div className={`flex aspect-[4/3] items-center justify-center ${bg}`}>
+                    <span className="text-4xl font-semibold text-zinc-900/20">{course.title.charAt(0).toUpperCase()}</span>
+                  </div>
+                )}
                 <div className="p-3">
                   <h2 className="truncate text-sm font-medium text-zinc-900 group-hover:text-blue-700">
                     {course.title}

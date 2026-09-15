@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { updateTrack, deleteCourse, setEnrollment } from "@/lib/actions/courses";
+import { updateCourse, deleteCourse, setEnrollment } from "@/lib/actions/courses";
 import { createChapter, renameChapter, deleteChapter, moveChapter } from "@/lib/actions/chapters";
 import { createLesson, deleteLesson, moveLesson, setLessonStatus } from "@/lib/actions/lessons";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { CourseCoverForm } from "@/components/courses/CourseCoverForm";
 
 const smallBtn =
   "rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-40";
@@ -47,7 +48,7 @@ export default async function TrackDetailPage({
             { label: course.title },
           ]}
         />
-        <form action={updateTrack.bind(null, course.id)} className="mt-3 max-w-xl space-y-3">
+        <form action={updateCourse.bind(null, course.id)} className="mt-3 max-w-xl space-y-3">
           <input name="title" defaultValue={course.title} required className={`${inputCls} w-full text-lg font-semibold`} />
           <textarea
             name="description"
@@ -65,6 +66,9 @@ export default async function TrackDetailPage({
             </SubmitButton>
           </div>
         </form>
+        <div className="mt-4">
+          <CourseCoverForm courseId={course.id} coverImagePath={course.coverImagePath} />
+        </div>
       </div>
 
       {/* Chapters & lessons */}

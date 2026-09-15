@@ -90,7 +90,7 @@ export default async function StudentTrackPage({
     chapterViews.flatMap((c) => c.items).find((i) => !i.complete)?.key ?? null;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_280px]">
       <div className="min-w-0 space-y-6">
         <Breadcrumbs
           items={[
@@ -99,7 +99,16 @@ export default async function StudentTrackPage({
             { label: course.title },
           ]}
         />
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 lg:p-8">
+        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white p-6 lg:p-8">
+          {course.coverImagePath && (
+            // Signed URL behind a redirect — not something next/image can optimise.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`/api/courses/${course.id}/cover?v=${encodeURIComponent(course.coverImagePath)}`}
+              alt=""
+              className="-mx-6 -mt-6 mb-6 aspect-[16/6] w-[calc(100%+3rem)] max-w-none object-cover lg:-mx-8 lg:-mt-8 lg:w-[calc(100%+4rem)]"
+            />
+          )}
           <h1 className="text-2xl font-semibold">{course.title}</h1>
           {course.description && <p className="mt-2 text-sm text-zinc-600">{course.description}</p>}
           {courseV2 && progress.total > 0 && (
@@ -179,7 +188,7 @@ export default async function StudentTrackPage({
         </div>
       </div>
 
-      <aside className="lg:sticky lg:top-14 lg:self-start">
+      <aside className="xl:sticky xl:top-14 xl:self-start">
         <div className="rounded-xl border border-zinc-200 bg-white p-5">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">Upcoming</h2>
           {upcomingSessions.length === 0 ? (

@@ -94,6 +94,9 @@ model Course {
   id          String       @id @default(uuid()) @db.Uuid
   title       String
   description String       @default("")
+  // Storage path of the uploaded cover in the attachments bucket. Served through
+  // an access-checked route, never linked directly; null shows the letter tile.
+  coverImagePath String?
   ownerId     String       @db.Uuid
   owner       User         @relation("CourseOwner", fields: [ownerId], references: [id])
   chapters    Chapter[]
