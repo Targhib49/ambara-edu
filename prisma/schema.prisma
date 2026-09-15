@@ -40,6 +40,16 @@ enum SessionStatus {
   RESCHEDULE_REQUESTED_BY_STUDENT
   RESCHEDULE_REQUESTED_BY_TUTOR
   CANCELLED
+  // The session happened and the tutor closed it out (attendance + notes).
+  COMPLETED
+  // The tutor can't make it; the student picks a new time from availability.
+  // Its old time is released, so it holds no slot while in this state.
+  AWAITING_RESCHEDULE
+}
+
+enum Attendance {
+  ATTENDED
+  NO_SHOW
 }
 
 enum QuestionType {
@@ -194,6 +204,11 @@ model Session {
   // and vice versa. A counter-proposal overwrites this and flips the status —
   // no history of earlier proposals is kept.
   proposedAltTime DateTime?     @db.Timestamptz(3)
+  // Why a session was cancelled or needs a new time. Shown to the student.
+  statusReason    String?
+  cancelledAt     DateTime?     @db.Timestamptz(3)
+  // Recorded when the tutor marks a session done.
+  attendance      Attendance?
   // Set when this session was generated from a repeating booking. Occurrences
   // are edited and cancelled individually — moving one never touches its
   // siblings — so this is a provenance link, not a source of truth for timing.

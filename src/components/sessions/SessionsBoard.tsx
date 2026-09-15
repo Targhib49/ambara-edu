@@ -1,29 +1,34 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { TutorSessionRow } from "./TutorSessionRow";
+import { useEffect, useState } from "react";
 import { StudentSessionRow } from "./StudentSessionRow";
 import { SessionCalendar } from "./SessionCalendar";
+import { TutorSessionsTable, type TutorSessionTableRow } from "./TutorSessionsTable";
+import type { OpenSlot } from "./BookingPanel";
 import { nowMs } from "@/lib/sessions/format";
 import type { SessionStatus } from "@/generated/prisma/enums";
 
-type BaseRow = {
+export type StudentSessionBoardRow = {
   id: string;
+  tutorId: string;
+  tutorName: string;
   startTime: string;
   durationMinutes: number;
   status: SessionStatus;
   notes: string;
+  statusReason: string | null;
   proposedAltTime: string | null;
 };
-type TutorRow = BaseRow & { studentName: string };
-type StudentRow = BaseRow & { tutorName: string };
 
-// The board is shared by both roles; server pages can't pass render
-// callbacks across the client boundary, so the role prop picks the row
-// component (and which reschedule status means "waiting on you") internally.
+// Shared by both roles; server pages can't pass render callbacks across the
+// client boundary, so the role prop picks the list view internally. Tutors get
+// the action table, students keep the card list.
 type BoardProps =
-  | { role: "tutor"; sessions: TutorRow[] }
-  | { role: "student"; sessions: StudentRow[] };
+  | { role: "tutor"; sessions: TutorSessionTableRow[] }
+  | { role: "student"; sessions: StudentSessionBoardRow[]; rescheduleSlots: OpenSlot[] };
+
+const STUDENT_NEEDS_RESPONSE: SessionStatus[] = ["RESCHEDULE_REQUESTED_BY_TUTOR", "AWAITING_RESCHEDULE"];
+const FINISHED: SessionStatus[] = ["CANCELLED", "COMPLETED"];
 
 const tabCls = (active: boolean) =>
   `rounded px-3 py-1 text-sm font-medium ${active ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`;
@@ -31,30 +36,25 @@ const tabCls = (active: boolean) =>
 export function SessionsBoard(props: BoardProps) {
   const [view, setView] = useState<"calendar" | "list">("calendar");
   const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
-
   const isTutor = props.role === "tutor";
-  const needsResponseStatus: SessionStatus = isTutor
-    ? "RESCHEDULE_REQUESTED_BY_STUDENT"
-    : "RESCHEDULE_REQUESTED_BY_TUTOR";
-  const sessions = props.sessions as (TutorRow | StudentRow)[];
+
+  const calendarSessions = (props.sessions as (TutorSessionTableRow | StudentSessionBoardRow)[]).map((s) => ({
+    id: s.id,
+    label: "studentName" in s ? s.studentName : s.tutorName,
+    startTime: s.startTime,
+    status: s.status,
+  }));
 
   const now = nowMs();
-  const needsResponse = sessions.filter((s) => s.status === needsResponseStatus);
-  const rest = sessions.filter((s) => s.status !== needsResponseStatus);
-  const upcoming = useMemo(
-    () =>
-      rest
-        .filter((s) => s.status !== "CANCELLED" && new Date(s.startTime).getTime() >= now)
-        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
-    [rest, now]
-  );
-  const past = useMemo(
-    () =>
-      rest
-        .filter((s) => s.status === "CANCELLED" || new Date(s.startTime).getTime() < now)
-        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()),
-    [rest, now]
-  );
+  const studentSessions = props.role === "student" ? props.sessions : [];
+  const needsResponse = studentSessions.filter((s) => STUDENT_NEEDS_RESPONSE.includes(s.status));
+  const rest = studentSessions.filter((s) => !STUDENT_NEEDS_RESPONSE.includes(s.status));
+  const upcoming = rest
+    .filter((s) => !FINISHED.includes(s.status) && new Date(s.startTime).getTime() >= now)
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  const past = rest
+    .filter((s) => FINISHED.includes(s.status) || new Date(s.startTime).getTime() < now)
+    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
   function selectFromCalendar(sessionId: string) {
     setView("list");
@@ -78,13 +78,6 @@ export function SessionsBoard(props: BoardProps) {
     return () => clearTimeout(timer);
   }, [view, pendingScrollId]);
 
-  const row = (s: TutorRow | StudentRow, isPast: boolean) =>
-    isTutor ? (
-      <TutorSessionRow key={s.id} session={s as TutorRow} />
-    ) : (
-      <StudentSessionRow key={s.id} session={s as StudentRow} isPast={isPast} />
-    );
-
   return (
     <div>
       <div className="mb-4 inline-flex gap-0.5 rounded-lg bg-zinc-100 p-0.5">
@@ -98,39 +91,47 @@ export function SessionsBoard(props: BoardProps) {
 
       {view === "calendar" && (
         <SessionCalendar
-          sessions={sessions.map((s) => ({
-            id: s.id,
-            label: "studentName" in s ? s.studentName : s.tutorName,
-            startTime: s.startTime,
-            status: s.status,
-          }))}
+          sessions={calendarSessions}
           onSelectSession={selectFromCalendar}
-          legendStatuses={["CONFIRMED", needsResponseStatus, "CANCELLED"]}
+          legendStatuses={
+            isTutor
+              ? ["CONFIRMED", "RESCHEDULE_REQUESTED_BY_STUDENT", "AWAITING_RESCHEDULE", "COMPLETED", "CANCELLED"]
+              : ["CONFIRMED", "AWAITING_RESCHEDULE", "COMPLETED", "CANCELLED"]
+          }
         />
       )}
 
-      {view === "list" && (
-        <div className="space-y-8">
-          {needsResponse.length > 0 && (
+      {view === "list" &&
+        (props.role === "tutor" ? (
+          <TutorSessionsTable sessions={props.sessions} />
+        ) : (
+          <div className="space-y-8">
+            {needsResponse.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-lg font-semibold text-amber-700">Needs your response</h2>
+                {needsResponse.map((s) => (
+                  <StudentSessionRow key={s.id} session={s} isPast={false} rescheduleSlots={props.rescheduleSlots} />
+                ))}
+              </section>
+            )}
+
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold text-amber-700">Needs your response</h2>
-              {needsResponse.map((s) => row(s, false))}
+              <h2 className="text-lg font-semibold">Upcoming</h2>
+              {upcoming.length === 0 && <p className="text-sm text-zinc-500">No upcoming sessions.</p>}
+              {upcoming.map((s) => (
+                <StudentSessionRow key={s.id} session={s} isPast={false} rescheduleSlots={props.rescheduleSlots} />
+              ))}
             </section>
-          )}
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Upcoming</h2>
-            {upcoming.length === 0 && <p className="text-sm text-zinc-500">No upcoming sessions.</p>}
-            {upcoming.map((s) => row(s, false))}
-          </section>
-
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Past</h2>
-            {past.length === 0 && <p className="text-sm text-zinc-500">No past sessions yet.</p>}
-            {past.map((s) => row(s, true))}
-          </section>
-        </div>
-      )}
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold">Past</h2>
+              {past.length === 0 && <p className="text-sm text-zinc-500">No past sessions yet.</p>}
+              {past.map((s) => (
+                <StudentSessionRow key={s.id} session={s} isPast rescheduleSlots={props.rescheduleSlots} />
+              ))}
+            </section>
+          </div>
+        ))}
     </div>
   );
 }

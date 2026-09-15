@@ -27,20 +27,28 @@ export default async function StudentSessionsPage() {
     durationMinutes: number;
     dayLabel: string;
     timeLabel: string;
+    tutorId: string;
   }[] = [];
   let feedUrl: string | null = null;
-  if (schedulingV2) {
+  // A tutor can ask for a new time whether or not self-booking is switched on,
+  // so the student always gets slots to pick from when one is waiting on them.
+  const awaitingNewTime = sessions.some((s) => s.status === "AWAITING_RESCHEDULE");
+  if (schedulingV2 || awaitingNewTime) {
     const [windows, busy] = await Promise.all([
       db.availability.findMany({ where: { active: true } }),
       db.session.findMany({
-        where: { status: { not: "CANCELLED" } },
+        where: { // A session waiting for a new time no longer holds its old slot.
+        status: { notIn: ["CANCELLED", "AWAITING_RESCHEDULE"] } },
         select: { tutorId: true, startTime: true, durationMinutes: true },
       }),
     ]);
     const now = new Date();
     openSlots = windows
       .flatMap((w) =>
-        generateSlots([w], busy.filter((b) => b.tutorId === w.tutorId), now)
+        generateSlots([w], busy.filter((b) => b.tutorId === w.tutorId), now).map((slot) => ({
+          ...slot,
+          tutorId: w.tutorId,
+        }))
       )
       .sort((a, b) => a.start.getTime() - b.start.getTime())
       .map((slot) => ({
@@ -49,13 +57,16 @@ export default async function StudentSessionsPage() {
         durationMinutes: slot.durationMinutes,
         dayLabel: formatSlotDay(slot.start),
         timeLabel: formatSlotTime(slot.start),
+        tutorId: slot.tutorId,
       }));
-    feedUrl = await feedUrlFor(await ensureCalendarToken());
   }
+  if (schedulingV2) feedUrl = await feedUrlFor(await ensureCalendarToken());
 
   const rows = sessions.map((s) => ({
     id: s.id,
+    tutorId: s.tutorId,
     tutorName: s.tutor.name,
+    statusReason: s.statusReason,
     startTime: s.startTime.toISOString(),
     durationMinutes: s.durationMinutes,
     status: s.status,
@@ -72,7 +83,7 @@ export default async function StudentSessionsPage() {
 
       {schedulingV2 && <BookingPanel slots={openSlots} />}
 
-      <SessionsBoard role="student" sessions={rows} />
+      <SessionsBoard role="student" sessions={rows} rescheduleSlots={openSlots} />
 
       {schedulingV2 && feedUrl && <CalendarFeedCard url={feedUrl} />}
     </div>

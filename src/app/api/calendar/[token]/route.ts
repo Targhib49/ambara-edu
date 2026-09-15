@@ -42,7 +42,8 @@ export async function GET(
 
   const sessions = await db.session.findMany({
     where: {
-      status: { not: "CANCELLED" },
+      // A session awaiting a new time has no valid time to put in a calendar.
+      status: { notIn: ["CANCELLED", "AWAITING_RESCHEDULE"] },
       ...(feed.user.role === "TUTOR" ? { tutorId: feed.user.id } : { studentId: feed.user.id }),
     },
     include: { student: { select: { name: true } }, tutor: { select: { name: true } } },
@@ -71,7 +72,7 @@ export async function GET(
       `DTEND:${icsStamp(end)}`,
       fold(`SUMMARY:${icsEscape(`AmbaraEdu session with ${other}`)}`),
       ...(session.notes ? [fold(`DESCRIPTION:${icsEscape(session.notes)}`)] : []),
-      `STATUS:${session.status === "CONFIRMED" ? "CONFIRMED" : "TENTATIVE"}`,
+      `STATUS:${session.status === "CONFIRMED" || session.status === "COMPLETED" ? "CONFIRMED" : "TENTATIVE"}`,
       "END:VEVENT"
     );
   }

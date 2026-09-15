@@ -7,6 +7,8 @@ export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   RESCHEDULE_REQUESTED_BY_STUDENT: "Reschedule requested",
   RESCHEDULE_REQUESTED_BY_TUTOR: "Reschedule proposed",
   CANCELLED: "Cancelled",
+  COMPLETED: "Completed",
+  AWAITING_RESCHEDULE: "Awaiting new time",
 };
 
 export const SESSION_STATUS_BADGE_CLASS: Record<SessionStatus, string> = {
@@ -15,6 +17,8 @@ export const SESSION_STATUS_BADGE_CLASS: Record<SessionStatus, string> = {
   RESCHEDULE_REQUESTED_BY_STUDENT: "bg-amber-100 text-amber-700",
   RESCHEDULE_REQUESTED_BY_TUTOR: "bg-amber-100 text-amber-700",
   CANCELLED: "bg-zinc-100 text-zinc-400 line-through",
+  COMPLETED: "bg-blue-100 text-blue-700",
+  AWAITING_RESCHEDULE: "bg-violet-100 text-violet-700",
 };
 
 // Indirection so Server Component pages calling this for bucketing
@@ -88,4 +92,24 @@ export function formatSessionInstant(instant: Date) {
       timeZone: "UTC",
     }) + " WIB"
   );
+}
+
+export const ATTENDANCE_LABEL = { ATTENDED: "Attended", NO_SHOW: "No-show" } as const;
+
+/**
+ * Compact session time for tables, e.g. "Tue 15 Sept, 16:00". Formatted on the
+ * server in the app's timezone and passed down as a string — formatting in the
+ * browser would disagree with server rendering in production, where Vercel
+ * runs UTC.
+ */
+export function formatSessionShort(instant: Date) {
+  const shifted = new Date(instant.getTime() + APP_TZ_OFFSET_MINUTES * 60_000);
+  return shifted.toLocaleString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
 }

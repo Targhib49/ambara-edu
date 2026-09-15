@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { requireTutor } from "@/lib/auth";
 import { SessionsBoard } from "@/components/sessions/SessionsBoard";
+import type { TutorSessionTableRow } from "@/components/sessions/TutorSessionsTable";
+import { formatSessionShort, nowMs } from "@/lib/sessions/format";
 import { ScheduleSessionForm } from "@/components/sessions/ScheduleSessionForm";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { AvailabilityEditor } from "@/components/sessions/AvailabilityEditor";
@@ -36,15 +38,24 @@ export default async function TutorSessionsPage() {
   const local = toLocalParts(new Date());
   const todayValue = `${local.year}-${String(local.month + 1).padStart(2, "0")}-${String(local.day).padStart(2, "0")}`;
 
-  const rows = sessions.map((s) => ({
-    id: s.id,
-    studentName: s.student.name,
-    startTime: s.startTime.toISOString(),
-    durationMinutes: s.durationMinutes,
-    status: s.status,
-    notes: s.notes,
-    proposedAltTime: s.proposedAltTime?.toISOString() ?? null,
-  }));
+  const now = nowMs();
+  const rows: TutorSessionTableRow[] = sessions.map((s) => {
+    const local = toLocalParts(s.startTime);
+    return {
+      id: s.id,
+      studentName: s.student.name,
+      startTime: s.startTime.toISOString(),
+      whenLabel: formatSessionShort(s.startTime),
+      localDate: `${local.year}-${String(local.month + 1).padStart(2, "0")}-${String(local.day).padStart(2, "0")}`,
+      durationMinutes: s.durationMinutes,
+      status: s.status,
+      notes: s.notes,
+      statusReason: s.statusReason,
+      attendance: s.attendance,
+      proposedAltLabel: s.proposedAltTime ? formatSessionShort(s.proposedAltTime) : null,
+      hasStarted: s.startTime.getTime() <= now,
+    };
+  });
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8">

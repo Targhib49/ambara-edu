@@ -11,6 +11,8 @@ export type OpenSlot = {
   /** Formatted server-side in the app timezone — see formatSlotDay/Time. */
   dayLabel: string;
   timeLabel: string;
+  /** Which tutor's availability this came from — lets a reschedule show only that tutor's times. */
+  tutorId?: string;
 };
 
 function groupByDay(slots: OpenSlot[]) {

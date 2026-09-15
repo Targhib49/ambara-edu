@@ -300,7 +300,9 @@ export function DataTable<T>({
                     <tr key={key} className="border-t border-zinc-100 align-top hover:bg-zinc-50/70">
                       {open ? (
                         <td colSpan={columns.length} className="bg-zinc-50/70 p-4">
-                          {renderExpanded(row)}
+                          {/* Pinned to the left edge of the scroll area, so a panel opened from a
+                              column scrolled into view on a narrow screen isn't half off-screen. */}
+                          <div className="sticky left-4 max-w-[calc(100vw-3rem)]">{renderExpanded(row)}</div>
                         </td>
                       ) : (
                         columns.map((c) => (

@@ -40,7 +40,7 @@ export async function bookSlot(
   if (!window) return { error: "That slot is no longer offered." };
 
   const busy = await db.session.findMany({
-    where: { tutorId: window.tutorId, status: { not: "CANCELLED" } },
+    where: { tutorId: window.tutorId, status: { notIn: ["CANCELLED", "AWAITING_RESCHEDULE"] } },
     select: { startTime: true, durationMinutes: true },
   });
   const open = generateSlots(
@@ -111,7 +111,7 @@ export async function createSeries(
 
   const instants = seriesOccurrences(weekday, startMinute, startsOn, occurrences);
   const busy = await db.session.findMany({
-    where: { tutorId: tutor.id, status: { not: "CANCELLED" } },
+    where: { tutorId: tutor.id, status: { notIn: ["CANCELLED", "AWAITING_RESCHEDULE"] } },
     select: { startTime: true, durationMinutes: true },
   });
   const clashes = (start: Date) =>

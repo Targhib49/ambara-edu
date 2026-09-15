@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { StatusBadge } from "./StatusBadge";
+import type { OpenSlot } from "./BookingPanel";
 import { formatSessionTime } from "@/lib/sessions/format";
-import { requestReschedule, studentRespondToReschedule } from "@/lib/actions/sessions";
+import { requestReschedule, studentPickRescheduleSlot, studentRespondToReschedule } from "@/lib/actions/sessions";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import type { SessionStatus } from "@/generated/prisma/enums";
 
@@ -13,24 +15,48 @@ const primaryBtn =
   "rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-40";
 const dateInputCls = "rounded-md border border-zinc-300 px-2 py-1 text-sm";
 
+/** Enough to choose from without turning the card into a month of buttons. */
+const MAX_RESCHEDULE_SLOTS = 12;
+
 export function StudentSessionRow({
   session,
   isPast,
+  rescheduleSlots,
 }: {
   session: {
     id: string;
+    tutorId: string;
     tutorName: string;
     startTime: string;
     durationMinutes: number;
     status: SessionStatus;
     notes: string;
+    statusReason: string | null;
     proposedAltTime: string | null;
   };
   isPast: boolean;
+  /**
+   * Open slots to reschedule into. Omitted where a page doesn't load
+   * availability (the dashboard) — the card then links to the Sessions page,
+   * which has the picker, instead of pretending there are no times.
+   */
+  rescheduleSlots?: OpenSlot[];
 }) {
   const [pending, startTransition] = useTransition();
   const [formOpen, setFormOpen] = useState(false);
   const [altValue, setAltValue] = useState("");
+  const [pickError, setPickError] = useState<string | null>(null);
+
+  // Only this tutor's times, long enough for this session.
+  const slots = (rescheduleSlots ?? [])
+    .filter((slot) => slot.tutorId === session.tutorId && slot.durationMinutes >= session.durationMinutes)
+    .slice(0, MAX_RESCHEDULE_SLOTS);
+  const slotsByDay = slots.reduce<[string, OpenSlot[]][]>((groups, slot) => {
+    const last = groups[groups.length - 1];
+    if (last && last[0] === slot.dayLabel) last[1].push(slot);
+    else groups.push([slot.dayLabel, [slot]]);
+    return groups;
+  }, []);
 
   return (
     <div
@@ -51,6 +77,51 @@ export function StudentSessionRow({
         </div>
         <StatusBadge status={session.status} />
       </div>
+
+      {session.status === "AWAITING_RESCHEDULE" && (
+        <div className="mt-3 space-y-2.5 rounded-lg border border-violet-200 bg-violet-50/60 p-3">
+          <p className="text-sm font-medium text-violet-900">Your tutor needs to move this session — pick a new time.</p>
+          {session.statusReason && <p className="text-sm text-violet-800">&ldquo;{session.statusReason}&rdquo;</p>}
+          {rescheduleSlots === undefined ? (
+            <Link href="/sessions" className="inline-block text-sm font-medium text-violet-800 hover:underline">
+              Pick a new time on your Sessions page →
+            </Link>
+          ) : slotsByDay.length === 0 ? (
+            <p className="text-sm text-zinc-600">No open times right now. Message your tutor to arrange one.</p>
+          ) : (
+            <div className="space-y-2">
+              {slotsByDay.map(([day, daySlots]) => (
+                <div key={day}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700/70">{day}</p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {daySlots.map((slot) => (
+                      <button
+                        key={slot.startIso}
+                        disabled={pending}
+                        onClick={() =>
+                          startTransition(async () => {
+                            setPickError(null);
+                            const result = await studentPickRescheduleSlot(session.id, slot.availabilityId, slot.startIso);
+                            if (result.error) setPickError(result.error);
+                          })
+                        }
+                        className="rounded-md border border-violet-300 bg-white px-2.5 py-1 text-sm text-violet-900 hover:border-violet-500 hover:bg-violet-100 disabled:opacity-50"
+                      >
+                        {slot.timeLabel}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {pickError && <p className="text-sm text-red-600">{pickError}</p>}
+        </div>
+      )}
+
+      {session.status === "CANCELLED" && session.statusReason && (
+        <p className="mt-3 text-sm text-zinc-500">Reason: {session.statusReason}</p>
+      )}
 
       {session.status === "RESCHEDULE_REQUESTED_BY_STUDENT" && (
         <p className="mt-3 text-sm text-zinc-500">
@@ -124,11 +195,7 @@ export function StudentSessionRow({
                   className={smallBtn}
                   onClick={() =>
                     startTransition(async () => {
-                      await studentRespondToReschedule(
-                        session.id,
-                        "counter",
-                        new Date(altValue).toISOString()
-                      );
+                      await studentRespondToReschedule(session.id, "counter", new Date(altValue).toISOString());
                       setFormOpen(false);
                     })
                   }

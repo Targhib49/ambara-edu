@@ -134,7 +134,9 @@ export default async function StudentDashboardPage() {
     .slice(0, 3)
     .map((s) => ({
       id: s.id,
+      tutorId: s.tutorId,
       tutorName: s.tutor.name,
+      statusReason: s.statusReason,
       startTime: s.startTime.toISOString(),
       durationMinutes: s.durationMinutes,
       status: s.status,
