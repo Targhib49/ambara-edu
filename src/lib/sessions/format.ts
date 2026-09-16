@@ -6,6 +6,10 @@ import { APP_TZ, APP_TZ_OFFSET_MINUTES } from "@/lib/scheduling";
 /** Dictionary key for a session status, so both roles show it in their own language. */
 export const sessionStatusKey = (status: SessionStatus) => `session.status.${status}` as MessageKey;
 
+/** Weekday names live in the dictionary; 0 = Sunday, matching Date.getDay(). */
+export const weekdayKey = (weekday: number) => `weekday.${weekday}` as MessageKey;
+export const weekdayShortKey = (weekday: number) => `weekdayShort.${weekday}` as MessageKey;
+
 export const attendanceKey = (value: "ATTENDED" | "NO_SHOW") => `attendance.${value}` as MessageKey;
 
 export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {

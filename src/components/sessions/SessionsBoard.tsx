@@ -6,6 +6,7 @@ import { SessionCalendar } from "./SessionCalendar";
 import { TutorSessionsTable, type TutorSessionTableRow } from "./TutorSessionsTable";
 import type { OpenSlot } from "./BookingPanel";
 import { nowMs } from "@/lib/sessions/format";
+import { useT } from "@/lib/i18n/client";
 import type { SessionStatus } from "@/generated/prisma/enums";
 
 export type StudentSessionBoardRow = {
@@ -34,6 +35,7 @@ const tabCls = (active: boolean) =>
   `rounded px-3 py-1 text-sm font-medium ${active ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`;
 
 export function SessionsBoard(props: BoardProps) {
+  const t = useT();
   const [view, setView] = useState<"calendar" | "list">("calendar");
   const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
   const isTutor = props.role === "tutor";
@@ -82,10 +84,10 @@ export function SessionsBoard(props: BoardProps) {
     <div>
       <div className="mb-4 inline-flex gap-0.5 rounded-lg bg-zinc-100 p-0.5">
         <button onClick={() => setView("calendar")} className={tabCls(view === "calendar")}>
-          Calendar
+          {t("sessions.viewCalendar")}
         </button>
         <button onClick={() => setView("list")} className={tabCls(view === "list")}>
-          List
+          {t("sessions.viewList")}
         </button>
       </div>
 
@@ -108,7 +110,7 @@ export function SessionsBoard(props: BoardProps) {
           <div className="space-y-8">
             {needsResponse.length > 0 && (
               <section className="space-y-3">
-                <h2 className="text-lg font-semibold text-amber-700">Needs your response</h2>
+                <h2 className="text-lg font-semibold text-amber-700">{t("studentSessions.needsResponse")}</h2>
                 {needsResponse.map((s) => (
                   <StudentSessionRow key={s.id} session={s} isPast={false} rescheduleSlots={props.rescheduleSlots} />
                 ))}
@@ -116,16 +118,16 @@ export function SessionsBoard(props: BoardProps) {
             )}
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold">Upcoming</h2>
-              {upcoming.length === 0 && <p className="text-sm text-zinc-500">No upcoming sessions.</p>}
+              <h2 className="text-lg font-semibold">{t("tutorSessions.tabUpcoming")}</h2>
+              {upcoming.length === 0 && <p className="text-sm text-zinc-500">{t("studentSessions.noUpcoming")}</p>}
               {upcoming.map((s) => (
                 <StudentSessionRow key={s.id} session={s} isPast={false} rescheduleSlots={props.rescheduleSlots} />
               ))}
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold">Past</h2>
-              {past.length === 0 && <p className="text-sm text-zinc-500">No past sessions yet.</p>}
+              <h2 className="text-lg font-semibold">{t("studentSessions.past")}</h2>
+              {past.length === 0 && <p className="text-sm text-zinc-500">{t("studentSessions.noPast")}</p>}
               {past.map((s) => (
                 <StudentSessionRow key={s.id} session={s} isPast rescheduleSlots={props.rescheduleSlots} />
               ))}

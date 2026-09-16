@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Combobox } from "@/components/ui/Combobox";
 import { hintCls, labelCls } from "@/components/ui/styles";
+import { useT } from "@/lib/i18n/client";
 import type { PlacementCourse } from "@/lib/courses/placement";
 
 export type Placement = {
@@ -41,6 +42,7 @@ export function QuizPlacementFields({
   defaultLessonId?: string | null;
   onChange?: (placement: Placement) => void;
 }) {
+  const t = useT();
   const initialCourse =
     (defaultChapterId ? tree.find((c) => c.chapters.some((ch) => ch.id === defaultChapterId))?.id : undefined) ??
     defaultCourseId ??
@@ -57,13 +59,17 @@ export function QuizPlacementFields({
     () =>
       tree
         .filter((c) => !c.archived || c.id === initialCourse)
-        .map((c) => ({ value: c.id, label: c.title, hint: `${c.chapters.length} chapter${c.chapters.length === 1 ? "" : "s"}` })),
-    [tree, initialCourse]
+        .map((c) => ({
+          value: c.id,
+          label: c.title,
+          hint: t(c.chapters.length === 1 ? "count.chapter" : "count.chapters", { n: c.chapters.length }),
+        })),
+    [tree, initialCourse, t]
   );
   const chapterOptions = (course?.chapters ?? []).map((ch, i) => ({
     value: ch.id,
     label: ch.title,
-    hint: `Chapter ${i + 1} · ${ch.lessons.length} lesson${ch.lessons.length === 1 ? "" : "s"}`,
+    hint: t(ch.lessons.length === 1 ? "placement.chapterHint" : "placement.chapterHintPlural", { n: i + 1, c: ch.lessons.length }),
   }));
   const lessonOptions = (chapter?.lessons ?? []).map((l) => ({ value: l.id, label: l.title }));
 
@@ -78,7 +84,7 @@ export function QuizPlacementFields({
   return (
     <div className="space-y-4">
       <div>
-        <label className={labelCls}>Course</label>
+        <label className={labelCls}>{t("studentDetail.course")}</label>
         <Combobox
           options={courseOptions}
           value={courseId}
@@ -88,13 +94,13 @@ export function QuizPlacementFields({
             setLessonId("");
             emit("", position, "");
           }}
-          placeholder="Search courses"
-          aria-label="Course"
+          placeholder={t("studentDetail.searchCourses")}
+          aria-label={t("studentDetail.course")}
         />
       </div>
 
       <div>
-        <label className={labelCls}>Chapter</label>
+        <label className={labelCls}>{t("placement.chapter")}</label>
         <Combobox
           name="chapterId"
           disabled={!course}
@@ -105,19 +111,19 @@ export function QuizPlacementFields({
             setLessonId("");
             emit(value, position, "");
           }}
-          placeholder={course ? "Search chapters" : "Choose a course first"}
-          emptyText={course && course.chapters.length === 0 ? "This course has no chapters yet" : "No matches"}
-          aria-label="Chapter"
+          placeholder={course ? t("placement.searchChapters") : t("placement.chooseCourseFirst")}
+          emptyText={course && course.chapters.length === 0 ? t("placement.noChapters") : t("placement.noMatches")}
+          aria-label={t("placement.chapter")}
         />
       </div>
 
       <fieldset disabled={!chapter}>
-        <legend className={labelCls}>Shown to students</legend>
+        <legend className={labelCls}>{t("placement.shownToStudents")}</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {(
             [
-              ["end", "At the end of the chapter", "A chapter test or try-out, after the last lesson"],
-              ["lesson", "After a lesson", "A quiz on one lesson, right after it"],
+              ["end", t("placement.atEndOfChapter"), t("placement.atEndSub")],
+              ["lesson", t("quizTable.afterLesson"), t("placement.afterLessonSub")],
             ] as const
           ).map(([value, title, sub]) => (
             <label
@@ -144,7 +150,7 @@ export function QuizPlacementFields({
 
       {position === "lesson" && chapter && (
         <div>
-          <label className={labelCls}>Lesson</label>
+          <label className={labelCls}>{t("placement.lesson")}</label>
           <Combobox
             options={lessonOptions}
             value={lessonId}
@@ -152,11 +158,11 @@ export function QuizPlacementFields({
               setLessonId(value);
               emit(chapterId, position, value);
             }}
-            placeholder="Search lessons in this chapter"
-            emptyText="This chapter has no lessons yet"
-            aria-label="Lesson"
+            placeholder={t("placement.searchLessons")}
+            emptyText={t("placement.noLessons")}
+            aria-label={t("placement.lesson")}
           />
-          <p className={hintCls}>Several quizzes can follow the same lesson.</p>
+          <p className={hintCls}>{t("placement.severalQuizzes")}</p>
         </div>
       )}
 

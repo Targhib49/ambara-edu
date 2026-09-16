@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import { createSession, type CreateSessionState } from "@/lib/actions/sessions";
 import { createSeries, type BookingState } from "@/lib/actions/booking";
 import { WEEKDAY_LABELS } from "@/lib/scheduling";
+import { weekdayKey } from "@/lib/sessions/format";
+import { useT } from "@/lib/i18n/client";
 import { Combobox, type ComboOption } from "@/components/ui/Combobox";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import { btnPrimary, btnSecondary, hintCls, inputCls, labelCls } from "@/components/ui/styles";
@@ -26,6 +28,7 @@ export function ScheduleSessionForm({
   today: string;
   defaultStudentId?: string;
 }) {
+  const t = useT();
   const panel = useSlideOver();
   const [mode, setMode] = useState<"once" | "weekly">("once");
   const [studentId, setStudentId] = useState(defaultStudentId ?? "");
@@ -51,26 +54,26 @@ export function ScheduleSessionForm({
   return (
     <form action={mode === "once" ? onceAction : seriesAction} className="space-y-5">
       <div>
-        <label className={labelCls}>Student</label>
+        <label className={labelCls}>{t("students.header.student")}</label>
         <Combobox
           name="studentId"
           required
           options={students}
           value={studentId}
           onChange={setStudentId}
-          placeholder="Search by name or email"
-          aria-label="Student"
+          placeholder={t("schedule.searchStudent")}
+          aria-label={t("students.header.student")}
         />
       </div>
 
       {allowWeekly && (
         <div>
-          <span className={labelCls}>How often</span>
+          <span className={labelCls}>{t("schedule.howOften")}</span>
           <div className="grid grid-cols-2 gap-1 rounded-lg bg-zinc-100 p-1">
             {(
               [
-                ["once", "One session"],
-                ["weekly", "Every week"],
+                ["once", t("schedule.once")],
+                ["weekly", t("schedule.weekly")],
               ] as const
             ).map(([value, label]) => (
               <button
@@ -93,13 +96,13 @@ export function ScheduleSessionForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls} htmlFor="session-date">
-              Date
+              {t("schedule.date")}
             </label>
             <input id="session-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required className={inputCls} />
           </div>
           <div>
             <label className={labelCls} htmlFor="session-time">
-              Starts (WIB)
+              {t("schedule.startsWib")}
             </label>
             <input id="session-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required className={inputCls} />
           </div>
@@ -109,49 +112,50 @@ export function ScheduleSessionForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls} htmlFor="series-day">
-              Day
+              {t("schedule.day")}
             </label>
             <select id="series-day" name="weekday" defaultValue="1" className={inputCls}>
               {WEEKDAY_LABELS.map((label, i) => (
                 <option key={label} value={i}>
-                  {label}
+                  {t(weekdayKey(i))}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className={labelCls} htmlFor="series-time">
-              Starts (WIB)
+              {t("schedule.startsWib")}
             </label>
             <input id="series-time" type="time" name="startTime" defaultValue="16:00" required className={inputCls} />
           </div>
           <div>
             <label className={labelCls} htmlFor="series-from">
-              First week
+              {t("schedule.firstWeek")}
             </label>
             <input id="series-from" type="date" name="startsOn" defaultValue={today} required className={inputCls} />
           </div>
           <div>
             <label className={labelCls} htmlFor="series-weeks">
-              Number of weeks
+              {t("schedule.numberOfWeeks")}
             </label>
             <input id="series-weeks" type="number" name="occurrences" defaultValue={4} min={2} max={52} required className={inputCls} />
           </div>
-          <p className={`${hintCls} col-span-2`}>
-            Each week becomes its own session, so you can move or cancel one without touching the rest. Weeks that clash
-            with an existing booking are skipped.
-          </p>
+          <p className={`${hintCls} col-span-2`}>{t("schedule.seriesHint")}</p>
         </div>
       )}
 
       <div>
         <label className={labelCls} htmlFor="session-length">
-          Length
+          {t("schedule.length")}
         </label>
         <select id="session-length" name="durationMinutes" defaultValue="60" className={inputCls}>
           {DURATIONS.map((m) => (
             <option key={m} value={m}>
-              {m < 60 ? `${m} minutes` : m % 60 === 0 ? `${m / 60} hour${m === 60 ? "" : "s"}` : `${Math.floor(m / 60)}h ${m % 60}m`}
+              {m < 60
+                ? t("schedule.minutesOption", { n: m })
+                : m % 60 === 0
+                  ? t(m === 60 ? "schedule.hourOption" : "schedule.hoursOption", { n: m / 60 })
+                  : t("schedule.hourMinuteOption", { h: Math.floor(m / 60), m: m % 60 })}
             </option>
           ))}
         </select>
@@ -162,11 +166,11 @@ export function ScheduleSessionForm({
       <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
-            Cancel
+            {t("action.cancel")}
           </button>
         )}
         <button disabled={pending} className={btnPrimary}>
-          {pending ? "Scheduling…" : mode === "once" ? "Schedule session" : "Create weekly sessions"}
+          {pending ? t("schedule.scheduling") : mode === "once" ? t("studentPage.scheduleSession") : t("schedule.createWeekly")}
         </button>
       </div>
     </form>

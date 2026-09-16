@@ -1,6 +1,7 @@
 "use client";
 
 import { createCollapsibleStore } from "@/lib/ui/collapsibleStore";
+import { useT } from "@/lib/i18n/client";
 
 const { useOpen, setOpen } = createCollapsibleStore("lms:sidebarOpen");
 
@@ -16,6 +17,7 @@ export function SidebarShell({
   sidebar: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const t = useT();
   const open = useOpen();
 
   return (
@@ -33,8 +35,8 @@ export function SidebarShell({
               </p>
               <button
                 onClick={() => setOpen(false)}
-                title="Collapse sidebar"
-                aria-label="Collapse sidebar"
+                title={t("sidebar.collapse")}
+                aria-label={t("sidebar.collapse")}
                 className="rounded-md px-2 py-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
               >
                 «
@@ -46,8 +48,8 @@ export function SidebarShell({
           <div className="flex justify-center py-3">
             <button
               onClick={() => setOpen(true)}
-              title="Expand sidebar"
-              aria-label="Expand sidebar"
+              title={t("sidebar.expand")}
+              aria-label={t("sidebar.expand")}
               className="rounded-md px-2 py-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
             >
               »

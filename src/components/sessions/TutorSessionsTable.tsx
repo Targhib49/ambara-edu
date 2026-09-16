@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { StatusBadge } from "./StatusBadge";
-import { ATTENDANCE_LABEL, SESSION_STATUS_LABEL } from "@/lib/sessions/format";
+import { attendanceKey, sessionStatusKey } from "@/lib/sessions/format";
+import { useT } from "@/lib/i18n/client";
+import type { Translate } from "@/lib/i18n/translate";
 import {
   cancelSessionWithReason,
   completeSession,
@@ -45,23 +47,24 @@ const fieldCls =
 const needsAction = (s: TutorSessionTableRow) =>
   s.status === "RESCHEDULE_REQUESTED_BY_STUDENT" || (s.status === "CONFIRMED" && s.hasStarted);
 
-const TABS: Tab<TutorSessionTableRow>[] = [
-  { key: "needs", label: "Needs action", match: needsAction },
+const makeTabs = (t: Translate): Tab<TutorSessionTableRow>[] => [
+  { key: "needs", label: t("tutorSessions.tabNeeds"), match: needsAction },
   {
     key: "upcoming",
-    label: "Upcoming",
+    label: t("tutorSessions.tabUpcoming"),
     match: (s) =>
       (s.status === "CONFIRMED" || s.status === "PROPOSED" || s.status === "RESCHEDULE_REQUESTED_BY_TUTOR") &&
       !s.hasStarted,
   },
-  { key: "waiting", label: "Waiting on student", match: (s) => s.status === "AWAITING_RESCHEDULE" },
-  { key: "completed", label: "Completed", match: (s) => s.status === "COMPLETED" },
-  { key: "cancelled", label: "Cancelled", match: (s) => s.status === "CANCELLED" },
-  { key: "all", label: "All", match: () => true },
+  { key: "waiting", label: t("tutorSessions.tabWaiting"), match: (s) => s.status === "AWAITING_RESCHEDULE" },
+  { key: "completed", label: t("tutorSessions.tabCompleted"), match: (s) => s.status === "COMPLETED" },
+  { key: "cancelled", label: t("tutorSessions.tabCancelled"), match: (s) => s.status === "CANCELLED" },
+  { key: "all", label: t("status.all"), match: () => true },
 ];
 
 /** The panel that opens in place of a row. Its own component so it can hold form state. */
 function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: Mode; onClose: () => void }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [attendance, setAttendance] = useState<"ATTENDED" | "NO_SHOW">(row.attendance ?? "ATTENDED");
@@ -91,10 +94,10 @@ function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: 
       {mode === "done" && (
         <>
           <p className="text-sm font-medium text-zinc-900">
-            {row.status === "COMPLETED" ? "Edit session record" : "Mark as done"}
+            {row.status === "COMPLETED" ? t("tutorSessions.editRecord") : t("tutorSessions.markAsDone")}
             {context}
           </p>
-          <div role="radiogroup" aria-label="Attendance" className="flex flex-wrap gap-2">
+          <div role="radiogroup" aria-label={t("tutorSessions.attendanceAria")} className="flex flex-wrap gap-2">
             {(["ATTENDED", "NO_SHOW"] as const).map((value) => (
               <label
                 key={value}
@@ -110,30 +113,30 @@ function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: 
                   onChange={() => setAttendance(value)}
                   className="sr-only"
                 />
-                {ATTENDANCE_LABEL[value]}
+                {t(attendanceKey(value))}
               </label>
             ))}
           </div>
           <div>
             <label htmlFor={`notes-${row.id}`} className="mb-1 block text-xs font-medium text-zinc-500">
-              Notes for {row.studentName}
+              {t("tutorSessions.notesFor", { name: row.studentName })}
             </label>
             <textarea
               id={`notes-${row.id}`}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              placeholder="What you covered, and anything to practise before next time"
+              placeholder={t("tutorSessions.notesPlaceholder")}
               className={fieldCls}
             />
-            <p className="mt-1 text-xs text-zinc-400">Your student sees these on their Sessions page.</p>
+            <p className="mt-1 text-xs text-zinc-400">{t("tutorSessions.notesHint")}</p>
           </div>
           <div className="flex gap-2">
             <button className={primaryBtn} disabled={pending} onClick={() => run(() => completeSession(row.id, { attendance, notes }))}>
-              {pending ? "Saving…" : "Save"}
+              {pending ? t("action.saving") : t("action.save")}
             </button>
             <button className={smallBtn} onClick={onClose}>
-              Close
+              {t("tutorSessions.close")}
             </button>
           </div>
         </>
@@ -142,18 +145,19 @@ function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: 
       {mode === "cancel" && (
         <>
           <p className="text-sm font-medium text-zinc-900">
-            Cancel session{context}
+            {t("tutorSessions.cancelSession")}
+            {context}
           </p>
           <div>
             <label htmlFor={`reason-${row.id}`} className="mb-1 block text-xs font-medium text-zinc-500">
-              Reason
+              {t("tutorSessions.reason")}
             </label>
             <textarea
               id={`reason-${row.id}`}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
-              placeholder="e.g. I'm unwell — sorry for the short notice"
+              placeholder={t("tutorSessions.reasonPlaceholder")}
               className={fieldCls}
             />
           </div>
@@ -165,8 +169,8 @@ function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: 
               className="mt-0.5"
             />
             <span>
-              Let {row.studentName} pick a new time from my availability instead
-              <span className="block text-xs text-zinc-400">They&rsquo;ll see your open slots on their Sessions page.</span>
+              {t("tutorSessions.offerReschedule", { name: row.studentName })}
+              <span className="block text-xs text-zinc-400">{t("tutorSessions.offerRescheduleHint")}</span>
             </span>
           </label>
           <div className="flex gap-2">
@@ -175,10 +179,10 @@ function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: 
               disabled={pending || !reason.trim()}
               onClick={() => run(() => cancelSessionWithReason(row.id, { reason, offerReschedule }))}
             >
-              {pending ? "Sending…" : offerReschedule ? "Send reschedule request" : "Cancel session"}
+              {pending ? t("tutorSessions.sending") : offerReschedule ? t("tutorSessions.sendRescheduleRequest") : t("tutorSessions.cancelSession")}
             </button>
             <button className={smallBtn} onClick={onClose}>
-              Close
+              {t("tutorSessions.close")}
             </button>
           </div>
         </>
@@ -187,25 +191,24 @@ function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: 
       {mode === "reschedule" && (
         <>
           <p className="text-sm font-medium text-zinc-900">
-            Ask to reschedule{context}
+            {t("tutorSessions.askReschedule")}
+            {context}
           </p>
-          <p className="text-sm text-zinc-600">
-            {row.studentName} will choose a new time from your open availability. This time is released straight away.
-          </p>
+          <p className="text-sm text-zinc-600">{t("tutorSessions.rescheduleExplain", { name: row.studentName })}</p>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
-            placeholder="Optional note, e.g. something came up on Tuesday"
+            placeholder={t("tutorSessions.notePlaceholder")}
             className={fieldCls}
-            aria-label="Note for the student"
+            aria-label={t("tutorSessions.noteAria")}
           />
           <div className="flex gap-2">
             <button className={primaryBtn} disabled={pending} onClick={() => run(() => requestStudentReschedule(row.id, { note }))}>
-              {pending ? "Sending…" : "Send request"}
+              {pending ? t("tutorSessions.sending") : t("tutorSessions.sendRequest")}
             </button>
             <button className={smallBtn} onClick={onClose}>
-              Close
+              {t("tutorSessions.close")}
             </button>
           </div>
         </>
@@ -214,15 +217,16 @@ function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: 
       {mode === "counter" && (
         <>
           <p className="text-sm font-medium text-zinc-900">
-            Propose a different time{context}
+            {t("tutorSessions.proposeTime")}
+            {context}
           </p>
-          {row.proposedAltLabel && <p className="text-sm text-zinc-600">They asked for {row.proposedAltLabel}.</p>}
+          {row.proposedAltLabel && <p className="text-sm text-zinc-600">{t("tutorSessions.theyAsked", { when: row.proposedAltLabel })}</p>}
           <input
             type="datetime-local"
             value={counterValue}
             onChange={(e) => setCounterValue(e.target.value)}
             className="rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
-            aria-label="Proposed time"
+            aria-label={t("tutorSessions.proposedTimeAria")}
           />
           <div className="flex gap-2">
             <button
@@ -232,10 +236,10 @@ function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: 
                 run(() => tutorRespondToReschedule(row.id, "counter", new Date(counterValue).toISOString()))
               }
             >
-              {pending ? "Sending…" : "Send"}
+              {pending ? t("tutorSessions.sending") : t("tutorSessions.send")}
             </button>
             <button className={smallBtn} onClick={onClose}>
-              Close
+              {t("tutorSessions.close")}
             </button>
           </div>
         </>
@@ -247,6 +251,7 @@ function ActionPanel({ row, mode, onClose }: { row: TutorSessionTableRow; mode: 
 }
 
 export function TutorSessionsTable({ sessions }: { sessions: TutorSessionTableRow[] }) {
+  const t = useT();
   const [open, setOpen] = useState<{ id: string; mode: Mode } | null>(null);
   const [pending, startTransition] = useTransition();
   const initialTab = sessions.some(needsAction) ? "needs" : "upcoming";
@@ -254,7 +259,7 @@ export function TutorSessionsTable({ sessions }: { sessions: TutorSessionTableRo
   const columns: Column<TutorSessionTableRow>[] = [
     {
       key: "student",
-      header: "Student",
+      header: t("students.header.student"),
       sort: (s) => s.studentName.toLowerCase(),
       text: (s) => s.studentName,
       cell: (s) => (
@@ -269,28 +274,28 @@ export function TutorSessionsTable({ sessions }: { sessions: TutorSessionTableRo
     },
     {
       key: "when",
-      header: "When",
+      header: t("studentDetail.when"),
       sort: (s) => s.startTime,
-      text: (s) => `${s.whenLabel} (${s.durationMinutes} min)`,
+      text: (s) => `${s.whenLabel} (${t("count.minutes", { n: s.durationMinutes })})`,
       className: "whitespace-nowrap",
       cell: (s) => (
         <span>
           <span className="block text-zinc-800">{s.whenLabel}</span>
-          <span className="block text-xs tabular-nums text-zinc-500">{s.durationMinutes} min</span>
+          <span className="block text-xs tabular-nums text-zinc-500">{t("count.minutes", { n: s.durationMinutes })}</span>
           {s.status === "RESCHEDULE_REQUESTED_BY_STUDENT" && s.proposedAltLabel && (
-            <span className="mt-0.5 block text-xs text-amber-700">Asks for {s.proposedAltLabel}</span>
+            <span className="mt-0.5 block text-xs text-amber-700">{t("tutorSessions.asksFor", { when: s.proposedAltLabel })}</span>
           )}
           {s.status === "RESCHEDULE_REQUESTED_BY_TUTOR" && s.proposedAltLabel && (
-            <span className="mt-0.5 block text-xs text-zinc-500">You proposed {s.proposedAltLabel}</span>
+            <span className="mt-0.5 block text-xs text-zinc-500">{t("tutorSessions.youProposed", { when: s.proposedAltLabel })}</span>
           )}
         </span>
       ),
     },
     {
       key: "status",
-      header: "Status",
-      sort: (s) => SESSION_STATUS_LABEL[s.status],
-      text: (s) => `${SESSION_STATUS_LABEL[s.status]}${s.attendance ? ` (${ATTENDANCE_LABEL[s.attendance]})` : ""}`,
+      header: t("studentDetail.status"),
+      sort: (s) => t(sessionStatusKey(s.status)),
+      text: (s) => `${t(sessionStatusKey(s.status))}${s.attendance ? ` (${t(attendanceKey(s.attendance))})` : ""}`,
       cell: (s) => (
         <div className="flex flex-wrap items-center gap-1.5">
           <StatusBadge status={s.status} />
@@ -300,7 +305,7 @@ export function TutorSessionsTable({ sessions }: { sessions: TutorSessionTableRo
                 s.attendance === "ATTENDED" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
               }`}
             >
-              {ATTENDANCE_LABEL[s.attendance]}
+              {t(attendanceKey(s.attendance))}
             </span>
           )}
         </div>
@@ -308,11 +313,11 @@ export function TutorSessionsTable({ sessions }: { sessions: TutorSessionTableRo
     },
     {
       key: "notes",
-      header: "Notes",
-      text: (s) => (s.statusReason ? `Reason: ${s.statusReason}` : s.notes),
+      header: t("studentDetail.notes"),
+      text: (s) => (s.statusReason ? t("tutorSessions.reasonPrefix", { reason: s.statusReason }) : s.notes),
       cell: (s) => {
         const showReason = (s.status === "CANCELLED" || s.status === "AWAITING_RESCHEDULE") && s.statusReason;
-        const body = showReason ? `Reason: ${s.statusReason}` : s.notes;
+        const body = showReason ? t("tutorSessions.reasonPrefix", { reason: s.statusReason ?? "" }) : s.notes;
         return body ? (
           <span className="line-clamp-2 block max-w-[220px]" title={body}>
             {body}
@@ -337,31 +342,31 @@ export function TutorSessionsTable({ sessions }: { sessions: TutorSessionTableRo
                   disabled={pending}
                   onClick={() => startTransition(() => tutorRespondToReschedule(s.id, "accept"))}
                 >
-                  {pending ? "Accepting…" : "Accept"}
+                  {pending ? t("tutorSessions.accepting") : t("tutorSessions.accept")}
                 </button>
                 <button className={smallBtn} onClick={() => setOpen({ id: s.id, mode: "counter" })}>
-                  Counter
+                  {t("tutorSessions.counter")}
                 </button>
               </>
             )}
             {s.status === "CONFIRMED" && s.hasStarted && (
               <button className={primaryBtn} onClick={() => setOpen({ id: s.id, mode: "done" })}>
-                Mark done
+                {t("tutorSessions.markDone")}
               </button>
             )}
             {s.status === "COMPLETED" && (
               <button className={smallBtn} onClick={() => setOpen({ id: s.id, mode: "done" })}>
-                Edit notes
+                {t("tutorSessions.editNotes")}
               </button>
             )}
             {(s.status === "CONFIRMED" || s.status === "PROPOSED") && !s.hasStarted && (
               <button className={smallBtn} onClick={() => setOpen({ id: s.id, mode: "reschedule" })}>
-                Reschedule
+                {t("tutorSessions.reschedule")}
               </button>
             )}
             {s.status !== "COMPLETED" && (
               <button className={dangerBtn} onClick={() => setOpen({ id: s.id, mode: "cancel" })}>
-                Cancel
+                {t("action.cancel")}
               </button>
             )}
           </div>
@@ -375,14 +380,14 @@ export function TutorSessionsTable({ sessions }: { sessions: TutorSessionTableRo
       rows={sessions}
       columns={columns}
       rowKey={(s) => s.id}
-      tabs={TABS}
+      tabs={makeTabs(t)}
       initialTab={initialTab}
-      search={{ placeholder: "Search student or notes", of: (s) => `${s.studentName} ${s.notes} ${s.statusReason ?? ""}` }}
+      search={{ placeholder: t("tutorSessions.search"), of: (s) => `${s.studentName} ${s.notes} ${s.statusReason ?? ""}` }}
       dateOf={(s) => s.localDate}
       initialSort={{ key: "when", dir: "asc" }}
       exportName="sessions"
       minWidth="720px"
-      empty={{ title: "No sessions yet", hint: "Schedule one above, or publish availability so students can book." }}
+      empty={{ title: t("studentDetail.noSessions"), hint: t("tutorSessions.emptyHint") }}
       expandedKey={open?.id ?? null}
       renderExpanded={(row) =>
         open ? <ActionPanel key={`${row.id}-${open.mode}`} row={row} mode={open.mode} onClose={() => setOpen(null)} /> : null

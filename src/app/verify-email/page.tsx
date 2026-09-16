@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { confirmEmail } from "@/lib/actions/verification";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { btnPrimary, cardCls } from "@/components/ui/styles";
+import { getT } from "@/lib/i18n/server";
 
 type State = "confirmed" | "expired" | "invalid";
 
@@ -11,6 +12,7 @@ export default async function VerifyEmailPage({
 }: {
   searchParams: Promise<{ token?: string; state?: string }>;
 }) {
+  const t = await getT();
   const { token, state } = await searchParams;
   const settled = (["confirmed", "expired", "invalid"] as const).find((s) => s === state) ?? null;
 
@@ -23,37 +25,35 @@ export default async function VerifyEmailPage({
       <div className={`${cardCls} w-full max-w-sm space-y-4 p-8 text-center`}>
         {status === null && token && (
           <>
-            <h1 className="text-lg font-semibold text-zinc-900">Confirm your email</h1>
-            <p className="text-sm text-zinc-600">
-              One tap and we know this address reaches you. It doesn&rsquo;t change how you sign in.
-            </p>
+            <h1 className="text-lg font-semibold text-zinc-900">{t("verify.confirmTitle")}</h1>
+            <p className="text-sm text-zinc-600">{t("verify.confirmBody")}</p>
             <form action={confirmEmail.bind(null, token)}>
-              <SubmitButton pendingLabel="Confirming…" className={btnPrimary}>
-                Confirm my email
+              <SubmitButton pendingLabel={t("verify.confirming")} className={btnPrimary}>
+                {t("verify.confirmButton")}
               </SubmitButton>
             </form>
           </>
         )}
         {status === "confirmed" && (
           <>
-            <h1 className="text-lg font-semibold text-green-700">Email confirmed</h1>
-            <p className="text-sm text-zinc-600">Thanks — nothing else to do.</p>
+            <h1 className="text-lg font-semibold text-green-700">{t("verify.confirmedTitle")}</h1>
+            <p className="text-sm text-zinc-600">{t("verify.confirmedBody")}</p>
           </>
         )}
         {status === "expired" && (
           <>
-            <h1 className="text-lg font-semibold text-amber-700">This link has expired</h1>
-            <p className="text-sm text-zinc-600">Ask your tutor to send a new one, or request it from your profile.</p>
+            <h1 className="text-lg font-semibold text-amber-700">{t("verify.expiredTitle")}</h1>
+            <p className="text-sm text-zinc-600">{t("verify.expiredBody")}</p>
           </>
         )}
         {status === "invalid" && (
           <>
-            <h1 className="text-lg font-semibold text-red-600">This link isn&rsquo;t valid</h1>
-            <p className="text-sm text-zinc-600">It may already have been used. You can request a new one from your profile.</p>
+            <h1 className="text-lg font-semibold text-red-600">{t("verify.invalidTitle")}</h1>
+            <p className="text-sm text-zinc-600">{t("verify.invalidBody")}</p>
           </>
         )}
         <Link href="/login" className="inline-block text-sm text-blue-700 hover:underline">
-          Go to sign in
+          {t("verify.goSignIn")}
         </Link>
       </div>
     </main>

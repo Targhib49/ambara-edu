@@ -6,17 +6,19 @@ import { deleteQuestion, moveQuestion } from "@/lib/actions/quizzes";
 import { formatCorrectAnswer } from "@/lib/quiz/format";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
 import type { QuestionType } from "@/generated/prisma/enums";
 
 const smallBtn =
   "rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-40";
 
-const TYPE_LABELS: Record<QuestionType, string> = {
-  MULTIPLE_CHOICE: "Multiple choice",
-  MULTI_SELECT: "Multi-select",
-  NUMERIC: "Numeric",
-  SHORT_TEXT: "Short text",
-  CODE: "Code",
+const TYPE_KEYS: Record<QuestionType, MessageKey> = {
+  MULTIPLE_CHOICE: "questionType.MULTIPLE_CHOICE",
+  MULTI_SELECT: "questionType.MULTI_SELECT",
+  NUMERIC: "questionType.NUMERIC",
+  SHORT_TEXT: "questionType.SHORT_TEXT",
+  CODE: "questionType.CODE",
 };
 
 /**
@@ -26,6 +28,7 @@ const TYPE_LABELS: Record<QuestionType, string> = {
  * the tutor can fill it in immediately without an extra click.
  */
 export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }) {
+  const t = useT();
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(questions.filter((q) => q.prompt === "New question").map((q) => q.id))
   );
@@ -40,7 +43,7 @@ export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }
   }
 
   if (questions.length === 0) {
-    return <p className="text-sm text-zinc-500">No questions yet — add one below.</p>;
+    return <p className="text-sm text-zinc-500">{t("qSection.empty")}</p>;
   }
 
   return (
@@ -59,24 +62,24 @@ export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }
                   Q{i + 1}
                 </span>
                 <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                  {TYPE_LABELS[q.type]}
+                  {t(TYPE_KEYS[q.type])}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm text-zinc-900">{q.prompt}</span>
                 <span className="shrink-0 text-xs text-zinc-400">
-                  {q.points} pt{q.points === 1 ? "" : "s"}
+                  {t(q.points === 1 ? "qSection.pt" : "quizTable.pts", { n: q.points })}
                 </span>
                 <span className="shrink-0 text-xs text-zinc-400">{isExpanded ? "▲" : "▼"}</span>
               </button>
               <div className="flex shrink-0 gap-1.5">
                 <form action={moveQuestion.bind(null, q.id, "up")}>
-                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === 0} title="Move up">↑</SubmitButton>
+                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === 0} title={t("lessonEditor.moveUp")}>↑</SubmitButton>
                 </form>
                 <form action={moveQuestion.bind(null, q.id, "down")}>
-                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === questions.length - 1} title="Move down">↓</SubmitButton>
+                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === questions.length - 1} title={t("lessonEditor.moveDown")}>↓</SubmitButton>
                 </form>
                 <form action={deleteQuestion.bind(null, q.id)}>
-                  <ConfirmButton message="Delete this question?" className={`${smallBtn} text-red-600`}>
-                    Delete
+                  <ConfirmButton message={t("qSection.deleteConfirm")} className={`${smallBtn} text-red-600`}>
+                    {t("action.delete")}
                   </ConfirmButton>
                 </form>
               </div>
@@ -87,7 +90,7 @@ export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }
               </div>
             ) : (
               <p className="border-t border-zinc-100 px-4 py-2 text-xs text-zinc-500">
-                Correct: {formatCorrectAnswer(q.type, q.correctAnswer, q.options)}
+                {t("qSection.correct", { answer: formatCorrectAnswer(q.type, q.correctAnswer, q.options) })}
               </p>
             )}
           </div>

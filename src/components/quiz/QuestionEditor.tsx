@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateQuestion, type UpdateQuestionInput } from "@/lib/actions/quizzes";
+import { useT } from "@/lib/i18n/client";
 import type { QuestionType } from "@/generated/prisma/enums";
 
 const inputCls =
@@ -23,13 +24,14 @@ export type QuestionForEdit = {
 };
 
 function SaveButton({ pending, saved }: { pending: boolean; saved: boolean }) {
+  const t = useT();
   return (
     <button
       type="submit"
       disabled={pending}
       className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
     >
-      {pending ? "Saving…" : saved ? "Saved ✓" : "Save"}
+      {pending ? t("action.saving") : saved ? t("qEditor.saved") : t("action.save")}
     </button>
   );
 }
@@ -69,14 +71,15 @@ function MetaFields({
   explanation: string;
   setExplanation: (v: string) => void;
 }) {
+  const t = useT();
   return (
     <>
       <div>
-        <label className={labelCls}>Question prompt</label>
+        <label className={labelCls}>{t("qEditor.prompt")}</label>
         <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2} className={inputCls} />
       </div>
       <div>
-        <label className={labelCls}>Points</label>
+        <label className={labelCls}>{t("qEditor.points")}</label>
         <input
           type="number"
           step="0.5"
@@ -87,7 +90,7 @@ function MetaFields({
         />
       </div>
       <div>
-        <label className={labelCls}>Explanation (shown to the student after grading)</label>
+        <label className={labelCls}>{t("qEditor.explanation")}</label>
         <textarea
           value={explanation}
           onChange={(e) => setExplanation(e.target.value)}
@@ -100,6 +103,7 @@ function MetaFields({
 }
 
 function ChoiceEditor({ question, multi }: { question: QuestionForEdit; multi: boolean }) {
+  const t = useT();
   const initialLetters = multi
     ? ((question.correctAnswer as { letters?: string[] })?.letters ?? [])
     : (() => {
@@ -177,7 +181,7 @@ function ChoiceEditor({ question, multi }: { question: QuestionForEdit; multi: b
         setExplanation={setExplanation}
       />
       <div>
-        <label className={labelCls}>Options — tick the correct one{multi ? "(s)" : ""}</label>
+        <label className={labelCls}>{t(multi ? "qEditor.optionsMulti" : "qEditor.options")}</label>
         <div className="space-y-1.5">
           {options.map((opt, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -197,7 +201,7 @@ function ChoiceEditor({ question, multi }: { question: QuestionForEdit; multi: b
                 onClick={() => removeOption(i)}
                 disabled={options.length <= 2}
                 className="text-xs text-red-500 disabled:opacity-30"
-                aria-label="Remove option"
+                aria-label={t("qEditor.removeOption")}
               >
                 ✕
               </button>
@@ -206,7 +210,7 @@ function ChoiceEditor({ question, multi }: { question: QuestionForEdit; multi: b
         </div>
         {options.length < 4 && (
           <button type="button" onClick={addOption} className={`${smallBtn} mt-1.5`}>
-            + Add option
+            {t("qEditor.addOption")}
           </button>
         )}
       </div>
@@ -217,6 +221,7 @@ function ChoiceEditor({ question, multi }: { question: QuestionForEdit; multi: b
 }
 
 function NumericEditor({ question }: { question: QuestionForEdit }) {
+  const t = useT();
   const ca = question.correctAnswer as { value?: number; tolerance?: number };
   const [prompt, setPrompt] = useState(question.prompt);
   const [points, setPoints] = useState(question.points);
@@ -243,7 +248,7 @@ function NumericEditor({ question }: { question: QuestionForEdit }) {
       />
       <div className="flex gap-3">
         <div>
-          <label className={labelCls}>Correct value</label>
+          <label className={labelCls}>{t("qEditor.correctValue")}</label>
           <input
             type="number"
             step="any"
@@ -253,7 +258,7 @@ function NumericEditor({ question }: { question: QuestionForEdit }) {
           />
         </div>
         <div>
-          <label className={labelCls}>Tolerance (±, 0 = exact)</label>
+          <label className={labelCls}>{t("qEditor.tolerance")}</label>
           <input
             type="number"
             step="any"
@@ -271,6 +276,7 @@ function NumericEditor({ question }: { question: QuestionForEdit }) {
 }
 
 function ShortTextEditor({ question }: { question: QuestionForEdit }) {
+  const t = useT();
   const ca = question.correctAnswer as {
     kind?: "exact" | "regex";
     value?: string;
@@ -311,22 +317,22 @@ function ShortTextEditor({ question }: { question: QuestionForEdit }) {
       <div className="flex gap-4 text-sm">
         <label className="flex items-center gap-1.5">
           <input type="radio" checked={kind === "exact"} onChange={() => setKind("exact")} />
-          Exact match
+          {t("qEditor.exactMatch")}
         </label>
         <label className="flex items-center gap-1.5">
           <input type="radio" checked={kind === "regex"} onChange={() => setKind("regex")} />
-          Regex pattern
+          {t("qEditor.regexPattern")}
         </label>
       </div>
       {kind === "exact" ? (
         <div>
-          <label className={labelCls}>Correct answer (case-insensitive, trimmed)</label>
+          <label className={labelCls}>{t("qEditor.correctAnswer")}</label>
           <input value={value} onChange={(e) => setValue(e.target.value)} className={inputCls} />
         </div>
       ) : (
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className={labelCls}>Pattern</label>
+            <label className={labelCls}>{t("qEditor.pattern")}</label>
             <input
               value={pattern}
               onChange={(e) => setPattern(e.target.value)}
@@ -335,7 +341,7 @@ function ShortTextEditor({ question }: { question: QuestionForEdit }) {
             />
           </div>
           <div>
-            <label className={labelCls}>Flags</label>
+            <label className={labelCls}>{t("qEditor.flags")}</label>
             <input value={flags} onChange={(e) => setFlags(e.target.value)} className={`${inputCls} w-16`} />
           </div>
         </div>
@@ -347,6 +353,7 @@ function ShortTextEditor({ question }: { question: QuestionForEdit }) {
 }
 
 function CodeQuestionEditor({ question }: { question: QuestionForEdit }) {
+  const t = useT();
   const ca = question.correctAnswer as { testCases?: { input: string; expectedOutput: string }[] };
   const [prompt, setPrompt] = useState(question.prompt);
   const [points, setPoints] = useState(question.points);
@@ -383,7 +390,7 @@ function CodeQuestionEditor({ question }: { question: QuestionForEdit }) {
         setExplanation={setExplanation}
       />
       <div>
-        <label className={labelCls}>Test cases (stdin → expected stdout). Empty = manual review only.</label>
+        <label className={labelCls}>{t("qEditor.testCases")}</label>
         <div className="space-y-2">
           {testCases.map((tc, i) => (
             <div key={i} className="flex items-start gap-2">
@@ -397,7 +404,7 @@ function CodeQuestionEditor({ question }: { question: QuestionForEdit }) {
               <textarea
                 value={tc.expectedOutput}
                 onChange={(e) => updateCase(i, "expectedOutput", e.target.value)}
-                placeholder="expected output"
+                placeholder={t("qEditor.expectedOutput")}
                 rows={1}
                 className={`${inputCls} flex-1 font-mono text-xs`}
               />
@@ -405,7 +412,7 @@ function CodeQuestionEditor({ question }: { question: QuestionForEdit }) {
                 type="button"
                 onClick={() => removeCase(i)}
                 className="mt-2 text-xs text-red-500"
-                aria-label="Remove test case"
+                aria-label={t("qEditor.removeTestCase")}
               >
                 ✕
               </button>
@@ -414,7 +421,7 @@ function CodeQuestionEditor({ question }: { question: QuestionForEdit }) {
         </div>
         {testCases.length < 20 && (
           <button type="button" onClick={addCase} className={`${smallBtn} mt-1.5`}>
-            + Add test case
+            {t("qEditor.addTestCase")}
           </button>
         )}
       </div>

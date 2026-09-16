@@ -7,6 +7,7 @@ import {
   dateKey,
   formatTimeOnly,
   sessionStatusKey,
+  weekdayShortKey,
   nowMs,
   startOfMonth,
   SESSION_STATUS_BADGE_CLASS,
@@ -14,7 +15,6 @@ import {
 import { useT } from "@/lib/i18n/client";
 import type { SessionStatus } from "@/generated/prisma/enums";
 
-const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MAX_CHIPS_PER_DAY = 3;
 
 type CalendarSession = {
@@ -69,14 +69,14 @@ export function SessionCalendar({
           </button>
           <button
             onClick={() => setMonthCursor((m) => addMonths(m, -1))}
-            aria-label="Previous month"
+            aria-label={t("calendar.prevMonth")}
             className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100"
           >
             ‹
           </button>
           <button
             onClick={() => setMonthCursor((m) => addMonths(m, 1))}
-            aria-label="Next month"
+            aria-label={t("calendar.nextMonth")}
             className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100"
           >
             ›
@@ -85,9 +85,9 @@ export function SessionCalendar({
       </div>
 
       <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border border-zinc-200 bg-zinc-200 text-xs">
-        {WEEKDAY_LABELS.map((d) => (
-          <div key={d} className="bg-zinc-50 px-2 py-1.5 text-center font-medium text-zinc-500">
-            {d}
+        {[0, 1, 2, 3, 4, 5, 6].map((weekday) => (
+          <div key={weekday} className="bg-zinc-50 px-2 py-1.5 text-center font-medium text-zinc-500">
+            {t(weekdayShortKey(weekday))}
           </div>
         ))}
         {cells.map((date) => {

@@ -16,6 +16,7 @@ import { studentOptions } from "@/lib/students/options";
 import { courseOptions } from "@/lib/courses/options";
 import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/format";
 import { getT } from "@/lib/i18n/server";
+import type { MessageKey } from "@/lib/i18n/messages";
 import { ResetPasswordPanel } from "./ResetPasswordPanel";
 import {
   AssignCourseForm,
@@ -28,7 +29,11 @@ import {
   type StudentSessionHistoryRow,
 } from "./StudentDetailTables";
 
-const GROUP_LABELS = { JUNIOR_HIGH: "Junior high", UNDERGRAD: "Undergrad", GRAD: "Grad" } as const;
+const GROUP_LABEL_KEYS = {
+  JUNIOR_HIGH: "group.JUNIOR_HIGH",
+  UNDERGRAD: "group.UNDERGRAD",
+  GRAD: "group.GRAD",
+} as const satisfies Record<string, MessageKey>;
 const TABS = ["overview", "courses", "quizzes", "sessions"] as const;
 type TabKey = (typeof TABS)[number];
 
@@ -140,7 +145,7 @@ export default async function StudentDetailPage({
       where,
       status: s.status,
       pct: s.status === "PENDING_REVIEW" || total === 0 ? null : Math.round((score / total) * 100),
-      scoreLabel: s.status === "PENDING_REVIEW" ? "Awaiting review" : `${score}/${total}`,
+      scoreLabel: s.status === "PENDING_REVIEW" ? t("studentPage.awaitingReview") : `${score}/${total}`,
       submittedLabel: dateFmt.format(s.updatedAt),
       submittedAt: s.updatedAt.toISOString(),
     };
@@ -173,7 +178,7 @@ export default async function StudentDetailPage({
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <PageHeader
-        crumbs={[{ label: "Home", href: "/tutor" }, { label: "Students", href: "/tutor/students" }, { label: student.name }]}
+        crumbs={[{ label: t("nav.home"), href: "/tutor" }, { label: t("nav.students"), href: "/tutor/students" }, { label: student.name }]}
         title={
           <span className="flex items-center gap-3">
             <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${badgeColorForKey(student.name)}`}>
@@ -185,18 +190,32 @@ export default async function StudentDetailPage({
         meta={
           <>
             {student.email}
-            {student.studentGroup && <> · {GROUP_LABELS[student.studentGroup]}</>} · joined {dateFmt.format(student.createdAt)}
+            {student.studentGroup && <> · {t(GROUP_LABEL_KEYS[student.studentGroup])}</>} ·{" "}
+            {t("studentPage.joined", { date: dateFmt.format(student.createdAt) })}
           </>
         }
         actions={
           <>
-            <SlideOverButton label="Reset password" title={`Reset ${student.name}'s password`} variant="secondary" icon="none">
+            <SlideOverButton
+              label={t("studentPage.resetPassword")}
+              title={t("studentPage.resetPasswordTitle", { name: student.name })}
+              variant="secondary"
+              icon="none"
+            >
               <ResetPasswordPanel studentId={student.id} name={student.name} />
             </SlideOverButton>
-            <SlideOverButton label="Assign course" title={`Assign a course to ${student.name}`} variant="secondary">
+            <SlideOverButton
+              label={t("studentDetail.assignCourse")}
+              title={t("studentPage.assignCourseTitle", { name: student.name })}
+              variant="secondary"
+            >
               <AssignCourseForm studentId={student.id} courses={courses.filter((c) => !enrolledIds.has(c.value))} />
             </SlideOverButton>
-            <SlideOverButton label="Schedule session" title={`Schedule a session with ${student.name}`} description="All times are WIB.">
+            <SlideOverButton
+              label={t("studentPage.scheduleSession")}
+              title={t("studentPage.scheduleSessionTitle", { name: student.name })}
+              description={t("studentPage.wibNote")}
+            >
               <ScheduleSessionForm students={students} allowWeekly={schedulingV2} today={localDate(new Date(now))} defaultStudentId={student.id} />
             </SlideOverButton>
           </>
@@ -204,19 +223,36 @@ export default async function StudentDetailPage({
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Courses" value={String(courseRows.length)} sub={lessonsTotal ? `${lessonsDone} of ${lessonsTotal} lessons done` : "No lessons yet"} />
-        <Stat label="Average quiz score" value={avgScore === null ? "—" : `${avgScore}%`} sub={`${graded.length} graded${pendingReview ? ` · ${pendingReview} to review` : ""}`} />
-        <Stat label="Sessions attended" value={String(attended)} sub={noShows ? `${noShows} no-show${noShows === 1 ? "" : "s"}` : "No no-shows"} />
-        <Stat label="Next session" value={nextSession ? formatSessionShort(nextSession.startTime) : "—"} sub={nextSession ? `${nextSession.durationMinutes} min` : "Nothing booked"} small />
+        <Stat
+          label={t("studentPage.statCourses")}
+          value={String(courseRows.length)}
+          sub={lessonsTotal ? t("studentPage.lessonsDone", { done: lessonsDone, total: lessonsTotal }) : t("studentPage.noLessonsYet")}
+        />
+        <Stat
+          label={t("studentPage.statAvgScore")}
+          value={avgScore === null ? "—" : `${avgScore}%`}
+          sub={`${t("studentPage.graded", { n: graded.length })}${pendingReview ? ` · ${t("studentPage.toReview", { n: pendingReview })}` : ""}`}
+        />
+        <Stat
+          label={t("studentPage.statAttended")}
+          value={String(attended)}
+          sub={noShows ? t(noShows === 1 ? "studentPage.noShow" : "studentPage.noShows", { n: noShows }) : t("studentPage.noNoShows")}
+        />
+        <Stat
+          label={t("studentPage.statNextSession")}
+          value={nextSession ? formatSessionShort(nextSession.startTime) : "—"}
+          sub={nextSession ? t("count.minutes", { n: nextSession.durationMinutes }) : t("studentPage.nothingBooked")}
+          small
+        />
       </div>
 
       <PageTabs
         active={tab}
         tabs={[
-          { key: "overview", label: "Overview", href: base },
-          { key: "courses", label: "Courses", href: `${base}?tab=courses`, count: courseRows.length },
-          { key: "quizzes", label: "Quiz results", href: `${base}?tab=quizzes`, count: quizRows.length },
-          { key: "sessions", label: "Sessions", href: `${base}?tab=sessions`, count: sessionRows.length },
+          { key: "overview", label: t("studentPage.tabOverview"), href: base },
+          { key: "courses", label: t("nav.courses"), href: `${base}?tab=courses`, count: courseRows.length },
+          { key: "quizzes", label: t("studentPage.tabQuizResults"), href: `${base}?tab=quizzes`, count: quizRows.length },
+          { key: "sessions", label: t("nav.sessions"), href: `${base}?tab=sessions`, count: sessionRows.length },
         ]}
       />
 
@@ -224,9 +260,9 @@ export default async function StudentDetailPage({
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
             <section className={cardCls}>
-              <SectionHead title="Course progress" href={`${base}?tab=courses`} />
+              <SectionHead title={t("studentPage.courseProgress")} href={`${base}?tab=courses`} />
               {courseRows.length === 0 ? (
-                <p className="px-5 pb-5 text-sm text-zinc-500">Not enrolled in any course yet. Use “Assign course” above.</p>
+                <p className="px-5 pb-5 text-sm text-zinc-500">{t("studentPage.noCourses")}</p>
               ) : (
                 <ul className="divide-y divide-zinc-100">
                   {courseRows.slice(0, 5).map((c) => (
@@ -249,9 +285,9 @@ export default async function StudentDetailPage({
             </section>
 
             <section className={cardCls}>
-              <SectionHead title="Recent quiz results" href={`${base}?tab=quizzes`} />
+              <SectionHead title={t("studentPage.recentQuizResults")} href={`${base}?tab=quizzes`} />
               {quizRows.length === 0 ? (
-                <p className="px-5 pb-5 text-sm text-zinc-500">No quizzes submitted yet.</p>
+                <p className="px-5 pb-5 text-sm text-zinc-500">{t("studentPage.noQuizzes")}</p>
               ) : (
                 <ul className="divide-y divide-zinc-100">
                   {quizRows.slice(0, 5).map((q) => (
@@ -277,9 +313,9 @@ export default async function StudentDetailPage({
 
           <div className="space-y-6">
             <section className={cardCls}>
-              <SectionHead title="Sessions" href={`${base}?tab=sessions`} />
+              <SectionHead title={t("nav.sessions")} href={`${base}?tab=sessions`} />
               {sessionRows.length === 0 ? (
-                <p className="px-5 pb-5 text-sm text-zinc-500">No sessions yet.</p>
+                <p className="px-5 pb-5 text-sm text-zinc-500">{t("studentPage.noSessions")}</p>
               ) : (
                 <ul className="divide-y divide-zinc-100">
                   {sessionRows.slice(0, 4).map((s) => (
@@ -293,11 +329,11 @@ export default async function StudentDetailPage({
             </section>
 
             <section className={`${cardCls} p-5`}>
-              <h2 className="text-sm font-semibold text-zinc-900">Account</h2>
+              <h2 className="text-sm font-semibold text-zinc-900">{t("studentPage.account")}</h2>
               <p className="mt-1 text-sm text-zinc-500">
                 {sessionCount > 0
-                  ? `Has ${sessionCount} session${sessionCount === 1 ? "" : "s"} on record, which are kept as part of your teaching history — so this account can't be deleted.`
-                  : "Deleting removes their login, enrollments, quiz results and progress."}
+                  ? t(sessionCount === 1 ? "studentPage.deleteBlocked" : "studentPage.deleteBlockedPlural", { n: sessionCount })
+                  : t("studentPage.deleteHint")}
               </p>
               <div className="mt-3">
                 <DeleteStudentButton studentId={student.id} name={student.name} disabled={sessionCount > 0} />
@@ -324,12 +360,13 @@ function Stat({ label, value, sub, small }: { label: string; value: string; sub:
   );
 }
 
-function SectionHead({ title, href }: { title: string; href: string }) {
+async function SectionHead({ title, href }: { title: string; href: string }) {
+  const t = await getT();
   return (
     <div className="flex items-center justify-between px-5 pb-2 pt-4">
       <h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
       <Link href={href} className="text-xs font-medium text-blue-700 hover:underline">
-        View all
+        {t("studentPage.viewAll")}
       </Link>
     </div>
   );

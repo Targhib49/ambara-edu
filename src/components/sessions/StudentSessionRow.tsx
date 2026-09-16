@@ -7,6 +7,7 @@ import type { OpenSlot } from "./BookingPanel";
 import { formatSessionTime } from "@/lib/sessions/format";
 import { requestReschedule, studentPickRescheduleSlot, studentRespondToReschedule } from "@/lib/actions/sessions";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
+import { useT } from "@/lib/i18n/client";
 import type { SessionStatus } from "@/generated/prisma/enums";
 
 const smallBtn =
@@ -42,6 +43,7 @@ export function StudentSessionRow({
    */
   rescheduleSlots?: OpenSlot[];
 }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   // The slot just picked, so only that button says it is booking.
   const [pickedSlot, setPickedSlot] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export function StudentSessionRow({
         <div className="min-w-0 flex-1">
           <p className="font-medium text-zinc-900">{session.tutorName}</p>
           <p className="text-sm text-zinc-500">
-            {formatSessionTime(session.startTime)} · {session.durationMinutes} min
+            {formatSessionTime(session.startTime)} · {t("count.minutes", { n: session.durationMinutes })}
           </p>
         </div>
         <StatusBadge status={session.status} />
@@ -82,14 +84,14 @@ export function StudentSessionRow({
 
       {session.status === "AWAITING_RESCHEDULE" && (
         <div className="mt-3 space-y-2.5 rounded-lg border border-violet-200 bg-violet-50/60 p-3">
-          <p className="text-sm font-medium text-violet-900">Your tutor needs to move this session — pick a new time.</p>
+          <p className="text-sm font-medium text-violet-900">{t("sessionRow.tutorNeedsMove")}</p>
           {session.statusReason && <p className="text-sm text-violet-800">&ldquo;{session.statusReason}&rdquo;</p>}
           {rescheduleSlots === undefined ? (
             <Link href="/sessions" className="inline-block text-sm font-medium text-violet-800 hover:underline">
-              Pick a new time on your Sessions page →
+              {t("sessionRow.pickOnSessionsPage")}
             </Link>
           ) : slotsByDay.length === 0 ? (
-            <p className="text-sm text-zinc-600">No open times right now. Message your tutor to arrange one.</p>
+            <p className="text-sm text-zinc-600">{t("sessionRow.noOpenTimes")}</p>
           ) : (
             <div className="space-y-2">
               {slotsByDay.map(([day, daySlots]) => (
@@ -110,7 +112,7 @@ export function StudentSessionRow({
                         }
                         className="rounded-md border border-violet-300 bg-white px-2.5 py-1 text-sm text-violet-900 hover:border-violet-500 hover:bg-violet-100 disabled:opacity-50"
                       >
-                        {pending && pickedSlot === slot.startIso ? "Booking…" : slot.timeLabel}
+                        {pending && pickedSlot === slot.startIso ? t("sessionRow.booking") : slot.timeLabel}
                       </button>
                     ))}
                   </div>
@@ -123,12 +125,12 @@ export function StudentSessionRow({
       )}
 
       {session.status === "CANCELLED" && session.statusReason && (
-        <p className="mt-3 text-sm text-zinc-500">Reason: {session.statusReason}</p>
+        <p className="mt-3 text-sm text-zinc-500">{t("tutorSessions.reasonPrefix", { reason: session.statusReason })}</p>
       )}
 
       {session.status === "RESCHEDULE_REQUESTED_BY_STUDENT" && (
         <p className="mt-3 text-sm text-zinc-500">
-          Waiting on your tutor to respond to your proposed time
+          {t("sessionRow.waitingTutor")}
           {session.proposedAltTime && (
             <>
               : <strong>{formatSessionTime(session.proposedAltTime)}</strong>
@@ -157,15 +159,15 @@ export function StudentSessionRow({
                   })
                 }
               >
-                {pending ? "Sending…" : "Send request"}
+                {pending ? t("tutorSessions.sending") : t("tutorSessions.sendRequest")}
               </button>
               <button className={smallBtn} onClick={() => setFormOpen(false)}>
-                Cancel
+                {t("action.cancel")}
               </button>
             </span>
           ) : (
             <button className={smallBtn} onClick={() => setFormOpen(true)}>
-              Request reschedule
+              {t("sessionRow.requestReschedule")}
             </button>
           )}
         </div>
@@ -174,7 +176,7 @@ export function StudentSessionRow({
       {!isPast && session.status === "RESCHEDULE_REQUESTED_BY_TUTOR" && (
         <div className="mt-3 space-y-2">
           <div className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Your tutor proposed:{" "}
+            {t("sessionRow.tutorProposed")}{" "}
             <strong>{session.proposedAltTime && formatSessionTime(session.proposedAltTime)}</strong>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -183,7 +185,7 @@ export function StudentSessionRow({
               className={primaryBtn}
               onClick={() => startTransition(() => studentRespondToReschedule(session.id, "accept"))}
             >
-              {pending ? "Accepting…" : "Accept"}
+              {pending ? t("tutorSessions.accepting") : t("tutorSessions.accept")}
             </button>
             {formOpen ? (
               <span className="flex items-center gap-1.5">
@@ -203,15 +205,15 @@ export function StudentSessionRow({
                     })
                   }
                 >
-                  {pending ? "Sending…" : "Send"}
+                  {pending ? t("tutorSessions.sending") : t("tutorSessions.send")}
                 </button>
                 <button className={smallBtn} onClick={() => setFormOpen(false)}>
-                  Cancel
+                  {t("action.cancel")}
                 </button>
               </span>
             ) : (
               <button className={smallBtn} onClick={() => setFormOpen(true)}>
-                Propose different time
+                {t("sessionRow.proposeDifferent")}
               </button>
             )}
           </div>
@@ -220,7 +222,7 @@ export function StudentSessionRow({
 
       {session.notes && (
         <div className="mt-3 border-t border-zinc-100 pt-3">
-          <p className="mb-1 text-xs font-medium text-zinc-500">Session notes</p>
+          <p className="mb-1 text-xs font-medium text-zinc-500">{t("sessionRow.sessionNotes")}</p>
           <p className="whitespace-pre-line text-sm text-zinc-700">{session.notes}</p>
         </div>
       )}

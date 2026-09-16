@@ -4,26 +4,28 @@ import { useState, useTransition } from "react";
 import type { AnyBlock, BlockDataMap } from "@/lib/blocks/schema";
 import { effectiveFileDisplay, isPreviewableFile } from "@/lib/blocks/schema";
 import { updateBlock } from "@/lib/actions/blocks";
-import { VIDEO_URL_HINT, parseVideoUrl } from "@/lib/blocks/video";
+import { parseVideoUrl } from "@/lib/blocks/video";
 import {
   VIZ_LABELS,
   visualizationDataSchema,
   vizDefaultProps,
   type VizComponentName,
 } from "@/lib/viz/schemas";
+import { useT } from "@/lib/i18n/client";
 
 const inputCls =
   "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none";
 const labelCls = "mb-1 block text-xs font-medium text-zinc-500";
 
 function SaveButton({ pending, saved }: { pending: boolean; saved: boolean }) {
+  const t = useT();
   return (
     <button
       type="submit"
       disabled={pending}
       className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
     >
-      {pending ? "Saving…" : saved ? "Saved ✓" : "Save"}
+      {pending ? t("action.saving") : saved ? t("qEditor.saved") : t("action.save")}
     </button>
   );
 }
@@ -41,6 +43,7 @@ function useSave(blockId: string) {
 }
 
 function MarkdownEditor({ block }: { block: { id: string; data: BlockDataMap["MARKDOWN"] } }) {
+  const t = useT();
   const [markdown, setMarkdown] = useState(block.data.markdown);
   const { pending, saved, save } = useSave(block.id);
   return (
@@ -51,7 +54,7 @@ function MarkdownEditor({ block }: { block: { id: string; data: BlockDataMap["MA
       }}
       className="space-y-2"
     >
-      <label className={labelCls}>Markdown (supports GFM + inline $LaTeX$)</label>
+      <label className={labelCls}>{t("blockEditor.markdown")}</label>
       <textarea
         value={markdown}
         onChange={(e) => setMarkdown(e.target.value)}
@@ -64,6 +67,7 @@ function MarkdownEditor({ block }: { block: { id: string; data: BlockDataMap["MA
 }
 
 function EquationEditor({ block }: { block: { id: string; data: BlockDataMap["EQUATION"] } }) {
+  const t = useT();
   const [latex, setLatex] = useState(block.data.latex);
   const [display, setDisplay] = useState(block.data.display);
   const { pending, saved, save } = useSave(block.id);
@@ -75,7 +79,7 @@ function EquationEditor({ block }: { block: { id: string; data: BlockDataMap["EQ
       }}
       className="space-y-2"
     >
-      <label className={labelCls}>LaTeX</label>
+      <label className={labelCls}>{t("blockEditor.latex")}</label>
       <textarea
         value={latex}
         onChange={(e) => setLatex(e.target.value)}
@@ -93,6 +97,7 @@ function EquationEditor({ block }: { block: { id: string; data: BlockDataMap["EQ
 }
 
 function CodeSnippetEditor({ block }: { block: { id: string; data: BlockDataMap["CODE_SNIPPET"] } }) {
+  const t = useT();
   const [language, setLanguage] = useState(block.data.language);
   const [code, setCode] = useState(block.data.code);
   const { pending, saved, save } = useSave(block.id);
@@ -105,7 +110,7 @@ function CodeSnippetEditor({ block }: { block: { id: string; data: BlockDataMap[
       className="space-y-2"
     >
       <div>
-        <label className={labelCls}>Language</label>
+        <label className={labelCls}>{t("blockEditor.language")}</label>
         <input
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
@@ -114,7 +119,7 @@ function CodeSnippetEditor({ block }: { block: { id: string; data: BlockDataMap[
         />
       </div>
       <div>
-        <label className={labelCls}>Code</label>
+        <label className={labelCls}>{t("blockEditor.code")}</label>
         <textarea
           value={code}
           onChange={(e) => setCode(e.target.value)}
@@ -156,6 +161,7 @@ function CodeEditorEditor({ block }: { block: { id: string; data: BlockDataMap["
 }
 
 function VisualizationEditor({ block }: { block: { id: string; data: BlockDataMap["VISUALIZATION"] } }) {
+  const t = useT();
   const [component, setComponent] = useState<VizComponentName>(block.data.component);
   const [propsText, setPropsText] = useState(JSON.stringify(block.data.props, null, 2));
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +189,7 @@ function VisualizationEditor({ block }: { block: { id: string; data: BlockDataMa
       className="space-y-2"
     >
       <div>
-        <label className={labelCls}>Visualization</label>
+        <label className={labelCls}>{t("blockEditor.visualization")}</label>
         <select
           value={component}
           onChange={(e) => {
@@ -202,7 +208,7 @@ function VisualizationEditor({ block }: { block: { id: string; data: BlockDataMa
         </select>
       </div>
       <div>
-        <label className={labelCls}>Props (JSON — validated on save)</label>
+        <label className={labelCls}>{t("blockEditor.props")}</label>
         <textarea
           value={propsText}
           onChange={(e) => setPropsText(e.target.value)}
@@ -218,6 +224,7 @@ function VisualizationEditor({ block }: { block: { id: string; data: BlockDataMa
 }
 
 function VideoEmbedEditor({ block }: { block: { id: string; data: BlockDataMap["VIDEO_EMBED"] } }) {
+  const t = useT();
   const [url, setUrl] = useState(block.data.url);
   const [caption, setCaption] = useState(block.data.caption);
   const [error, setError] = useState<string | null>(null);
@@ -230,7 +237,7 @@ function VideoEmbedEditor({ block }: { block: { id: string; data: BlockDataMap["
         e.preventDefault();
         const trimmed = url.trim();
         if (trimmed && !parseVideoUrl(trimmed)) {
-          setError(VIDEO_URL_HINT);
+          setError(t("blockEditor.videoHint"));
           return;
         }
         setError(null);
@@ -239,7 +246,7 @@ function VideoEmbedEditor({ block }: { block: { id: string; data: BlockDataMap["
       className="space-y-2"
     >
       <div>
-        <label className={labelCls}>Video link</label>
+        <label className={labelCls}>{t("blockEditor.videoLink")}</label>
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -249,17 +256,17 @@ function VideoEmbedEditor({ block }: { block: { id: string; data: BlockDataMap["
         />
         <p className="mt-1 text-xs text-zinc-500">
           {parsed
-            ? `Recognised as ${parsed.provider === "youtube" ? "YouTube" : "Vimeo"} — save to preview.`
-            : VIDEO_URL_HINT}
+            ? t("blockEditor.videoRecognised", { provider: parsed.provider === "youtube" ? "YouTube" : "Vimeo" })
+            : t("blockEditor.videoHint")}
         </p>
       </div>
       <div>
-        <label className={labelCls}>Caption (optional)</label>
+        <label className={labelCls}>{t("blockEditor.caption")}</label>
         <input
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           className={inputCls}
-          placeholder="What this video covers"
+          placeholder={t("blockEditor.captionPlaceholder")}
         />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -273,6 +280,7 @@ function FileAttachmentEditor({
 }: {
   block: { id: string; data: BlockDataMap["FILE_ATTACHMENT"] };
 }) {
+  const t = useT();
   const [display, setDisplay] = useState(effectiveFileDisplay(block.data));
   const { pending, saved, save } = useSave(block.id);
   const previewable = isPreviewableFile(block.data);
@@ -286,24 +294,24 @@ function FileAttachmentEditor({
       className="space-y-2"
     >
       <p className="text-xs text-zinc-500">
-        Attached: <span className="font-medium text-zinc-700">{block.data.fileName}</span> — to
-        replace it, delete this block and upload again.
+        {t("blockEditor.attached")} <span className="font-medium text-zinc-700">{block.data.fileName}</span>{" "}
+        {t("blockEditor.attachedHint")}
       </p>
       <div>
-        <label className={labelCls}>How students see it</label>
+        <label className={labelCls}>{t("blockEditor.howStudentsSee")}</label>
         <select
           value={display}
           onChange={(e) => setDisplay(e.target.value as "download" | "inline")}
           className={`${inputCls} max-w-64`}
         >
-          <option value="download">Download link only</option>
+          <option value="download">{t("blockEditor.downloadOnly")}</option>
           <option value="inline" disabled={!previewable}>
-            Show in page (PDF / image viewer)
+            {t("blockEditor.showInPage")}
           </option>
         </select>
         {!previewable && (
           <p className="mt-1 text-xs text-zinc-500">
-            Only PDFs and images can be shown in the page — this one is download-only.
+            {t("blockEditor.notPreviewable")}
           </p>
         )}
       </div>

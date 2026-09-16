@@ -4,6 +4,7 @@ import { createCourse } from "@/lib/actions/courses";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import { btnPrimary, btnSecondary, hintCls, inputCls, labelCls } from "@/components/ui/styles";
+import { useT } from "@/lib/i18n/client";
 
 export type FacetSuggestions = { subjects: string[]; curricula: string[]; levels: string[] };
 
@@ -15,13 +16,14 @@ export function CourseFacetFields({
   suggestions: FacetSuggestions;
   defaults?: { subject?: string | null; curriculum?: string | null; level?: string | null };
 }) {
+  const t = useT();
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       {(
         [
-          ["subject", "Subject", "e.g. Mathematics", suggestions.subjects, defaults?.subject],
-          ["curriculum", "Curriculum", "e.g. Kurikulum Merdeka", suggestions.curricula, defaults?.curriculum],
-          ["level", "Level", "e.g. Kelas 7, Beginner", suggestions.levels, defaults?.level],
+          ["subject", t("courseForm.subject"), t("courseForm.subjectPlaceholder"), suggestions.subjects, defaults?.subject],
+          ["curriculum", t("courseForm.curriculum"), t("courseForm.curriculumPlaceholder"), suggestions.curricula, defaults?.curriculum],
+          ["level", t("courseForm.level"), t("courseForm.levelPlaceholder"), suggestions.levels, defaults?.level],
         ] as const
       ).map(([name, label, placeholder, options, value]) => (
         <div key={name}>
@@ -50,34 +52,32 @@ export function CourseFacetFields({
 
 /** Lives in the "New course" panel. */
 export function NewCourseForm({ suggestions }: { suggestions: FacetSuggestions }) {
+  const t = useT();
   const panel = useSlideOver();
   return (
     <form action={createCourse} className="space-y-5">
       <div>
         <label className={labelCls} htmlFor="course-title">
-          Title
+          {t("courseEditor.title")}
         </label>
-        <input id="course-title" name="title" required placeholder="e.g. Excel for Data Analysts" className={inputCls} />
+        <input id="course-title" name="title" required placeholder={t("courseForm.titlePlaceholder")} className={inputCls} />
       </div>
       <div>
         <label className={labelCls} htmlFor="course-description">
-          Description
+          {t("courseEditor.description")}
         </label>
         <textarea id="course-description" name="description" rows={3} className={inputCls} />
       </div>
       <CourseFacetFields suggestions={suggestions} />
-      <p className={hintCls}>
-        Subject, curriculum and level are how you&rsquo;ll filter the catalogue later — pick an existing value where one fits.
-        The course starts as a draft, hidden from students.
-      </p>
+      <p className={hintCls}>{t("courseForm.hint")}</p>
       <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
-            Cancel
+            {t("action.cancel")}
           </button>
         )}
-        <SubmitButton pendingLabel="Creating…" className={btnPrimary}>
-          Create course
+        <SubmitButton pendingLabel={t("courseForm.creating")} className={btnPrimary}>
+          {t("courseForm.create")}
         </SubmitButton>
       </div>
     </form>
