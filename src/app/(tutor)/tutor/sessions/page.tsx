@@ -14,7 +14,7 @@ import { PageHeader, PageTabs } from "@/components/ui/PageHeader";
 import { cardCls } from "@/components/ui/styles";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { studentOptions } from "@/lib/students/options";
-import { getT } from "@/lib/i18n/server";
+import { getLanguage, getT } from "@/lib/i18n/server";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -29,6 +29,7 @@ export default async function TutorSessionsPage({ searchParams }: { searchParams
   const { tab: requestedTab } = await searchParams;
   const tab = schedulingV2 && requestedTab === "availability" ? "availability" : "schedule";
   const t = await getT();
+  const language = await getLanguage();
 
   const [sessions, students, activeWindows] = await Promise.all([
     db.session.findMany({
@@ -45,14 +46,14 @@ export default async function TutorSessionsPage({ searchParams }: { searchParams
     id: s.id,
     studentName: s.student.name,
     startTime: s.startTime.toISOString(),
-    whenLabel: formatSessionShort(s.startTime),
+    whenLabel: formatSessionShort(s.startTime, language),
     localDate: localDate(s.startTime),
     durationMinutes: s.durationMinutes,
     status: s.status,
     notes: s.notes,
     statusReason: s.statusReason,
     attendance: s.attendance,
-    proposedAltLabel: s.proposedAltTime ? formatSessionShort(s.proposedAltTime) : null,
+    proposedAltLabel: s.proposedAltTime ? formatSessionShort(s.proposedAltTime, language) : null,
     hasStarted: s.startTime.getTime() <= now,
   }));
 

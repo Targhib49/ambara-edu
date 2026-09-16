@@ -1,4 +1,5 @@
 import type { SessionStatus } from "@/generated/prisma/enums";
+import { localeFor, DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/messages";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { fromLocalParts, toLocalParts } from "@/lib/scheduling";
 import { APP_TZ, APP_TZ_OFFSET_MINUTES } from "@/lib/scheduling";
@@ -44,9 +45,9 @@ export function nowMs() {
  * with `undefined` the server (UTC on Vercel) and the browser disagree, so the
  * same session read as two different times depending on where it rendered.
  */
-export function formatSessionTime(iso: string | Date) {
+export function formatSessionTime(iso: string | Date, language: Language) {
   const date = typeof iso === "string" ? new Date(iso) : iso;
-  return date.toLocaleString("en-GB", {
+  return date.toLocaleString(localeFor(language), {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -118,7 +119,8 @@ export const ATTENDANCE_LABEL = { ATTENDED: "Attended", NO_SHOW: "No-show" } as 
  * both dashboards greet from this. Reading `getHours()` off a server-rendered
  * Date says "Good morning" at 7 PM WIB, because Vercel runs in UTC.
  */
-export function appClock(instant: Date = new Date(nowMs())) {
+export function appClock(instant: Date = new Date(nowMs()), language: Language = DEFAULT_LANGUAGE) {
+  const locale = localeFor(language);
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: APP_TZ }).format(instant));
   return {
     hour,
@@ -130,10 +132,10 @@ export function appClock(instant: Date = new Date(nowMs())) {
     weekdayShort: (offsetDays = 0) => {
       const parts = toLocalParts(instant);
       const day = fromLocalParts(parts.year, parts.month, parts.day + offsetDays, 12 * 60);
-      return new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: APP_TZ }).format(day);
+      return new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: APP_TZ }).format(day);
     },
     longDate: () =>
-      new Intl.DateTimeFormat("en-GB", { weekday: "long", month: "long", day: "numeric", timeZone: APP_TZ }).format(instant),
+      new Intl.DateTimeFormat(locale, { weekday: "long", month: "long", day: "numeric", timeZone: APP_TZ }).format(instant),
   };
 }
 
@@ -143,9 +145,9 @@ export function appClock(instant: Date = new Date(nowMs())) {
  * browser would disagree with server rendering in production, where Vercel
  * runs UTC.
  */
-export function formatSessionShort(instant: Date) {
+export function formatSessionShort(instant: Date, language: Language) {
   const shifted = new Date(instant.getTime() + APP_TZ_OFFSET_MINUTES * 60_000);
-  return shifted.toLocaleString("en-GB", {
+  return shifted.toLocaleString(localeFor(language), {
     weekday: "short",
     day: "numeric",
     month: "short",

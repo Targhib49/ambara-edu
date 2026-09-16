@@ -3,7 +3,7 @@
 import { formatSessionTime } from "@/lib/sessions/format";
 import type { SubmissionStatus } from "@/generated/prisma/enums";
 import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/format";
-import { useT } from "@/lib/i18n/client";
+import { useLanguage, useT } from "@/lib/i18n/client";
 
 type AttemptRow = {
   attemptNumber: number;
@@ -34,6 +34,7 @@ export function ScoreHistory({
   totalPoints: number;
 }) {
   const t = useT();
+  const language = useLanguage();
   const rows = current ? [current, ...attempts] : attempts;
   if (rows.length <= 1) return null; // history is only interesting with 2+ attempts
 
@@ -53,7 +54,7 @@ export function ScoreHistory({
             >
               {t(submissionStatusKey(row.status))}
             </span>
-            <span className="ml-auto text-xs text-zinc-400">{formatSessionTime(row.submittedAt)}</span>
+            <span className="ml-auto text-xs text-zinc-400">{formatSessionTime(row.submittedAt, language)}</span>
           </li>
         ))}
       </ul>

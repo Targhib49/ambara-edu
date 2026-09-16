@@ -7,7 +7,7 @@ import type { OpenSlot } from "./BookingPanel";
 import { formatSessionTime } from "@/lib/sessions/format";
 import { requestReschedule, studentPickRescheduleSlot, studentRespondToReschedule } from "@/lib/actions/sessions";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
-import { useT } from "@/lib/i18n/client";
+import { useLanguage, useT } from "@/lib/i18n/client";
 import type { SessionStatus } from "@/generated/prisma/enums";
 
 const smallBtn =
@@ -44,6 +44,7 @@ export function StudentSessionRow({
   rescheduleSlots?: OpenSlot[];
 }) {
   const t = useT();
+  const language = useLanguage();
   const [pending, startTransition] = useTransition();
   // The slot just picked, so only that button says it is booking.
   const [pickedSlot, setPickedSlot] = useState<string | null>(null);
@@ -76,7 +77,7 @@ export function StudentSessionRow({
         <div className="min-w-0 flex-1">
           <p className="font-medium text-zinc-900">{session.tutorName}</p>
           <p className="text-sm text-zinc-500">
-            {formatSessionTime(session.startTime)} · {t("count.minutes", { n: session.durationMinutes })}
+            {formatSessionTime(session.startTime, language)} · {t("count.minutes", { n: session.durationMinutes })}
           </p>
         </div>
         <StatusBadge status={session.status} />
@@ -133,7 +134,7 @@ export function StudentSessionRow({
           {t("sessionRow.waitingTutor")}
           {session.proposedAltTime && (
             <>
-              : <strong>{formatSessionTime(session.proposedAltTime)}</strong>
+              : <strong>{formatSessionTime(session.proposedAltTime, language)}</strong>
             </>
           )}
         </p>
@@ -177,7 +178,7 @@ export function StudentSessionRow({
         <div className="mt-3 space-y-2">
           <div className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
             {t("sessionRow.tutorProposed")}{" "}
-            <strong>{session.proposedAltTime && formatSessionTime(session.proposedAltTime)}</strong>
+            <strong>{session.proposedAltTime && formatSessionTime(session.proposedAltTime, language)}</strong>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button

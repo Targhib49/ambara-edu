@@ -11,6 +11,13 @@
  */
 export type Language = "ID" | "EN";
 
+/**
+ * The locale to format dates and numbers in. Weekday and month names come out
+ * of Intl, so they have to follow the interface language; the timezone is
+ * pinned separately and is never the browser's.
+ */
+export const localeFor = (language: Language) => (language === "ID" ? "id-ID" : "en-GB");
+
 export const LANGUAGES: Language[] = ["ID", "EN"];
 export const LANGUAGE_LABEL: Record<Language, string> = { ID: "ID", EN: "EN" };
 export const DEFAULT_LANGUAGE: Language = "ID";
@@ -864,6 +871,17 @@ export const MESSAGES = {
   "action.timeNotOffered": { ID: "Waktu itu sudah tidak ditawarkan.", EN: "That time is no longer offered." },
   "action.slotTooShort": { ID: "Slot itu terlalu pendek untuk sesi ini.", EN: "That slot is too short for this session." },
   "action.justTaken": { ID: "Waktu itu baru saja diambil orang lain \u2014 pilih yang lain.", EN: "Someone just took that time \u2014 pick another." },
+  "action.studentHasSessions": { ID: "Siswa ini punya sesi tercatat, jadi akunnya tidak bisa dihapus.", EN: "This student has sessions on record, so their account can't be deleted." },
+  "action.deleteStudentFailed": { ID: "Gagal menghapus siswa: {message}", EN: "Could not delete the student: {message}" },
+  "action.authDeleteFailed": { ID: "Data siswa sudah dihapus, tapi loginnya masih ada: {message}", EN: "The student's data was deleted, but their login still exists: {message}" },
+  "action.resetPasswordFailed": { ID: "Gagal mereset password: {message}", EN: "Could not reset the password: {message}" },
+  "tutor.chip.coursesOne": { ID: "{n} course", EN: "{n} course" },
+  "tutor.chip.studentsOne": { ID: "{n} siswa", EN: "{n} student" },
+  "tutor.chip.sessionsThisWeekOne": { ID: "{n} sesi minggu ini", EN: "{n} session this week" },
+  "tutor.chip.draftLessonsOne": { ID: "{n} sesi draf", EN: "{n} draft lesson" },
+  "tutor.rescheduleWaitingOne": { ID: "{n} permintaan jadwal ulang menunggu kamu", EN: "{n} reschedule request waiting on you" },
+  "tutor.sessionCountOne": { ID: "{n} sesi", EN: "{n} session" },
+  "tutor.publishedOfOne": { ID: "{done}/{total} terbit \u00b7 {students} siswa", EN: "{done}/{total} published \u00b7 {students} student" },
   "createStudent.fullName": { ID: "Nama lengkap", EN: "Full name" },
   "createStudent.email": { ID: "Email", EN: "Email" },
   "createStudent.tempPassword": { ID: "Password sementara", EN: "Temporary password" },

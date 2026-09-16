@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { SessionsBoard } from "@/components/sessions/SessionsBoard";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { getT } from "@/lib/i18n/server";
+import { getLanguage, getT } from "@/lib/i18n/server";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { nowMs } from "@/lib/sessions/format";
 import { BookingPanel } from "@/components/sessions/BookingPanel";
@@ -16,6 +16,7 @@ export default async function StudentSessionsPage() {
   const student = await requireStudent();
   const schedulingV2 = await isEnabled("scheduling_v2");
   const t = await getT();
+  const language = await getLanguage();
 
   const sessions = await db.session.findMany({
     where: { studentId: student.id },
@@ -59,7 +60,7 @@ export default async function StudentSessionsPage() {
         availabilityId: slot.availabilityId,
         startIso: slot.start.toISOString(),
         durationMinutes: slot.durationMinutes,
-        dayLabel: formatSlotDay(slot.start),
+        dayLabel: formatSlotDay(slot.start, language),
         timeLabel: formatSlotTime(slot.start),
         tutorId: slot.tutorId,
       }));

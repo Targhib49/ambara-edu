@@ -285,20 +285,25 @@ export function AssignCourseForm({ studentId, courses }: { studentId: string; co
 export function DeleteStudentButton({ studentId, name, disabled }: { studentId: string; name: string; disabled?: boolean }) {
   const t = useT();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   return (
-    <button
-      disabled={pending || disabled}
-      onClick={() => {
-        if (!confirm(t("studentDetail.deleteConfirm", { name }))) return;
-        startTransition(async () => {
-          await deleteStudent(studentId);
-          router.push("/tutor/students");
-        });
-      }}
-      className={btnDanger}
-    >
-      {pending ? t("action.deleting") : t("studentDetail.deleteStudent")}
-    </button>
+    <div className="space-y-2">
+      <button
+        disabled={pending || disabled}
+        onClick={() => {
+          if (!confirm(t("studentDetail.deleteConfirm", { name }))) return;
+          startTransition(async () => {
+            const result = await deleteStudent(studentId);
+            if (result.error) setError(result.error);
+            else router.push("/tutor/students");
+          });
+        }}
+        className={btnDanger}
+      >
+        {pending ? t("action.deleting") : t("studentDetail.deleteStudent")}
+      </button>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+    </div>
   );
 }

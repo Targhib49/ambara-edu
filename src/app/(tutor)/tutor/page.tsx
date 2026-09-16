@@ -4,7 +4,7 @@ import { requireTutor } from "@/lib/auth";
 import { appClock, nowMs, formatSessionTime } from "@/lib/sessions/format";
 import { StatusBadge } from "@/components/sessions/StatusBadge";
 import { badgeColorFor, badgeColorForKey, initialsFor } from "@/lib/ui/palette";
-import { getT } from "@/lib/i18n/server";
+import { getLanguage, getT } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 
 function greetingKey(hour: number): MessageKey {
@@ -24,8 +24,9 @@ function Pill({ children }: { children: React.ReactNode }) {
 export default async function TutorDashboardPage() {
   const tutor = await requireTutor();
   const now = new Date(nowMs());
-  const clock = appClock(now);
   const t = await getT();
+  const language = await getLanguage();
+  const clock = appClock(now, language);
 
   const [courses, studentCount, sessions] = await Promise.all([
     db.course.findMany({
@@ -86,10 +87,14 @@ export default async function TutorDashboardPage() {
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Pill>{t("tutor.chip.courses", { n: courses.length })}</Pill>
-          <Pill>{t("tutor.chip.students", { n: studentCount })}</Pill>
-          <Pill>{t("tutor.chip.sessionsThisWeek", { n: sessionsThisWeek })}</Pill>
-          {draftLessons > 0 && <Pill>{t("tutor.chip.draftLessons", { n: draftLessons })}</Pill>}
+          <Pill>{t(courses.length === 1 ? "tutor.chip.coursesOne" : "tutor.chip.courses", { n: courses.length })}</Pill>
+          <Pill>{t(studentCount === 1 ? "tutor.chip.studentsOne" : "tutor.chip.students", { n: studentCount })}</Pill>
+          <Pill>
+            {t(sessionsThisWeek === 1 ? "tutor.chip.sessionsThisWeekOne" : "tutor.chip.sessionsThisWeek", { n: sessionsThisWeek })}
+          </Pill>
+          {draftLessons > 0 && (
+            <Pill>{t(draftLessons === 1 ? "tutor.chip.draftLessonsOne" : "tutor.chip.draftLessons", { n: draftLessons })}</Pill>
+          )}
         </div>
       </div>
 
@@ -102,7 +107,7 @@ export default async function TutorDashboardPage() {
             ⏰
           </span>
           <p className="flex-1 text-sm font-medium text-amber-800">
-            {t("tutor.rescheduleWaiting", { n: needsResponse.length })}
+            {t(needsResponse.length === 1 ? "tutor.rescheduleWaitingOne" : "tutor.rescheduleWaiting", { n: needsResponse.length })}
           </p>
           <span className="shrink-0 text-sm font-medium text-amber-700">{t("tutor.review")}</span>
         </Link>
@@ -142,7 +147,11 @@ export default async function TutorDashboardPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-zinc-900">{course.title}</p>
                     <p className="truncate text-xs text-zinc-500">
-                      {t("tutor.publishedOf", { done: published, total: lessonCount, students: course._count.enrollments })}
+                      {t(course._count.enrollments === 1 ? "tutor.publishedOfOne" : "tutor.publishedOf", {
+                        done: published,
+                        total: lessonCount,
+                        students: course._count.enrollments,
+                      })}
                     </p>
                   </div>
                 </Link>
@@ -161,7 +170,7 @@ export default async function TutorDashboardPage() {
                 <div
                   className={`w-full rounded-t-md ${d.count > 0 ? "bg-blue-500/70" : "bg-zinc-100"}`}
                   style={{ height: `${Math.max(6, (d.count / maxDayCount) * 56)}px` }}
-                  title={t("tutor.sessionCount", { n: d.count })}
+                  title={t(d.count === 1 ? "tutor.sessionCountOne" : "tutor.sessionCount", { n: d.count })}
                 />
                 <p className="text-[11px] text-zinc-400">{d.label}</p>
               </div>
@@ -182,7 +191,7 @@ export default async function TutorDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-blue-700">{t("tutor.nextUp")}</p>
               <p className="mt-0.5 font-medium text-zinc-900">{nextSession.student.name}</p>
               <p className="text-sm text-zinc-600">
-                {formatSessionTime(nextSession.startTime)} · {nextSession.durationMinutes} min
+                {formatSessionTime(nextSession.startTime, language)} · {nextSession.durationMinutes} min
               </p>
             </div>
           )}
@@ -199,7 +208,7 @@ export default async function TutorDashboardPage() {
                     {initialsFor(s.student.name)}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{s.student.name}</span>
-                  <span className="shrink-0 text-zinc-500">{formatSessionTime(s.startTime)}</span>
+                  <span className="shrink-0 text-zinc-500">{formatSessionTime(s.startTime, language)}</span>
                   <StatusBadge status={s.status} />
                 </li>
               ))}

@@ -15,7 +15,7 @@ import { cardCls } from "@/components/ui/styles";
 import { studentOptions } from "@/lib/students/options";
 import { courseOptions } from "@/lib/courses/options";
 import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/format";
-import { getT } from "@/lib/i18n/server";
+import { getLanguage, getT } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { ResetPasswordPanel } from "./ResetPasswordPanel";
 import {
@@ -53,6 +53,7 @@ export default async function StudentDetailPage({
 }) {
   const tutor = await requireTutor();
   const t = await getT();
+  const language = await getLanguage();
   const { studentId } = await params;
   const { tab: requestedTab } = await searchParams;
   const tab: TabKey = (TABS as readonly string[]).includes(requestedTab ?? "") ? (requestedTab as TabKey) : "overview";
@@ -154,7 +155,7 @@ export default async function StudentDetailPage({
   const sessionRows: StudentSessionHistoryRow[] = sessions.map((s) => ({
     id: s.id,
     startTime: s.startTime.toISOString(),
-    whenLabel: formatSessionShort(s.startTime),
+    whenLabel: formatSessionShort(s.startTime, language),
     durationMinutes: s.durationMinutes,
     status: s.status,
     attendance: s.attendance,
@@ -240,7 +241,7 @@ export default async function StudentDetailPage({
         />
         <Stat
           label={t("studentPage.statNextSession")}
-          value={nextSession ? formatSessionShort(nextSession.startTime) : "—"}
+          value={nextSession ? formatSessionShort(nextSession.startTime, language) : "—"}
           sub={nextSession ? t("count.minutes", { n: nextSession.durationMinutes }) : t("studentPage.nothingBooked")}
           small
         />

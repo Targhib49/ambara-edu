@@ -9,7 +9,7 @@ import { summarizeCourseProgress } from "@/lib/progress";
 import { buildChapterItems, chapterStatus } from "@/lib/courseItems";
 import { ChapterSection } from "@/components/student/ChapterSection";
 import { btnPrimary, cardCls } from "@/components/ui/styles";
-import { getT } from "@/lib/i18n/server";
+import { getLanguage, getT } from "@/lib/i18n/server";
 
 const UPCOMING_LIMIT = 5;
 
@@ -21,6 +21,7 @@ export default async function StudentTrackPage({
   const { courseId } = await params;
   const student = await requireStudent();
   const t = await getT();
+  const language = await getLanguage();
   const courseV2 = await isEnabled("course_v2");
 
   const course = await db.course.findFirst({
@@ -222,7 +223,7 @@ export default async function StudentTrackPage({
               {upcomingSessions.map((s) => (
                 <li key={s.id} className="border-l-2 border-blue-400 pl-3">
                   <p className="text-sm font-medium text-zinc-900">{s.tutor.name}</p>
-                  <p className="text-xs text-zinc-500">{formatSessionTime(s.startTime)}</p>
+                  <p className="text-xs text-zinc-500">{formatSessionTime(s.startTime, language)}</p>
                 </li>
               ))}
             </ul>

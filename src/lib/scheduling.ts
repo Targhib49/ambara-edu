@@ -8,6 +8,8 @@
  * moves or takes on students in another zone, this constant becomes a per-user
  * field and these helpers grow a timezone argument; nothing else changes.
  */
+
+import { localeFor, type Language } from "@/lib/i18n/messages";
 export const APP_TZ_OFFSET_MINUTES = 7 * 60;
 
 /** The same zone by name, for Intl formatting. */
@@ -171,8 +173,8 @@ function shift(instant: Date) {
   return new Date(instant.getTime() + APP_TZ_OFFSET_MINUTES * 60_000);
 }
 
-export function formatSlotDay(instant: Date) {
-  return shift(instant).toLocaleDateString("en-GB", {
+export function formatSlotDay(instant: Date, language: Language) {
+  return shift(instant).toLocaleDateString(localeFor(language), {
     weekday: "long",
     day: "numeric",
     month: "long",

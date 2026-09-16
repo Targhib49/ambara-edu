@@ -4,10 +4,11 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { formatSessionShort, nowMs } from "@/lib/sessions/format";
 import { courseOptions } from "@/lib/courses/options";
-import { getT } from "@/lib/i18n/server";
+import { getLanguage, getT } from "@/lib/i18n/server";
 
 export default async function StudentsPage() {
   const t = await getT();
+  const language = await getLanguage();
   const now = new Date(nowMs());
   const [students, courses] = await Promise.all([
     db.user.findMany({
@@ -38,7 +39,7 @@ export default async function StudentsPage() {
     studentGroup: s.studentGroup,
     emailVerifiedAt: s.emailVerifiedAt,
     courses: s.enrollments.map((e) => e.course),
-    nextSessionLabel: s.sessionsAsStudent[0] ? formatSessionShort(s.sessionsAsStudent[0].startTime) : null,
+    nextSessionLabel: s.sessionsAsStudent[0] ? formatSessionShort(s.sessionsAsStudent[0].startTime, language) : null,
   }));
   const unenrolled = rows.filter((r) => r.courses.length === 0).length;
 
