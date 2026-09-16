@@ -7,14 +7,16 @@ import { QuizPlacementFields, type Placement } from "@/components/quiz/QuizPlace
 import { Combobox, type ComboOption } from "@/components/ui/Combobox";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import { btnPrimary, btnSecondary, inputCls, labelCls } from "@/components/ui/styles";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
 import type { PlacementCourse } from "@/lib/courses/placement";
 
-const TYPE_LABELS: Record<string, string> = {
-  MULTIPLE_CHOICE: "Multiple choice",
-  MULTI_SELECT: "Multi-select",
-  NUMERIC: "Numeric",
-  SHORT_TEXT: "Short text",
-  CODE: "Code",
+const TYPE_KEYS: Record<string, MessageKey> = {
+  MULTIPLE_CHOICE: "questionType.MULTIPLE_CHOICE",
+  MULTI_SELECT: "questionType.MULTI_SELECT",
+  NUMERIC: "questionType.NUMERIC",
+  SHORT_TEXT: "questionType.SHORT_TEXT",
+  CODE: "questionType.CODE",
 };
 
 /**
@@ -22,6 +24,7 @@ const TYPE_LABELS: Record<string, string> = {
  * which quiz the questions go into — nothing is saved before that last step.
  */
 export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]; quizOptions: ComboOption[] }) {
+  const t = useT();
   const panel = useSlideOver();
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -56,7 +59,7 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
   return (
     <div className="space-y-6">
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-zinc-900">1. Upload a sheet</h3>
+        <h3 className="text-sm font-semibold text-zinc-900">{t("quizImport.step1")}</h3>
         <form action={handlePreview} className="flex flex-wrap items-center gap-2">
           <input
             type="file"
@@ -66,33 +69,32 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
             className="min-w-0 flex-1 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200"
           />
           <button disabled={pending} className={btnSecondary}>
-            {pending && !result ? "Reading…" : "Preview"}
+            {pending && !result ? t("quizImport.reading") : t("quizImport.preview")}
           </button>
         </form>
         <details className="rounded-md bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
-          <summary className="cursor-pointer font-medium text-zinc-700">Sheet format</summary>
+          <summary className="cursor-pointer font-medium text-zinc-700">{t("quizImport.sheetFormat")}</summary>
           <p className="mt-2">
-            One row per question. Columns: <code>question_type</code>, <code>question_text</code>, <code>option_a</code>…
-            <code>option_d</code>, <code>correct_answer</code>, <code>points</code>, <code>explanation</code>. For code questions,
-            <code> correct_answer</code> is an optional JSON list of test cases, e.g.{" "}
-            <code>{'[{"input":"3","expected_output":"6"}]'}</code> — leave it blank to grade by hand.
+            {t("quizImport.formatIntro")} <code>question_type</code>, <code>question_text</code>, <code>option_a</code>…
+            <code>option_d</code>, <code>correct_answer</code>, <code>points</code>, <code>explanation</code>.{" "}
+            {t("quizImport.formatCode")}
+            <code> correct_answer</code> {t("quizImport.formatCodeTail")}{" "}
+            <code>{'[{"input":"3","expected_output":"6"}]'}</code> {t("quizImport.formatBlank")}
           </p>
         </details>
       </section>
 
       {result && (
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-zinc-900">2. Check the questions</h3>
+          <h3 className="text-sm font-semibold text-zinc-900">{t("quizImport.step2")}</h3>
           {result.errors.length > 0 && (
             <div className="rounded-md border border-red-200 bg-red-50 p-3">
               <p className="mb-1.5 text-sm font-medium text-red-800">
-                Fix {result.errors.length} row{result.errors.length > 1 ? "s" : ""} and upload again:
+                {t(result.errors.length > 1 ? "quizImport.fixRows" : "quizImport.fixRow", { n: result.errors.length })}
               </p>
               <ul className="max-h-40 space-y-0.5 overflow-y-auto text-sm text-red-700">
                 {result.errors.map((e, i) => (
-                  <li key={i}>
-                    Row {e.rowNumber}: {e.message}
-                  </li>
+                  <li key={i}>{t("quizImport.rowError", { n: e.rowNumber, message: e.message })}</li>
                 ))}
               </ul>
             </div>
@@ -102,17 +104,17 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 border-b border-zinc-200 bg-zinc-50 text-[11px] uppercase tracking-wide text-zinc-500">
                   <tr>
-                    <th className="px-3 py-2">Row</th>
-                    <th className="px-3 py-2">Type</th>
-                    <th className="px-3 py-2">Question</th>
-                    <th className="px-3 py-2 text-right">Points</th>
+                    <th className="px-3 py-2">{t("quizImport.row")}</th>
+                    <th className="px-3 py-2">{t("quizImport.type")}</th>
+                    <th className="px-3 py-2">{t("quizImport.question")}</th>
+                    <th className="px-3 py-2 text-right">{t("quizImport.points")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
                   {result.drafts.map((d) => (
                     <tr key={d.rowNumber}>
                       <td className="px-3 py-2 tabular-nums text-zinc-500">{d.rowNumber}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-zinc-600">{TYPE_LABELS[d.type]}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-zinc-600">{TYPE_KEYS[d.type] ? t(TYPE_KEYS[d.type]) : d.type}</td>
                       <td className="max-w-md truncate px-3 py-2">{d.prompt}</td>
                       <td className="px-3 py-2 text-right tabular-nums text-zinc-600">{d.points}</td>
                     </tr>
@@ -126,12 +128,12 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
 
       {ready && (
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-zinc-900">3. Choose where they go</h3>
+          <h3 className="text-sm font-semibold text-zinc-900">{t("quizImport.step3")}</h3>
           <div className="grid grid-cols-2 gap-1 rounded-lg bg-zinc-100 p-1">
             {(
               [
-                ["new", "New quiz"],
-                ["update", "Replace an existing quiz's questions"],
+                ["new", t("quizImport.modeNew")],
+                ["update", t("quizImport.modeUpdate")],
               ] as const
             ).map(([value, label]) => (
               <button
@@ -152,16 +154,16 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
           {mode === "new" ? (
             <div className="space-y-4">
               <div>
-                <label className={labelCls}>Quiz title</label>
+                <label className={labelCls}>{t("quizImport.quizTitle")}</label>
                 <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
               </div>
               <QuizPlacementFields tree={tree} onChange={setPlacement} />
             </div>
           ) : (
             <div>
-              <label className={labelCls}>Quiz</label>
-              <Combobox options={quizOptions} value={existingQuizId} onChange={setExistingQuizId} placeholder="Search quizzes" aria-label="Quiz to replace" />
-              <p className="mt-1 text-xs text-amber-700">Its current questions are replaced. Existing submissions are kept.</p>
+              <label className={labelCls}>{t("quizImport.quiz")}</label>
+              <Combobox options={quizOptions} value={existingQuizId} onChange={setExistingQuizId} placeholder={t("quizImport.searchQuizzes")} aria-label={t("quizImport.quizToReplace")} />
+              <p className="mt-1 text-xs text-amber-700">{t("quizImport.replaceWarning")}</p>
             </div>
           )}
         </section>
@@ -172,11 +174,15 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
       <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
-            Cancel
+            {t("action.cancel")}
           </button>
         )}
         <button onClick={handleCommit} disabled={!canCommit || pending} className={btnPrimary}>
-          {pending && result ? "Importing…" : ready ? `Import ${result!.drafts.length} question${result!.drafts.length > 1 ? "s" : ""}` : "Import"}
+          {pending && result
+            ? t("quizImport.importing")
+            : ready
+              ? t(result!.drafts.length > 1 ? "quizImport.importNPlural" : "quizImport.importN", { n: result!.drafts.length })
+              : t("quizImport.import")}
         </button>
       </div>
     </div>

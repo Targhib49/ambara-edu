@@ -13,19 +13,21 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { NewQuizForm } from "@/components/quiz/NewQuizForm";
 import { ClipboardIcon } from "@/components/ui/icons";
+import { getT } from "@/lib/i18n/server";
+import type { MessageKey } from "@/lib/i18n/messages";
 
 const smallBtn =
   "rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-40";
 
-const BLOCK_LABELS = {
-  MARKDOWN: "Markdown",
-  EQUATION: "Equation",
-  CODE_SNIPPET: "Code snippet",
-  FILE_ATTACHMENT: "File attachment",
-  CODE_EDITOR: "Python scratchpad",
-  VISUALIZATION: "Visualization",
-  VIDEO_EMBED: "Video",
-} as const;
+const BLOCK_LABEL_KEYS = {
+  MARKDOWN: "blockType.MARKDOWN",
+  EQUATION: "blockType.EQUATION",
+  CODE_SNIPPET: "blockType.CODE_SNIPPET",
+  FILE_ATTACHMENT: "blockType.FILE_ATTACHMENT",
+  CODE_EDITOR: "blockType.CODE_EDITOR",
+  VISUALIZATION: "blockType.VISUALIZATION",
+  VIDEO_EMBED: "blockType.VIDEO_EMBED",
+} as const satisfies Record<string, MessageKey>;
 
 export default async function LessonEditorPage({
   params,
@@ -33,6 +35,7 @@ export default async function LessonEditorPage({
   params: Promise<{ courseId: string; lessonId: string }>;
 }) {
   const { courseId, lessonId } = await params;
+  const t = await getT();
   const lesson = await db.lesson.findUnique({
     where: { id: lessonId },
     include: {
@@ -56,8 +59,8 @@ export default async function LessonEditorPage({
       <div>
         <Breadcrumbs
           items={[
-            { label: "Home", href: "/tutor" },
-            { label: "Courses", href: "/tutor/courses" },
+            { label: t("nav.home"), href: "/tutor" },
+            { label: t("nav.courses"), href: "/tutor/courses" },
             { label: lesson.chapter.course.title, href: `/tutor/courses/${courseId}` },
             { label: lesson.title },
           ]}
@@ -71,7 +74,9 @@ export default async function LessonEditorPage({
               required
               className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-lg font-semibold focus:border-zinc-500 focus:outline-none"
             />
-            <SubmitButton pendingLabel="Renaming…" className={smallBtn}>Rename</SubmitButton>
+            <SubmitButton pendingLabel={t("lessonEditor.renaming")} className={smallBtn}>
+              {t("lessonEditor.rename")}
+            </SubmitButton>
           </form>
           <form
             action={setLessonStatus.bind(
@@ -81,14 +86,14 @@ export default async function LessonEditorPage({
             )}
           >
             <SubmitButton
-              pendingLabel="Updating…"
+              pendingLabel={t("lessonEditor.updating")}
               className={`rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
                 lesson.status === "PUBLISHED"
                   ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
                   : "bg-green-600 text-white hover:bg-green-500"
               }`}
             >
-              {lesson.status === "PUBLISHED" ? "Unpublish" : "Publish"}
+              {lesson.status === "PUBLISHED" ? t("lessonEditor.unpublish") : t("lessonEditor.publish")}
             </SubmitButton>
           </form>
         </div>
@@ -99,18 +104,18 @@ export default async function LessonEditorPage({
           <div key={block.id} className="rounded-xl border border-zinc-200 bg-white shadow-sm">
             <div className="flex items-center gap-2 border-b border-zinc-100 px-4 py-2">
               <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                {BLOCK_LABELS[block.type]}
+                {t(BLOCK_LABEL_KEYS[block.type])}
               </span>
               <div className="ml-auto flex gap-1.5">
                 <form action={moveBlock.bind(null, block.id, "up")}>
-                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === 0} title="Move up">↑</SubmitButton>
+                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === 0} title={t("lessonEditor.moveUp")}>↑</SubmitButton>
                 </form>
                 <form action={moveBlock.bind(null, block.id, "down")}>
-                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === lesson.blocks.length - 1} title="Move down">↓</SubmitButton>
+                  <SubmitButton pendingLabel="" className={smallBtn} disabled={i === lesson.blocks.length - 1} title={t("lessonEditor.moveDown")}>↓</SubmitButton>
                 </form>
                 <form action={deleteBlock.bind(null, block.id)}>
-                  <ConfirmButton message="Delete this block?" className={`${smallBtn} text-red-600`}>
-                    Delete
+                  <ConfirmButton message={t("lessonEditor.deleteBlockConfirm")} className={`${smallBtn} text-red-600`}>
+                    {t("action.delete")}
                   </ConfirmButton>
                 </form>
               </div>
@@ -119,7 +124,7 @@ export default async function LessonEditorPage({
               <SafeBlockEditor block={block} />
               <div className="rounded-lg bg-zinc-50 p-4">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
-                  Preview (saved state)
+                  {t("lessonEditor.previewSaved")}
                 </p>
                 <BlockRenderer block={block} />
               </div>
@@ -127,17 +132,22 @@ export default async function LessonEditorPage({
           </div>
         ))}
         {lesson.blocks.length === 0 && (
-          <p className="text-sm text-zinc-500">No content yet — add a block below.</p>
+          <p className="text-sm text-zinc-500">{t("lessonEditor.noContent")}</p>
         )}
       </div>
 
       <section className="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-900">Quizzes after this lesson</h2>
-            <p className="text-xs text-zinc-500">Students see these right after the lesson, in this order.</p>
+            <h2 className="text-sm font-semibold text-zinc-900">{t("lessonEditor.quizzesAfter")}</h2>
+            <p className="text-xs text-zinc-500">{t("lessonEditor.quizzesAfterHint")}</p>
           </div>
-          <SlideOverButton variant="small" label="Add quiz" title="Add a quiz after this lesson" description={lesson.title}>
+          <SlideOverButton
+            variant="small"
+            label={t("lessonEditor.addQuiz")}
+            title={t("lessonEditor.addQuizTitle")}
+            description={lesson.title}
+          >
             <NewQuizForm tree={tree} defaultCourseId={courseId} defaultChapterId={lesson.chapterId} defaultLessonId={lesson.id} />
           </SlideOverButton>
         </div>
@@ -148,9 +158,11 @@ export default async function LessonEditorPage({
                 <Link href={`/tutor/quizzes/${quiz.id}`} className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-zinc-50">
                   <ClipboardIcon className="h-4 w-4 shrink-0 text-violet-500" />
                   <span className="min-w-0 flex-1 truncate text-zinc-800">{quiz.title}</span>
-                  {quiz.status === "DRAFT" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">Draft</span>}
+                  {quiz.status === "DRAFT" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("status.draft")}</span>}
                   <span className="text-xs tabular-nums text-zinc-500">
-                    {quiz._count.questions} question{quiz._count.questions === 1 ? "" : "s"}
+                    {t(quiz._count.questions === 1 ? "lessonEditor.questionCount" : "lessonEditor.questionCountPlural", {
+                      n: quiz._count.questions,
+                    })}
                   </span>
                 </Link>
               </li>
@@ -160,27 +172,27 @@ export default async function LessonEditorPage({
       </section>
 
       <div className="rounded-xl border border-dashed border-zinc-300 p-4">
-        <p className="mb-3 text-sm font-medium text-zinc-600">Add a block</p>
+        <p className="mb-3 text-sm font-medium text-zinc-600">{t("lessonEditor.addBlock")}</p>
         <div className="flex flex-wrap items-center gap-2">
           {(
             ["MARKDOWN", "EQUATION", "CODE_SNIPPET", "VIDEO_EMBED", "CODE_EDITOR", "VISUALIZATION"] as const
           ).map((type) => (
             <form key={type} action={addBlock.bind(null, lesson.id, type)}>
               <SubmitButton
-                pendingLabel="Adding…"
+                pendingLabel={t("action.adding")}
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50"
               >
-                + {BLOCK_LABELS[type]}
+                + {t(BLOCK_LABEL_KEYS[type])}
               </SubmitButton>
             </form>
           ))}
           <form action={addFileBlock.bind(null, lesson.id)} className="flex items-center gap-2">
             <input type="file" name="file" required multiple className="text-sm" />
             <SubmitButton
-              pendingLabel="Uploading…"
+              pendingLabel={t("action.uploading")}
               className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50"
             >
-              + {BLOCK_LABELS.FILE_ATTACHMENT}
+              + {t("blockType.FILE_ATTACHMENT")}
             </SubmitButton>
           </form>
         </div>
@@ -197,18 +209,18 @@ export default async function LessonEditorPage({
  * Unguarded, that throw takes down the whole editor page rather than the one
  * block, so the tutor can't even reach the Delete button to fix it.
  */
-function SafeBlockEditor({ block }: { block: { id: string; type: BlockType; data: unknown } }) {
+async function SafeBlockEditor({ block }: { block: { id: string; type: BlockType; data: unknown } }) {
+  const t = await getT();
   let parsed;
   try {
     parsed = toAnyBlock(block);
   } catch {
     return (
       <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-        <p className="font-medium">This block can’t be edited by this version of the app.</p>
+        <p className="font-medium">{t("lessonEditor.blockUneditable")}</p>
         <p className="mt-1 text-xs">
-          Its saved data doesn’t match any known <code>{block.type}</code> shape — usually a block
-          created by a newer deploy. Deploying the matching code restores it; deleting it here is safe
-          if you no longer need it.
+          {t("lessonEditor.blockUneditableHint1")} <code>{block.type}</code>{" "}
+          {t("lessonEditor.blockUneditableHint2")}
         </p>
       </div>
     );

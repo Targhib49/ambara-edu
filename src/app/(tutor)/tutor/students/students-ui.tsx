@@ -9,11 +9,14 @@ import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { Combobox, type ComboOption } from "@/components/ui/Combobox";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import { btnPrimary, btnSecondary, hintCls, inputCls, labelCls } from "@/components/ui/styles";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
+import type { Translate } from "@/lib/i18n/translate";
 
-export const GROUP_LABELS: Record<StudentGroup, string> = {
-  JUNIOR_HIGH: "Junior high",
-  UNDERGRAD: "Undergrad",
-  GRAD: "Grad",
+export const GROUP_LABEL_KEYS: Record<StudentGroup, MessageKey> = {
+  JUNIOR_HIGH: "group.JUNIOR_HIGH",
+  UNDERGRAD: "group.UNDERGRAD",
+  GRAD: "group.GRAD",
 };
 
 export type StudentRow = {
@@ -27,19 +30,19 @@ export type StudentRow = {
   nextSessionLabel: string | null;
 };
 
-const TABS: Tab<StudentRow>[] = [
-  { key: "all", label: "All", match: () => true },
-  { key: "JUNIOR_HIGH", label: "Junior high", match: (s) => s.studentGroup === "JUNIOR_HIGH" },
-  { key: "UNDERGRAD", label: "Undergrad", match: (s) => s.studentGroup === "UNDERGRAD" },
-  { key: "GRAD", label: "Grad", match: (s) => s.studentGroup === "GRAD" },
+const makeTabs = (t: Translate): Tab<StudentRow>[] => [
+  { key: "all", label: t("status.all"), match: () => true },
+  { key: "JUNIOR_HIGH", label: t("group.JUNIOR_HIGH"), match: (s) => s.studentGroup === "JUNIOR_HIGH" },
+  { key: "UNDERGRAD", label: t("group.UNDERGRAD"), match: (s) => s.studentGroup === "UNDERGRAD" },
+  { key: "GRAD", label: t("group.GRAD"), match: (s) => s.studentGroup === "GRAD" },
   // An account that can sign in but sees nothing — worth finding quickly.
-  { key: "unenrolled", label: "Not enrolled", match: (s) => s.courses.length === 0 },
+  { key: "unenrolled", label: t("students.notEnrolled"), match: (s) => s.courses.length === 0 },
 ];
 
-const COLUMNS: Column<StudentRow>[] = [
+const makeColumns = (t: Translate): Column<StudentRow>[] => [
   {
     key: "name",
-    header: "Student",
+    header: t("students.header.student"),
     sort: (s) => s.name.toLowerCase(),
     text: (s) => s.name,
     className: "min-w-[220px]",
@@ -55,18 +58,18 @@ const COLUMNS: Column<StudentRow>[] = [
       </div>
     ),
   },
-  { key: "email", header: "Email", text: (s) => s.email, csvOnly: true, cell: () => null },
+  { key: "email", header: t("students.header.email"), text: (s) => s.email, csvOnly: true, cell: () => null },
   {
     key: "group",
-    header: "Group",
-    sort: (s) => (s.studentGroup ? GROUP_LABELS[s.studentGroup] : ""),
-    text: (s) => (s.studentGroup ? GROUP_LABELS[s.studentGroup] : ""),
+    header: t("students.header.group"),
+    sort: (s) => (s.studentGroup ? t(GROUP_LABEL_KEYS[s.studentGroup]) : ""),
+    text: (s) => (s.studentGroup ? t(GROUP_LABEL_KEYS[s.studentGroup]) : ""),
     className: "whitespace-nowrap",
-    cell: (s) => (s.studentGroup ? GROUP_LABELS[s.studentGroup] : <span className="text-zinc-400">—</span>),
+    cell: (s) => (s.studentGroup ? t(GROUP_LABEL_KEYS[s.studentGroup]) : <span className="text-zinc-400">—</span>),
   },
   {
     key: "courses",
-    header: "Courses",
+    header: t("students.header.courses"),
     sort: (s) => s.courses.length,
     text: (s) => s.courses.map((c) => c.title).join("; "),
     cell: (s) =>
@@ -77,15 +80,17 @@ const COLUMNS: Column<StudentRow>[] = [
               {c.title}
             </span>
           ))}
-          {s.courses.length > 2 && <span className="text-[11px] text-zinc-500">+{s.courses.length - 2} more</span>}
+          {s.courses.length > 2 && (
+            <span className="text-[11px] text-zinc-500">{t("students.moreCourses", { n: s.courses.length - 2 })}</span>
+          )}
         </div>
       ) : (
-        <span className="text-xs font-medium text-amber-700">Not enrolled</span>
+        <span className="text-xs font-medium text-amber-700">{t("students.notEnrolled")}</span>
       ),
   },
   {
     key: "next",
-    header: "Next session",
+    header: t("students.header.nextSession"),
     text: (s) => s.nextSessionLabel ?? "",
     hideBelow: "xl",
     className: "whitespace-nowrap",
@@ -93,9 +98,9 @@ const COLUMNS: Column<StudentRow>[] = [
   },
   {
     key: "status",
-    header: "Email",
+    header: t("students.header.email"),
     sort: (s) => (s.emailVerifiedAt ? 1 : 0),
-    text: (s) => (s.emailVerifiedAt ? "Verified" : "Pending"),
+    text: (s) => (s.emailVerifiedAt ? t("students.verified") : t("students.pending")),
     className: "whitespace-nowrap",
     cell: (s) => (
       <span className="inline-flex items-center gap-2">
@@ -104,11 +109,11 @@ const COLUMNS: Column<StudentRow>[] = [
             s.emailVerifiedAt ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
           }`}
         >
-          {s.emailVerifiedAt ? "Verified" : "Pending"}
+          {s.emailVerifiedAt ? t("students.verified") : t("students.pending")}
         </span>
         {!s.emailVerifiedAt && (
           <button onClick={() => void resendVerificationEmail(s.id)} className="text-xs text-blue-600 hover:underline">
-            Resend
+            {t("students.resend")}
           </button>
         )}
       </span>
@@ -118,6 +123,7 @@ const COLUMNS: Column<StudentRow>[] = [
 
 /** Enroll every ticked student in one course. */
 function BulkAssign({ courses, studentIds, onDone }: { courses: ComboOption[]; studentIds: string[]; onDone: () => void }) {
+  const t = useT();
   const [courseId, setCourseId] = useState("");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
@@ -125,7 +131,7 @@ function BulkAssign({ courses, studentIds, onDone }: { courses: ComboOption[]; s
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="w-64">
-        <Combobox options={courses} value={courseId} onChange={setCourseId} placeholder="Assign to course…" aria-label="Course to assign" />
+        <Combobox options={courses} value={courseId} onChange={setCourseId} placeholder={t("students.assignTo")} aria-label={t("students.assignAria")} />
       </div>
       <button
         disabled={!courseId || pending}
@@ -143,7 +149,7 @@ function BulkAssign({ courses, studentIds, onDone }: { courses: ComboOption[]; s
         }
         className={btnPrimary}
       >
-        {pending ? "Assigning…" : "Assign"}
+        {pending ? t("students.assigning") : t("students.assign")}
       </button>
       {message && <span className="text-xs text-red-700">{message}</span>}
     </div>
@@ -151,18 +157,19 @@ function BulkAssign({ courses, studentIds, onDone }: { courses: ComboOption[]; s
 }
 
 export function StudentTable({ students, courses }: { students: StudentRow[]; courses: ComboOption[] }) {
+  const t = useT();
   return (
     <DataTable
       rows={students}
-      columns={COLUMNS}
+      columns={makeColumns(t)}
       rowKey={(s) => s.id}
       rowHref={(s) => `/tutor/students/${s.id}`}
-      tabs={TABS}
-      search={{ placeholder: "Search name, email or course", of: (s) => `${s.name} ${s.email} ${s.courses.map((c) => c.title).join(" ")}` }}
+      tabs={makeTabs(t)}
+      search={{ placeholder: t("students.search"), of: (s) => `${s.name} ${s.email} ${s.courses.map((c) => c.title).join(" ")}` }}
       initialSort={{ key: "name", dir: "asc" }}
       exportName="students"
       minWidth="700px"
-      empty={{ title: "No students yet", hint: "Add your first student with the button above." }}
+      empty={{ title: t("students.empty"), hint: t("students.emptyHint") }}
       bulkActions={(selected, clear) => (
         <BulkAssign courses={courses} studentIds={selected.map((s) => s.id)} onDone={clear} />
       )}
@@ -179,6 +186,7 @@ function randomPassword() {
 
 /** Lives in the "Add student" panel. */
 export function CreateStudentForm() {
+  const t = useT();
   const panel = useSlideOver();
   const formRef = useRef<HTMLFormElement>(null);
   const [password, setPassword] = useState("");
@@ -197,19 +205,19 @@ export function CreateStudentForm() {
     <form ref={formRef} action={formAction} className="space-y-4">
       <div>
         <label className={labelCls} htmlFor="student-name">
-          Full name
+          {t("createStudent.fullName")}
         </label>
         <input id="student-name" name="name" required className={inputCls} />
       </div>
       <div>
         <label className={labelCls} htmlFor="student-email">
-          Email
+          {t("createStudent.email")}
         </label>
         <input id="student-email" name="email" type="email" required className={inputCls} />
       </div>
       <div>
         <label className={labelCls} htmlFor="student-password">
-          Temporary password
+          {t("createStudent.tempPassword")}
         </label>
         <div className="flex gap-2">
           <input
@@ -223,20 +231,20 @@ export function CreateStudentForm() {
             className={`${inputCls} font-mono`}
           />
           <button type="button" onClick={() => setPassword(randomPassword())} className={btnSecondary}>
-            Generate
+            {t("createStudent.generate")}
           </button>
         </div>
-        <p className={hintCls}>At least 8 characters. Give it to the student; they can change it from their profile.</p>
+        <p className={hintCls}>{t("createStudent.passwordHint")}</p>
       </div>
       <div>
         <label className={labelCls} htmlFor="student-group">
-          Group
+          {t("createStudent.group")}
         </label>
         <select id="student-group" name="studentGroup" className={inputCls} defaultValue="">
-          <option value="">Not set</option>
-          <option value="JUNIOR_HIGH">Junior high</option>
-          <option value="UNDERGRAD">Undergrad</option>
-          <option value="GRAD">Grad</option>
+          <option value="">{t("group.notSet")}</option>
+          <option value="JUNIOR_HIGH">{t("group.JUNIOR_HIGH")}</option>
+          <option value="UNDERGRAD">{t("group.UNDERGRAD")}</option>
+          <option value="GRAD">{t("group.GRAD")}</option>
         </select>
       </div>
 
@@ -246,11 +254,11 @@ export function CreateStudentForm() {
       <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
-            {state.success ? "Done" : "Cancel"}
+            {state.success ? t("action.done") : t("action.cancel")}
           </button>
         )}
         <button disabled={pending} className={btnPrimary}>
-          {pending ? "Creating…" : "Create student"}
+          {pending ? t("action.creating") : t("createStudent.submit")}
         </button>
       </div>
     </form>

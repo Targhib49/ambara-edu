@@ -9,9 +9,11 @@ import { useSlideOver } from "@/components/ui/SlideOver";
 import { StatusBadge } from "@/components/sessions/StatusBadge";
 import { enrollStudents, setEnrollment } from "@/lib/actions/courses";
 import { deleteStudent } from "@/lib/actions/students";
-import { ATTENDANCE_LABEL } from "@/lib/sessions/format";
-import { SUBMISSION_STATUS_BADGE_CLASS, SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
+import { attendanceKey } from "@/lib/sessions/format";
+import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/format";
 import { btnDanger, btnPrimary, btnSecondary, btnSmall, labelCls } from "@/components/ui/styles";
+import { useT } from "@/lib/i18n/client";
+import type { Translate } from "@/lib/i18n/translate";
 import type { SessionStatus, SubmissionStatus } from "@/generated/prisma/enums";
 
 export type StudentCourseRow = {
@@ -47,13 +49,14 @@ export type StudentSessionHistoryRow = {
 };
 
 export function StudentCoursesTable({ studentId, courses }: { studentId: string; courses: StudentCourseRow[] }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const columns: Column<StudentCourseRow>[] = [
     {
       key: "title",
-      header: "Course",
+      header: t("studentDetail.course"),
       sort: (c) => c.title.toLowerCase(),
       text: (c) => c.title,
       cell: (c) => (
@@ -64,7 +67,7 @@ export function StudentCoursesTable({ studentId, courses }: { studentId: string;
     },
     {
       key: "progress",
-      header: "Progress",
+      header: t("studentDetail.progress"),
       sort: (c) => c.pct,
       text: (c) => `${c.pct}%`,
       className: "min-w-[200px]",
@@ -79,7 +82,7 @@ export function StudentCoursesTable({ studentId, courses }: { studentId: string;
         </div>
       ),
     },
-    { key: "enrolled", header: "Enrolled", text: (c) => c.enrolledLabel, className: "whitespace-nowrap", cell: (c) => c.enrolledLabel },
+    { key: "enrolled", header: t("studentDetail.enrolled"), text: (c) => c.enrolledLabel, className: "whitespace-nowrap", cell: (c) => c.enrolledLabel },
     {
       key: "actions",
       header: "",
@@ -88,14 +91,14 @@ export function StudentCoursesTable({ studentId, courses }: { studentId: string;
         <button
           disabled={pending}
           onClick={() => {
-            if (confirm(`Remove this student from "${c.title}"? Their progress is kept if you add them back.`)) {
+            if (confirm(t("studentDetail.removeConfirm", { title: c.title }))) {
               setRemovingId(c.id);
               startTransition(() => setEnrollment(c.id, studentId, false));
             }
           }}
           className={`${btnSmall} text-red-600`}
         >
-          {pending && removingId === c.id ? "Removing…" : "Remove"}
+          {pending && removingId === c.id ? t("studentDetail.removing") : t("studentDetail.remove")}
         </button>
       ),
     },
@@ -106,24 +109,24 @@ export function StudentCoursesTable({ studentId, courses }: { studentId: string;
       rows={courses}
       columns={columns}
       rowKey={(c) => c.id}
-      search={{ placeholder: "Search courses", of: (c) => c.title }}
+      search={{ placeholder: t("studentDetail.searchCourses"), of: (c) => c.title }}
       initialSort={{ key: "title", dir: "asc" }}
       minWidth="640px"
-      empty={{ title: "Not enrolled in any course", hint: "Use “Assign course” at the top of the page." }}
+      empty={{ title: t("studentDetail.noCourses"), hint: t("studentDetail.noCoursesHint") }}
     />
   );
 }
 
-const QUIZ_TABS: Tab<StudentQuizResultRow>[] = [
-  { key: "all", label: "All", match: () => true },
-  { key: "review", label: "Needs review", match: (q) => q.status === "PENDING_REVIEW" },
-  { key: "graded", label: "Graded", match: (q) => q.status !== "PENDING_REVIEW" },
+const makeQuizTabs = (t: Translate): Tab<StudentQuizResultRow>[] => [
+  { key: "all", label: t("status.all"), match: () => true },
+  { key: "review", label: t("studentDetail.needsReview"), match: (q) => q.status === "PENDING_REVIEW" },
+  { key: "graded", label: t("studentDetail.graded"), match: (q) => q.status !== "PENDING_REVIEW" },
 ];
 
-const QUIZ_COLUMNS: Column<StudentQuizResultRow>[] = [
+const makeQuizColumns = (t: Translate): Column<StudentQuizResultRow>[] => [
   {
     key: "title",
-    header: "Quiz",
+    header: t("studentDetail.quiz"),
     sort: (q) => q.title.toLowerCase(),
     text: (q) => q.title,
     className: "min-w-[240px]",
@@ -134,10 +137,10 @@ const QUIZ_COLUMNS: Column<StudentQuizResultRow>[] = [
       </span>
     ),
   },
-  { key: "where", header: "Placement", text: (q) => q.where, csvOnly: true, cell: () => null },
+  { key: "where", header: t("studentDetail.placement"), text: (q) => q.where, csvOnly: true, cell: () => null },
   {
     key: "score",
-    header: "Score",
+    header: t("studentDetail.score"),
     sort: (q) => q.pct ?? -1,
     text: (q) => q.scoreLabel,
     className: "whitespace-nowrap tabular-nums",
@@ -150,48 +153,56 @@ const QUIZ_COLUMNS: Column<StudentQuizResultRow>[] = [
   },
   {
     key: "status",
-    header: "Status",
-    sort: (q) => SUBMISSION_STATUS_LABEL[q.status],
-    text: (q) => SUBMISSION_STATUS_LABEL[q.status],
+    header: t("studentDetail.status"),
+    sort: (q) => t(submissionStatusKey(q.status)),
+    text: (q) => t(submissionStatusKey(q.status)),
     cell: (q) => (
       <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${SUBMISSION_STATUS_BADGE_CLASS[q.status]}`}>
-        {SUBMISSION_STATUS_LABEL[q.status]}
+        {t(submissionStatusKey(q.status))}
       </span>
     ),
   },
-  { key: "submitted", header: "Submitted", sort: (q) => q.submittedAt, text: (q) => q.submittedLabel, className: "whitespace-nowrap", cell: (q) => q.submittedLabel },
+  { key: "submitted", header: t("studentDetail.submitted"), sort: (q) => q.submittedAt, text: (q) => q.submittedLabel, className: "whitespace-nowrap", cell: (q) => q.submittedLabel },
 ];
 
 export function StudentQuizTable({ results }: { results: StudentQuizResultRow[] }) {
+  const t = useT();
   return (
     <DataTable
       rows={results}
-      columns={QUIZ_COLUMNS}
+      columns={makeQuizColumns(t)}
       rowKey={(q) => q.id}
       rowHref={(q) => `/tutor/quizzes/${q.quizId}/submissions/${q.id}`}
-      tabs={QUIZ_TABS}
-      search={{ placeholder: "Search quizzes", of: (q) => `${q.title} ${q.where}` }}
+      tabs={makeQuizTabs(t)}
+      search={{ placeholder: t("studentDetail.searchQuizzes"), of: (q) => `${q.title} ${q.where}` }}
       initialSort={{ key: "submitted", dir: "desc" }}
       exportName="quiz-results"
       minWidth="680px"
-      empty={{ title: "No quizzes submitted yet" }}
+      empty={{ title: t("studentDetail.noQuizzes") }}
     />
   );
 }
 
-const SESSION_COLUMNS: Column<StudentSessionHistoryRow>[] = [
-  { key: "when", header: "When", sort: (s) => s.startTime, text: (s) => s.whenLabel, className: "whitespace-nowrap", cell: (s) => s.whenLabel },
-  { key: "length", header: "Length", sort: (s) => s.durationMinutes, text: (s) => s.durationMinutes, className: "whitespace-nowrap tabular-nums", cell: (s) => `${s.durationMinutes} min` },
+const makeSessionColumns = (t: Translate): Column<StudentSessionHistoryRow>[] => [
+  { key: "when", header: t("studentDetail.when"), sort: (s) => s.startTime, text: (s) => s.whenLabel, className: "whitespace-nowrap", cell: (s) => s.whenLabel },
+  {
+    key: "length",
+    header: t("studentDetail.length"),
+    sort: (s) => s.durationMinutes,
+    text: (s) => s.durationMinutes,
+    className: "whitespace-nowrap tabular-nums",
+    cell: (s) => t("studentDetail.minutes", { n: s.durationMinutes }),
+  },
   {
     key: "status",
-    header: "Status",
-    text: (s) => (s.attendance ? `${s.status} (${ATTENDANCE_LABEL[s.attendance]})` : s.status),
+    header: t("studentDetail.status"),
+    text: (s) => (s.attendance ? `${s.status} (${t(attendanceKey(s.attendance))})` : s.status),
     cell: (s) => (
       <span className="flex flex-wrap items-center gap-1.5">
         <StatusBadge status={s.status} />
         {s.attendance && (
           <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${s.attendance === "ATTENDED" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-            {ATTENDANCE_LABEL[s.attendance]}
+            {t(attendanceKey(s.attendance))}
           </span>
         )}
       </span>
@@ -199,7 +210,7 @@ const SESSION_COLUMNS: Column<StudentSessionHistoryRow>[] = [
   },
   {
     key: "notes",
-    header: "Notes",
+    header: t("studentDetail.notes"),
     text: (s) => s.notes,
     cell: (s) =>
       s.notes ? (
@@ -213,42 +224,44 @@ const SESSION_COLUMNS: Column<StudentSessionHistoryRow>[] = [
 ];
 
 export function StudentSessionHistoryTable({ sessions }: { sessions: StudentSessionHistoryRow[] }) {
+  const t = useT();
   return (
     <DataTable
       rows={sessions}
-      columns={SESSION_COLUMNS}
+      columns={makeSessionColumns(t)}
       rowKey={(s) => s.id}
-      search={{ placeholder: "Search notes", of: (s) => s.notes }}
+      search={{ placeholder: t("studentDetail.searchNotes"), of: (s) => s.notes }}
       initialSort={{ key: "when", dir: "desc" }}
       exportName="sessions"
       minWidth="640px"
-      empty={{ title: "No sessions yet", hint: "Use “Schedule session” at the top of the page." }}
+      empty={{ title: t("studentDetail.noSessions"), hint: t("studentDetail.noSessionsHint") }}
     />
   );
 }
 
 /** Lives in the "Assign course" panel on a student's page. */
 export function AssignCourseForm({ studentId, courses }: { studentId: string; courses: ComboOption[] }) {
+  const t = useT();
   const panel = useSlideOver();
   const [courseId, setCourseId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   if (courses.length === 0) {
-    return <p className="text-sm text-zinc-500">This student is already on every available course.</p>;
+    return <p className="text-sm text-zinc-500">{t("studentDetail.allAssigned")}</p>;
   }
 
   return (
     <div className="space-y-5">
       <div>
-        <label className={labelCls}>Course</label>
-        <Combobox options={courses} value={courseId} onChange={setCourseId} placeholder="Search by title, subject or level" aria-label="Course" />
+        <label className={labelCls}>{t("studentDetail.course")}</label>
+        <Combobox options={courses} value={courseId} onChange={setCourseId} placeholder={t("studentDetail.coursePlaceholder")} aria-label={t("studentDetail.course")} />
       </div>
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
-            Cancel
+            {t("action.cancel")}
           </button>
         )}
         <button
@@ -262,7 +275,7 @@ export function AssignCourseForm({ studentId, courses }: { studentId: string; co
           }
           className={btnPrimary}
         >
-          {pending ? "Assigning…" : "Assign course"}
+          {pending ? t("students.assigning") : t("studentDetail.assignCourse")}
         </button>
       </div>
     </div>
@@ -270,13 +283,14 @@ export function AssignCourseForm({ studentId, courses }: { studentId: string; co
 }
 
 export function DeleteStudentButton({ studentId, name, disabled }: { studentId: string; name: string; disabled?: boolean }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   return (
     <button
       disabled={pending || disabled}
       onClick={() => {
-        if (!confirm(`Delete ${name}'s account? This removes their login, enrollments, quiz results and progress.`)) return;
+        if (!confirm(t("studentDetail.deleteConfirm", { name }))) return;
         startTransition(async () => {
           await deleteStudent(studentId);
           router.push("/tutor/students");
@@ -284,7 +298,7 @@ export function DeleteStudentButton({ studentId, name, disabled }: { studentId: 
       }}
       className={btnDanger}
     >
-      {pending ? "Deleting…" : "Delete student"}
+      {pending ? t("action.deleting") : t("studentDetail.deleteStudent")}
     </button>
   );
 }
