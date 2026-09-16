@@ -1,5 +1,6 @@
 import type { SessionStatus } from "@/generated/prisma/enums";
-import { APP_TZ_OFFSET_MINUTES } from "@/lib/scheduling";
+import { fromLocalParts, toLocalParts } from "@/lib/scheduling";
+import { APP_TZ, APP_TZ_OFFSET_MINUTES } from "@/lib/scheduling";
 
 export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   PROPOSED: "Proposed",
@@ -28,14 +29,20 @@ export function nowMs() {
   return Date.now();
 }
 
+/**
+ * Session time for lists and cards. Pinned to en-GB and the app's timezone:
+ * with `undefined` the server (UTC on Vercel) and the browser disagree, so the
+ * same session read as two different times depending on where it rendered.
+ */
 export function formatSessionTime(iso: string | Date) {
   const date = typeof iso === "string" ? new Date(iso) : iso;
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString("en-GB", {
     weekday: "short",
     month: "short",
     day: "numeric",
-    hour: "numeric",
+    hour: "2-digit",
     minute: "2-digit",
+    timeZone: APP_TZ,
   });
 }
 
@@ -71,7 +78,7 @@ export function dateKey(iso: string | Date) {
 
 export function formatTimeOnly(iso: string | Date) {
   const date = typeof iso === "string" ? new Date(iso) : iso;
-  return date.toLocaleString(undefined, { hour: "numeric", minute: "2-digit" });
+  return date.toLocaleString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: APP_TZ });
 }
 
 /**
@@ -95,6 +102,30 @@ export function formatSessionInstant(instant: Date) {
 }
 
 export const ATTENDANCE_LABEL = { ATTENDED: "Attended", NO_SHOW: "No-show" } as const;
+
+/**
+ * The hour and date as the user experiences them, in the app's timezone —
+ * both dashboards greet from this. Reading `getHours()` off a server-rendered
+ * Date says "Good morning" at 7 PM WIB, because Vercel runs in UTC.
+ */
+export function appClock(instant: Date = new Date(nowMs())) {
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: APP_TZ }).format(instant));
+  return {
+    hour,
+    /** Start of that day in the app's timezone, as an absolute instant. */
+    dayStart: (offsetDays = 0) => {
+      const parts = toLocalParts(instant);
+      return fromLocalParts(parts.year, parts.month, parts.day + offsetDays, 0).getTime();
+    },
+    weekdayShort: (offsetDays = 0) => {
+      const parts = toLocalParts(instant);
+      const day = fromLocalParts(parts.year, parts.month, parts.day + offsetDays, 12 * 60);
+      return new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: APP_TZ }).format(day);
+    },
+    longDate: () =>
+      new Intl.DateTimeFormat("en-GB", { weekday: "long", month: "long", day: "numeric", timeZone: APP_TZ }).format(instant),
+  };
+}
 
 /**
  * Compact session time for tables, e.g. "Tue 15 Sept, 16:00". Formatted on the

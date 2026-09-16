@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireTutor } from "@/lib/auth";
-import { nowMs, formatSessionTime } from "@/lib/sessions/format";
+import { appClock, nowMs, formatSessionTime } from "@/lib/sessions/format";
 import { StatusBadge } from "@/components/sessions/StatusBadge";
 import { badgeColorFor, badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 
@@ -22,6 +22,7 @@ function Pill({ children }: { children: React.ReactNode }) {
 export default async function TutorDashboardPage() {
   const tutor = await requireTutor();
   const now = new Date(nowMs());
+  const clock = appClock(now);
 
   const [courses, studentCount, sessions] = await Promise.all([
     db.course.findMany({
@@ -53,16 +54,14 @@ export default async function TutorDashboardPage() {
     }
   }
 
+  // Days run midnight-to-midnight in the app's timezone, not the server's.
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(now);
-    day.setDate(day.getDate() + i);
-    day.setHours(0, 0, 0, 0);
-    const dayStart = day.getTime();
-    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+    const dayStart = clock.dayStart(i);
+    const dayEnd = clock.dayStart(i + 1);
     const count = sessions.filter(
       (s) => s.status !== "CANCELLED" && s.startTime.getTime() >= dayStart && s.startTime.getTime() < dayEnd
     ).length;
-    return { key: dayStart, label: day.toLocaleDateString(undefined, { weekday: "short" }), count };
+    return { key: dayStart, label: clock.weekdayShort(i), count };
   });
   const maxDayCount = Math.max(1, ...weekDays.map((d) => d.count));
 
@@ -76,10 +75,10 @@ export default async function TutorDashboardPage() {
           </div>
           <div className="min-w-0">
             <p className="text-sm text-blue-100/80">
-              {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+              {clock.longDate()}
             </p>
             <h1 className="text-2xl font-semibold">
-              {greetingFor(now.getHours())}, {tutor.name.split(" ")[0]}
+              {greetingFor(clock.hour)}, {tutor.name.split(" ")[0]}
             </h1>
           </div>
         </div>

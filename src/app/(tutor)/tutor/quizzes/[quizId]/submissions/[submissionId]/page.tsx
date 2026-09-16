@@ -22,7 +22,10 @@ export default async function SubmissionReviewPage({
   });
   if (!submission || submission.quizId !== quizId) notFound();
 
-  const answers = submissionAnswersSchema.parse(submission.answers);
+  // Same tolerance as the student's results view: a submission whose stored
+  // answers don't parse shows as unanswered rather than failing the page.
+  const parsedAnswers = submissionAnswersSchema.safeParse(submission.answers);
+  const answers = parsedAnswers.success ? parsedAnswers.data : [];
   const totalPoints = submission.quiz.questions.reduce((n, q) => n + q.points, 0);
 
   const rows = submission.quiz.questions.map((q) => {

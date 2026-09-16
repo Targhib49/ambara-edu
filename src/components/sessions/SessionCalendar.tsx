@@ -56,7 +56,7 @@ export function SessionCalendar({
     <div className="rounded-xl border border-zinc-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-medium">
-          {monthCursor.toLocaleString(undefined, { month: "long", year: "numeric" })}
+          {monthCursor.toLocaleString("en-GB", { month: "long", year: "numeric" })}
         </h3>
         <div className="flex items-center gap-1.5">
           <button
