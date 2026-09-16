@@ -19,7 +19,9 @@ export function TutorTopBar({ userName }: { userName: string }) {
       >
         <MenuIcon className="h-6 w-6" />
       </button>
-      <div className="flex items-center gap-3 sm:gap-4">
+      {/* ml-auto, not justify-between: the hamburger is hidden from lg up, and
+          with one child left justify-between parks it against the left edge. */}
+      <div className="ml-auto flex items-center gap-3 sm:gap-4">
         <LanguageToggle />
         <Link
           href="/tutor/profile"
