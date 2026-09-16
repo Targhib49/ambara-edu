@@ -7,6 +7,7 @@ import type { ComboOption } from "@/components/ui/Combobox";
 import { enrollStudents, setEnrollment } from "@/lib/actions/courses";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import { btnPrimary, btnSecondary, btnSmall, inputCls } from "@/components/ui/styles";
+import { useT } from "@/lib/i18n/client";
 
 export type CourseStudentRow = {
   id: string;
@@ -19,13 +20,14 @@ export type CourseStudentRow = {
 };
 
 export function CourseStudentsTable({ courseId, students }: { courseId: string; students: CourseStudentRow[] }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const columns: Column<CourseStudentRow>[] = [
     {
       key: "name",
-      header: "Student",
+      header: t("students.header.student"),
       sort: (s) => s.name.toLowerCase(),
       text: (s) => s.name,
       className: "min-w-[220px]",
@@ -41,10 +43,10 @@ export function CourseStudentsTable({ courseId, students }: { courseId: string; 
         </div>
       ),
     },
-    { key: "email", header: "Email", text: (s) => s.email, csvOnly: true, cell: () => null },
+    { key: "email", header: t("students.header.email"), text: (s) => s.email, csvOnly: true, cell: () => null },
     {
       key: "progress",
-      header: "Progress",
+      header: t("students.header.progress"),
       sort: (s) => s.pct,
       text: (s) => `${s.completed}/${s.total}`,
       className: "min-w-[200px]",
@@ -75,7 +77,7 @@ export function CourseStudentsTable({ courseId, students }: { courseId: string; 
           }}
           className={`${btnSmall} text-red-600`}
         >
-          {pending && removingId === s.id ? "Removing…" : "Remove"}
+          {pending && removingId === s.id ? t("action.removing") : t("action.remove")}
         </button>
       ),
     },
@@ -87,17 +89,18 @@ export function CourseStudentsTable({ courseId, students }: { courseId: string; 
       columns={columns}
       rowKey={(s) => s.id}
       rowHref={(s) => `/tutor/students/${s.id}`}
-      search={{ placeholder: "Search name or email", of: (s) => `${s.name} ${s.email}` }}
+      search={{ placeholder: t("students.searchNameEmail"), of: (s) => `${s.name} ${s.email}` }}
       initialSort={{ key: "name", dir: "asc" }}
       exportName="course-students"
       minWidth="640px"
-      empty={{ title: "No one is enrolled yet", hint: "Use “Enroll students” above." }}
+      empty={{ title: t("enroll.noneYet"), hint: t("enroll.noneYetHint") }}
     />
   );
 }
 
 /** Lives in the "Enroll students" panel: search, tick, enroll. */
 export function EnrollStudentsForm({ courseId, students }: { courseId: string; students: ComboOption[] }) {
+  const t = useT();
   const panel = useSlideOver();
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState<Set<string>>(() => new Set());
@@ -154,7 +157,7 @@ export function EnrollStudentsForm({ courseId, students }: { courseId: string; s
           }
           className={btnPrimary}
         >
-          {pending ? "Enrolling…" : picked.size > 0 ? `Enroll ${picked.size} student${picked.size === 1 ? "" : "s"}` : "Enroll"}
+          {pending ? t("enroll.enrolling") : picked.size > 0 ? t("enroll.enrollN", { n: picked.size }) : t("enroll.enroll")}
         </button>
       </div>
     </div>

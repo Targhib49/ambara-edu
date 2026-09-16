@@ -4,6 +4,7 @@ import { PYTHON_ITEM, VIZ_LIBRARY } from "@/lib/playground";
 import type { CourseVizGroup } from "@/lib/playground/courseVisualizations";
 import { CodeBracketGlyph } from "@/components/playground/glyphs";
 import { cardCls } from "@/components/ui/styles";
+import { getT } from "@/lib/i18n/server";
 
 /** Game cards: live games open; coming-soon ones are shown but can't be clicked. */
 export function GamesGrid({ basePath }: { basePath: string }) {
@@ -127,7 +128,8 @@ export function ToolsGrid({ basePath }: { basePath: string }) {
 }
 
 /** Tutor only: every registered visualization, whether or not a lesson uses it yet. */
-export function VizLibraryGrid({ basePath, usage }: { basePath: string; usage: Record<string, number> }) {
+export async function VizLibraryGrid({ basePath, usage }: { basePath: string; usage: Record<string, number> }) {
+  const t = await getT();
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {VIZ_LIBRARY.map((item) => {
@@ -144,7 +146,7 @@ export function VizLibraryGrid({ basePath, usage }: { basePath: string; usage: R
                   used ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-500"
                 }`}
               >
-                {used ? `In ${used} lesson${used === 1 ? "" : "s"}` : "Not in a lesson"}
+                {used ? t("playgroundCards.inLessons", { n: used }) : t("playgroundCards.notInLesson")}
               </span>
               {item.blurb && <span className="text-sm text-zinc-500">{item.blurb}</span>}
               <span className="mt-auto pt-1 text-xs font-medium text-blue-700">Preview →</span>

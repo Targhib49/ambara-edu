@@ -14,6 +14,7 @@ import { PageHeader, PageTabs } from "@/components/ui/PageHeader";
 import { cardCls } from "@/components/ui/styles";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { studentOptions } from "@/lib/students/options";
+import { getT } from "@/lib/i18n/server";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -27,6 +28,7 @@ export default async function TutorSessionsPage({ searchParams }: { searchParams
   const schedulingV2 = await isEnabled("scheduling_v2");
   const { tab: requestedTab } = await searchParams;
   const tab = schedulingV2 && requestedTab === "availability" ? "availability" : "schedule";
+  const t = await getT();
 
   const [sessions, students, activeWindows] = await Promise.all([
     db.session.findMany({
@@ -67,17 +69,21 @@ export default async function TutorSessionsPage({ searchParams }: { searchParams
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <PageHeader
-        crumbs={[{ label: "Home", href: "/tutor" }, { label: "Sessions" }]}
-        title="Sessions"
+        crumbs={[{ label: t("nav.home"), href: "/tutor" }, { label: t("tutorSessions.title") }]}
+        title={t("tutorSessions.title")}
         meta={
           <>
-            {thisWeek} in the next 7 days
-            {needsAction > 0 && <span className="text-amber-700"> · {needsAction} need your action</span>}
+            {t("tutorSessions.meta", { n: thisWeek })}
+            {needsAction > 0 && <span className="text-amber-700"> · {t("tutorSessions.needAction", { n: needsAction })}</span>}
           </>
         }
         actions={
           students.length > 0 ? (
-            <SlideOverButton label="Schedule session" title="Schedule a session" description="All times are WIB.">
+            <SlideOverButton
+              label={t("tutorSessions.schedule")}
+              title={t("tutorSessions.scheduleTitle")}
+              description={t("tutorSessions.allTimesWib")}
+            >
               <ScheduleSessionForm students={students} allowWeekly={schedulingV2} today={localDate(new Date(now))} />
             </SlideOverButton>
           ) : null
@@ -88,8 +94,13 @@ export default async function TutorSessionsPage({ searchParams }: { searchParams
         <PageTabs
           active={tab}
           tabs={[
-            { key: "schedule", label: "Schedule", href: "/tutor/sessions" },
-            { key: "availability", label: "Availability & calendar", href: "/tutor/sessions?tab=availability", count: activeWindows },
+            { key: "schedule", label: t("tutorSessions.tab.schedule"), href: "/tutor/sessions" },
+            {
+              key: "availability",
+              label: t("tutorSessions.tab.availability"),
+              href: "/tutor/sessions?tab=availability",
+              count: activeWindows,
+            },
           ]}
         />
       )}

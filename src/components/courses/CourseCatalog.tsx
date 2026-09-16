@@ -8,6 +8,9 @@ import { ChevronLeftIcon, ChevronRightIcon, GridIcon, ListIcon, SearchIcon, User
 import { badgeColorForKey } from "@/lib/ui/palette";
 import { cardCls, controlCls, inputCls } from "@/components/ui/styles";
 import type { FacetSuggestions } from "@/components/courses/NewCourseForm";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
+import type { Translate } from "@/lib/i18n/translate";
 
 export type CatalogCourse = {
   id: string;
@@ -29,21 +32,25 @@ export type CatalogCourse = {
 type StatusTab = "active" | "PUBLISHED" | "DRAFT" | "ARCHIVED";
 type SortKey = "updated" | "title" | "students";
 
-const STATUS_TABS: { key: StatusTab; label: string; match: (c: CatalogCourse) => boolean }[] = [
-  { key: "active", label: "All active", match: (c) => c.status !== "ARCHIVED" },
-  { key: "PUBLISHED", label: "Published", match: (c) => c.status === "PUBLISHED" },
-  { key: "DRAFT", label: "Drafts", match: (c) => c.status === "DRAFT" },
-  { key: "ARCHIVED", label: "Archived", match: (c) => c.status === "ARCHIVED" },
+const STATUS_TABS: { key: StatusTab; labelKey: MessageKey; match: (c: CatalogCourse) => boolean }[] = [
+  { key: "active", labelKey: "tutorCourses.tab.active", match: (c) => c.status !== "ARCHIVED" },
+  { key: "PUBLISHED", labelKey: "tutorCourses.tab.published", match: (c) => c.status === "PUBLISHED" },
+  { key: "DRAFT", labelKey: "tutorCourses.tab.drafts", match: (c) => c.status === "DRAFT" },
+  { key: "ARCHIVED", labelKey: "tutorCourses.tab.archived", match: (c) => c.status === "ARCHIVED" },
 ];
 
 const GRID_PAGE = 12;
 const NOT_SET = "__none__";
 
 const facetsOf = (c: CatalogCourse) => [c.subject, c.curriculum, c.level].filter(Boolean).join(" · ");
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-const contentOf = (c: CatalogCourse) => `${plural(c.chapters, "chapter")} · ${plural(c.lessons, "lesson")} · ${plural(c.quizzes, "quiz")}`.replace("quizs", "quizzes");
+const contentOf = (c: CatalogCourse, tr: Translate) =>
+  [
+    tr("tutorCourses.chaptersCount", { n: c.chapters }),
+    tr("tutorCourses.lessonsCount", { n: c.lessons }),
+    tr("tutorCourses.quizzesCount", { n: c.quizzes }),
+  ].join(" · ");
 
-function StatusPill({ status }: { status: CourseStatus }) {
+function StatusPill({ status, tr }: { status: CourseStatus; tr: Translate }) {
   if (status === "PUBLISHED") return null;
   return (
     <span
@@ -51,7 +58,7 @@ function StatusPill({ status }: { status: CourseStatus }) {
         status === "DRAFT" ? "bg-amber-100 text-amber-800" : "bg-zinc-200 text-zinc-700"
       }`}
     >
-      {status === "DRAFT" ? "Draft" : "Archived"}
+      {status === "DRAFT" ? tr("status.draft") : tr("status.archived")}
     </span>
   );
 }
@@ -69,10 +76,10 @@ function Cover({ course, className }: { course: CatalogCourse; className: string
   );
 }
 
-const LIST_COLUMNS: Column<CatalogCourse>[] = [
+const makeListColumns = (tr: Translate): Column<CatalogCourse>[] => [
   {
     key: "title",
-    header: "Course",
+    header: tr("tutorCourses.course"),
     sort: (c) => c.title.toLowerCase(),
     text: (c) => c.title,
     className: "min-w-[260px]",
@@ -82,29 +89,30 @@ const LIST_COLUMNS: Column<CatalogCourse>[] = [
         <span className="min-w-0">
           <span className="flex items-center gap-2">
             <span className="truncate font-medium text-zinc-900">{c.title}</span>
-            <StatusPill status={c.status} />
+            <StatusPill status={c.status} tr={tr} />
           </span>
-          <span className="block truncate text-xs text-zinc-500">{facetsOf(c) || "No subject set"}</span>
+          <span className="block truncate text-xs text-zinc-500">{facetsOf(c) || tr("tutorCourses.noSubject")}</span>
         </span>
       </div>
     ),
   },
-  { key: "subject", header: "Subject", text: (c) => c.subject ?? "", csvOnly: true, cell: () => null },
-  { key: "curriculum", header: "Curriculum", text: (c) => c.curriculum ?? "", csvOnly: true, cell: () => null },
-  { key: "level", header: "Level", text: (c) => c.level ?? "", csvOnly: true, cell: () => null },
+  { key: "subject", header: tr("tutorCourses.filter.subject"), text: (c) => c.subject ?? "", csvOnly: true, cell: () => null },
+  { key: "curriculum", header: tr("tutorCourses.filter.curriculum"), text: (c) => c.curriculum ?? "", csvOnly: true, cell: () => null },
+  { key: "level", header: tr("tutorCourses.filter.level"), text: (c) => c.level ?? "", csvOnly: true, cell: () => null },
   {
     key: "content",
-    header: "Content",
+    header: tr("tutorCourses.contentHeader"),
     sort: (c) => c.lessons,
-    text: (c) => `${c.chapters} chapters, ${c.lessons} lessons, ${c.quizzes} quizzes`,
+    text: (c) => tr("tutorCourses.contentCsv", { chapters: c.chapters, lessons: c.lessons, quizzes: c.quizzes }),
     className: "whitespace-nowrap text-xs",
-    cell: (c) => contentOf(c),
+    cell: (c) => contentOf(c, tr),
   },
-  { key: "students", header: "Students", sort: (c) => c.students, text: (c) => c.students, align: "right", className: "tabular-nums", cell: (c) => c.students },
-  { key: "updated", header: "Updated", sort: (c) => c.updatedAt, text: (c) => c.updatedLabel, className: "whitespace-nowrap", cell: (c) => c.updatedLabel },
+  { key: "students", header: tr("tutorCourses.students"), sort: (c) => c.students, text: (c) => c.students, align: "right", className: "tabular-nums", cell: (c) => c.students },
+  { key: "updated", header: tr("tutorCourses.updated"), sort: (c) => c.updatedAt, text: (c) => c.updatedLabel, className: "whitespace-nowrap", cell: (c) => c.updatedLabel },
 ];
 
 export function CourseCatalog({ courses, suggestions }: { courses: CatalogCourse[]; suggestions: FacetSuggestions }) {
+  const tr = useT();
   const [q, setQ] = useState("");
   const [subject, setSubject] = useState("");
   const [curriculum, setCurriculum] = useState("");
@@ -155,13 +163,13 @@ export function CourseCatalog({ courses, suggestions }: { courses: CatalogCourse
       aria-label={label}
       className={`${controlCls} min-w-[9rem] ${value ? "border-blue-400 bg-blue-50/50 text-blue-900" : ""}`}
     >
-      <option value="">{label}: any</option>
+      <option value="">{tr("tutorCourses.filter.any", { facet: label })}</option>
       {options.map((o) => (
         <option key={o} value={o}>
           {o}
         </option>
       ))}
-      <option value={NOT_SET}>Not set</option>
+      <option value={NOT_SET}>{tr("tutorCourses.filter.notSet")}</option>
     </select>
   );
 
@@ -177,7 +185,7 @@ export function CourseCatalog({ courses, suggestions }: { courses: CatalogCourse
               tab === t.key ? "bg-slate-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            {t.label}
+            {tr(t.labelKey)}
             <span className={`ml-1.5 tabular-nums ${tab === t.key ? "text-white/60" : "text-zinc-400"}`}>{counts[t.key]}</span>
           </button>
         ))}
@@ -192,24 +200,24 @@ export function CourseCatalog({ courses, suggestions }: { courses: CatalogCourse
             type="search"
             value={q}
             onChange={(e) => reset(setQ)(e.target.value)}
-            placeholder="Search title, description, subject…"
+            placeholder={tr("tutorCourses.search")}
             className={`${inputCls} pl-9`}
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {facetSelect("Subject", subject, setSubject, suggestions.subjects)}
-          {facetSelect("Curriculum", curriculum, setCurriculum, suggestions.curricula)}
-          {facetSelect("Level", level, setLevel, suggestions.levels)}
-          <select value={sort} onChange={(e) => reset(setSort)(e.target.value as SortKey)} aria-label="Sort" className={controlCls}>
-            <option value="updated">Recently updated</option>
-            <option value="title">Title A–Z</option>
-            <option value="students">Most students</option>
+          {facetSelect(tr("tutorCourses.filter.subject"), subject, setSubject, suggestions.subjects)}
+          {facetSelect(tr("tutorCourses.filter.curriculum"), curriculum, setCurriculum, suggestions.curricula)}
+          {facetSelect(tr("tutorCourses.filter.level"), level, setLevel, suggestions.levels)}
+          <select value={sort} onChange={(e) => reset(setSort)(e.target.value as SortKey)} aria-label={tr("tutorCourses.sort.updated")} className={controlCls}>
+            <option value="updated">{tr("tutorCourses.sort.updated")}</option>
+            <option value="title">{tr("tutorCourses.sort.title")}</option>
+            <option value="students">{tr("tutorCourses.sort.students")}</option>
           </select>
           <div className="flex rounded-md border border-zinc-300 bg-white p-0.5">
             {(
               [
-                ["grid", GridIcon, "Grid view"],
-                ["list", ListIcon, "List view"],
+                ["grid", GridIcon, tr("tutorCourses.gridView")],
+                ["list", ListIcon, tr("tutorCourses.listView")],
               ] as const
             ).map(([key, Icon, label]) => (
               <button
@@ -228,7 +236,7 @@ export function CourseCatalog({ courses, suggestions }: { courses: CatalogCourse
 
       {filtersOn && (
         <div className="flex items-center gap-3 text-sm text-zinc-500">
-          {visible.length} match{visible.length === 1 ? "" : "es"}
+          {tr("tutorCourses.matches", { n: visible.length })}
           <button
             onClick={() => {
               setQ("");
@@ -239,7 +247,7 @@ export function CourseCatalog({ courses, suggestions }: { courses: CatalogCourse
             }}
             className="font-medium text-blue-700 hover:underline"
           >
-            Clear filters
+            {tr("tutorCourses.clearFilters")}
           </button>
         </div>
       )}
@@ -248,17 +256,17 @@ export function CourseCatalog({ courses, suggestions }: { courses: CatalogCourse
         <DataTable
           key={`${tab}-${sort}`}
           rows={visible}
-          columns={LIST_COLUMNS}
+          columns={makeListColumns(tr)}
           rowKey={(c) => c.id}
           rowHref={(c) => `/tutor/courses/${c.id}`}
           exportName="courses"
           minWidth="720px"
-          empty={{ title: "No courses here", hint: filtersOn ? "Try clearing the filters." : "Create one with “New course”." }}
+          empty={{ title: tr("tutorCourses.empty"), hint: filtersOn ? tr("tutorCourses.emptyFiltered") : tr("tutorCourses.emptyHint") }}
         />
       ) : visible.length === 0 ? (
         <div className={`${cardCls} px-5 py-14 text-center`}>
-          <p className="text-sm font-medium text-zinc-700">No courses here</p>
-          <p className="mt-1 text-sm text-zinc-500">{filtersOn ? "Try clearing the filters." : "Create one with “New course”."}</p>
+          <p className="text-sm font-medium text-zinc-700">{tr("tutorCourses.empty")}</p>
+          <p className="mt-1 text-sm text-zinc-500">{filtersOn ? tr("tutorCourses.emptyFiltered") : tr("tutorCourses.emptyHint")}</p>
         </div>
       ) : (
         <>
@@ -272,14 +280,16 @@ export function CourseCatalog({ courses, suggestions }: { courses: CatalogCourse
                   <div className="relative">
                     <Cover course={c} className="aspect-[16/9] w-full" />
                     <span className="absolute left-2 top-2">
-                      <StatusPill status={c.status} />
+                      <StatusPill status={c.status} tr={tr} />
                     </span>
                   </div>
                   <div className="flex flex-1 flex-col p-4">
-                    <p className="truncate text-[11px] font-medium uppercase tracking-wide text-zinc-500">{facetsOf(c) || "No subject set"}</p>
+                    <p className="truncate text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                      {facetsOf(c) || tr("tutorCourses.noSubject")}
+                    </p>
                     <h2 className="mt-1 line-clamp-2 font-semibold text-zinc-900 group-hover:text-blue-700">{c.title}</h2>
                     <div className="mt-auto flex items-center justify-between gap-2 pt-3 text-xs text-zinc-500">
-                      <span className="truncate">{contentOf(c)}</span>
+                      <span className="truncate">{contentOf(c, tr)}</span>
                       <span className="flex shrink-0 items-center gap-1">
                         <UsersIcon className="h-3.5 w-3.5" />
                         {c.students}

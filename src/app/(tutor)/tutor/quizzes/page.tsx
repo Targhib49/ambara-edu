@@ -6,11 +6,13 @@ import { NewQuizForm } from "@/components/quiz/NewQuizForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { placementTree } from "@/lib/courses/placement";
+import { getT } from "@/lib/i18n/server";
 
 const pad = (n: number) => String(n).padStart(4, "0");
 
 export default async function TutorQuizzesPage({ searchParams }: { searchParams: Promise<{ course?: string }> }) {
   const { course: courseParam } = await searchParams;
+  const t = await getT();
   const [quizzes, tree] = await Promise.all([
     db.quiz.findMany({
       orderBy: { createdAt: "desc" },
@@ -63,31 +65,37 @@ export default async function TutorQuizzesPage({ searchParams }: { searchParams:
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8">
       <PageHeader
-        crumbs={[{ label: "Home", href: "/tutor" }, { label: "Quizzes" }]}
-        title="Quizzes"
+        crumbs={[{ label: t("nav.home"), href: "/tutor" }, { label: t("tutorQuizzes.title") }]}
+        title={t("tutorQuizzes.title")}
         meta={
           <>
-            {rows.length} quizzes · {published} published
-            {needsReview > 0 && <span className="text-amber-700"> · {needsReview} submission{needsReview === 1 ? "" : "s"} to review</span>}
+            {t("tutorQuizzes.meta", { total: rows.length, published })}
+            {needsReview > 0 && (
+              <span className="text-amber-700"> · {t("tutorQuizzes.toReview", { n: needsReview })}</span>
+            )}
             {" · "}
             <Link href="/tutor/courses" className="text-blue-700 hover:underline">
-              Manage by course syllabus
+              {t("tutorQuizzes.manageBySyllabus")}
             </Link>
           </>
         }
         actions={
           <>
             <SlideOverButton
-              label="Import questions"
-              title="Import questions from a sheet"
-              description="CSV or Excel. Nothing is saved until the last step."
+              label={t("tutorQuizzes.import")}
+              title={t("tutorQuizzes.importTitle")}
+              description={t("tutorQuizzes.importDescription")}
               variant="secondary"
               icon="upload"
               width="lg"
             >
               <QuizImportPanel tree={tree} quizOptions={quizOptions} />
             </SlideOverButton>
-            <SlideOverButton label="New quiz" title="New quiz" description="Place it in the syllabus, then add questions.">
+            <SlideOverButton
+              label={t("tutorQuizzes.new")}
+              title={t("tutorQuizzes.new")}
+              description={t("tutorQuizzes.newDescription")}
+            >
               <NewQuizForm tree={tree} defaultCourseId={initialCourseId} />
             </SlideOverButton>
           </>
