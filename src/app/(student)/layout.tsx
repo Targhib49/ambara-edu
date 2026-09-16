@@ -15,7 +15,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
       <div className="flex min-h-screen w-full flex-1">
         <StudentSidebar showPlayground={playground} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <StudentTopBar userName={student.name} />
+          <StudentTopBar userName={student.name} email={student.email} studentGroup={student.studentGroup} />
           <main className="flex-1 bg-zinc-50">{children}</main>
         </div>
       </div>

@@ -1,17 +1,15 @@
 "use client";
 
-import Link from "next/link";
-import { SubmitButton } from "@/components/ui/SubmitButton";
-import { signOut } from "@/lib/actions/auth";
+import { AccountMenu } from "@/components/ui/AccountMenu";
 import { mobileNav } from "@/lib/ui/mobileNavStore";
 import { MenuIcon } from "@/components/ui/icons";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { useT } from "@/lib/i18n/client";
 
-export function TutorTopBar({ userName }: { userName: string }) {
+export function TutorTopBar({ userName, email }: { userName: string; email: string }) {
   const t = useT();
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-zinc-200 bg-white px-4 sm:px-6">
+    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-zinc-200 bg-white px-4 sm:px-6">
       <button
         onClick={() => mobileNav.setOpen(true)}
         aria-label={t("nav.openMenu")}
@@ -21,19 +19,9 @@ export function TutorTopBar({ userName }: { userName: string }) {
       </button>
       {/* ml-auto, not justify-between: the hamburger is hidden from lg up, and
           with one child left justify-between parks it against the left edge. */}
-      <div className="ml-auto flex items-center gap-3 sm:gap-4">
+      <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <LanguageToggle />
-        <Link
-          href="/tutor/profile"
-          className="text-sm text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline"
-        >
-          {userName}
-        </Link>
-        <form action={signOut}>
-          <SubmitButton pendingLabel={t("nav.signingOut")} className="text-sm text-zinc-600 underline-offset-2 hover:underline">
-            {t("nav.signOut")}
-          </SubmitButton>
-        </form>
+        <AccountMenu name={userName} email={email} subtitle={t("account.roleTutor")} profileHref="/tutor/profile" />
       </div>
     </header>
   );

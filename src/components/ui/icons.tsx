@@ -165,3 +165,21 @@ export function ListIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function UserIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className={className} aria-hidden>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M4.5 19.5a7.5 7.5 0 0115 0" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function SignOutIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className={className} aria-hidden>
+      <path d="M15 4.5h3a1.5 1.5 0 011.5 1.5v12a1.5 1.5 0 01-1.5 1.5h-3" strokeLinecap="round" />
+      <path d="M10 8.5L6.5 12l3.5 3.5M6.5 12H15" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
