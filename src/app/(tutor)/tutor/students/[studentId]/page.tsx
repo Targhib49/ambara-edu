@@ -15,6 +15,7 @@ import { cardCls } from "@/components/ui/styles";
 import { studentOptions } from "@/lib/students/options";
 import { courseOptions } from "@/lib/courses/options";
 import { SUBMISSION_STATUS_BADGE_CLASS, SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
+import { ResetPasswordPanel } from "./ResetPasswordPanel";
 import {
   AssignCourseForm,
   DeleteStudentButton,
@@ -187,6 +188,9 @@ export default async function StudentDetailPage({
         }
         actions={
           <>
+            <SlideOverButton label="Reset password" title={`Reset ${student.name}'s password`} variant="secondary" icon="none">
+              <ResetPasswordPanel studentId={student.id} name={student.name} />
+            </SlideOverButton>
             <SlideOverButton label="Assign course" title={`Assign a course to ${student.name}`} variant="secondary">
               <AssignCourseForm studentId={student.id} courses={courses.filter((c) => !enrolledIds.has(c.value))} />
             </SlideOverButton>

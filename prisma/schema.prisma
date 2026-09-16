@@ -83,6 +83,7 @@ model User {
   name              String
   role              Role          @default(STUDENT)
   studentGroup      StudentGroup? // display/defaults only, not an access constraint
+  emailVerifiedAt   DateTime?
   enrollments       Enrollment[]
   ownedCourses      Course[]      @relation("CourseOwner")
   sessionsAsStudent Session[]     @relation("SessionStudent")
@@ -95,10 +96,21 @@ model User {
   seriesAsStudent   SessionSeries[] @relation("SeriesStudent")
   calendarFeed      CalendarFeedToken?
   timedQuizSessions TimedQuizSession[]
+  verificationTokens EmailVerificationToken[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 }
 
+model EmailVerificationToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
 
 // Course -> Chapter -> Lesson. The physical tables are still named Track and
 // Module (and the FK columns trackId/moduleId): production shares this

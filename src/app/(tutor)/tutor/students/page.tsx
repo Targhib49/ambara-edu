@@ -16,6 +16,7 @@ export default async function StudentsPage() {
         name: true,
         email: true,
         studentGroup: true,
+        emailVerifiedAt: true,
         enrollments: { select: { course: { select: { id: true, title: true } } } },
         sessionsAsStudent: {
           where: { startTime: { gte: now }, status: { notIn: ["CANCELLED", "COMPLETED", "AWAITING_RESCHEDULE"] } },
@@ -33,6 +34,7 @@ export default async function StudentsPage() {
     name: s.name,
     email: s.email,
     studentGroup: s.studentGroup,
+    emailVerifiedAt: s.emailVerifiedAt,
     courses: s.enrollments.map((e) => e.course),
     nextSessionLabel: s.sessionsAsStudent[0] ? formatSessionShort(s.sessionsAsStudent[0].startTime) : null,
   }));

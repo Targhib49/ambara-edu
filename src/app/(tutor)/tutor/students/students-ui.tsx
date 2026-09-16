@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import { createStudent, type CreateStudentState } from "@/lib/actions/students";
+import { createStudent, resendVerificationEmail, type CreateStudentState } from "@/lib/actions/students";
 import { enrollStudents } from "@/lib/actions/courses";
 import type { StudentGroup } from "@/generated/prisma/enums";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
@@ -21,6 +21,7 @@ export type StudentRow = {
   name: string;
   email: string;
   studentGroup: StudentGroup | null;
+  emailVerifiedAt: Date | null;
   courses: { id: string; title: string }[];
   /** Server-formatted in WIB. */
   nextSessionLabel: string | null;
@@ -89,6 +90,29 @@ const COLUMNS: Column<StudentRow>[] = [
     hideBelow: "xl",
     className: "whitespace-nowrap",
     cell: (s) => s.nextSessionLabel ?? <span className="text-zinc-400">—</span>,
+  },
+  {
+    key: "status",
+    header: "Email",
+    sort: (s) => (s.emailVerifiedAt ? 1 : 0),
+    text: (s) => (s.emailVerifiedAt ? "Verified" : "Pending"),
+    className: "whitespace-nowrap",
+    cell: (s) => (
+      <span className="inline-flex items-center gap-2">
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs ${
+            s.emailVerifiedAt ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+          }`}
+        >
+          {s.emailVerifiedAt ? "Verified" : "Pending"}
+        </span>
+        {!s.emailVerifiedAt && (
+          <button onClick={() => void resendVerificationEmail(s.id)} className="text-xs text-blue-600 hover:underline">
+            Resend
+          </button>
+        )}
+      </span>
+    ),
   },
 ];
 
