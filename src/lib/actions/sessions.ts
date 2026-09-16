@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getT } from "@/lib/i18n/server";
+import { makeT } from "@/lib/i18n/translate";
 import { db } from "@/lib/db";
 import { requireTutor, requireStudent } from "@/lib/auth";
 import { sendSessionEmail } from "@/lib/email";
@@ -45,15 +46,21 @@ export async function createSession(
     data: { studentId, tutorId: tutor.id, startTime, durationMinutes, status: "CONFIRMED" },
   });
 
+  // Email copy follows the recipient's language, not the tutor's.
+  const et = makeT(student.language);
   await sendSessionEmail({
     to: student.email,
-    subject: "New session scheduled",
-    heading: "A new session has been scheduled",
-    body: `${tutor.name} scheduled a ${durationMinutes}-minute session with you for ${formatSessionInstant(startTime)}.`,
+    subject: et("email.newSession.subject"),
+    heading: et("email.newSession.heading"),
+    body: et("email.newSession.body", {
+      tutor: tutor.name,
+      minutes: durationMinutes,
+      when: formatSessionInstant(startTime, student.language),
+    }),
   });
 
   revalidateSessions();
-  return { success: `Session with ${student.name} scheduled ✓` };
+  return { success: t("action.sessionScheduled", { name: student.name }) };
 }
 
 export async function updateSessionNotes(sessionId: string, notes: string) {
@@ -73,11 +80,12 @@ export async function moveSession(sessionId: string, newStartTimeIso: string) {
     include: { student: true },
   });
 
+  const et = makeT(session.student.language);
   await sendSessionEmail({
     to: session.student.email,
-    subject: "Your session was rescheduled",
-    heading: "Your tutor moved a session",
-    body: `${tutor.name} moved your session to ${formatSessionInstant(newStartTime)}.`,
+    subject: et("email.moved.subject"),
+    heading: et("email.moved.heading"),
+    body: et("email.moved.body", { tutor: tutor.name, when: formatSessionInstant(newStartTime, session.student.language) }),
   });
 
   revalidateSessions();
@@ -91,11 +99,15 @@ export async function cancelSession(sessionId: string) {
     include: { student: true },
   });
 
+  const et = makeT(session.student.language);
   await sendSessionEmail({
     to: session.student.email,
-    subject: "Your session was cancelled",
-    heading: "A session was cancelled",
-    body: `${tutor.name} cancelled your session that was scheduled for ${formatSessionInstant(session.startTime)}.`,
+    subject: et("email.cancelled.subject"),
+    heading: et("email.cancelled.heading"),
+    body: et("email.cancelled.body", {
+      tutor: tutor.name,
+      when: formatSessionInstant(session.startTime, session.student.language),
+    }),
   });
 
   revalidateSessions();
@@ -115,11 +127,16 @@ export async function requestReschedule(sessionId: string, altTimeIso: string) {
     include: { tutor: true },
   });
 
+  const et = makeT(session.tutor.language);
   await sendSessionEmail({
     to: session.tutor.email,
-    subject: "Reschedule requested",
-    heading: "A student requested a reschedule",
-    body: `${student.name} asked to move their ${formatSessionInstant(session.startTime)} session to ${formatSessionInstant(altTime)}. Accept or propose another time in the Sessions tab.`,
+    subject: et("email.studentRequested.subject"),
+    heading: et("email.studentRequested.heading"),
+    body: et("email.studentRequested.body", {
+      student: student.name,
+      from: formatSessionInstant(session.startTime, session.tutor.language),
+      to: formatSessionInstant(altTime, session.tutor.language),
+    }),
   });
 
   revalidateSessions();
@@ -136,6 +153,7 @@ export async function tutorRespondToReschedule(
     include: { student: true },
   });
   if (existing.status !== "RESCHEDULE_REQUESTED_BY_STUDENT") return;
+  const et = makeT(existing.student.language);
 
   if (action === "accept") {
     if (!existing.proposedAltTime) return;
@@ -145,9 +163,12 @@ export async function tutorRespondToReschedule(
     });
     await sendSessionEmail({
       to: existing.student.email,
-      subject: "Reschedule accepted",
-      heading: "Your reschedule request was accepted",
-      body: `${tutor.name} confirmed your session for ${formatSessionInstant(session.startTime)}.`,
+      subject: et("email.rescheduleAccepted.subject"),
+      heading: et("email.rescheduleAccepted.heading"),
+      body: et("email.rescheduleAccepted.body", {
+        tutor: tutor.name,
+        when: formatSessionInstant(session.startTime, existing.student.language),
+      }),
     });
     revalidateSessions();
     return;
@@ -161,9 +182,12 @@ export async function tutorRespondToReschedule(
   });
   await sendSessionEmail({
     to: existing.student.email,
-    subject: "Your tutor proposed a different time",
-    heading: "A different time was proposed",
-    body: `${tutor.name} proposed moving your session to ${formatSessionInstant(altTime)} instead. Accept or counter-propose in the Sessions tab.`,
+    subject: et("email.tutorProposed.subject"),
+    heading: et("email.proposedHeading"),
+    body: et("email.tutorProposed.body", {
+      tutor: tutor.name,
+      when: formatSessionInstant(altTime, existing.student.language),
+    }),
   });
   revalidateSessions();
 }
@@ -181,6 +205,7 @@ export async function studentRespondToReschedule(
   if (existing.studentId !== student.id || existing.status !== "RESCHEDULE_REQUESTED_BY_TUTOR") {
     return;
   }
+  const et = makeT(existing.tutor.language);
 
   if (action === "accept") {
     if (!existing.proposedAltTime) return;
@@ -190,9 +215,12 @@ export async function studentRespondToReschedule(
     });
     await sendSessionEmail({
       to: existing.tutor.email,
-      subject: "Reschedule accepted",
-      heading: "Your proposed time was accepted",
-      body: `${student.name} confirmed the session for ${formatSessionInstant(session.startTime)}.`,
+      subject: et("email.rescheduleAccepted.subject"),
+      heading: et("email.proposalAccepted.heading"),
+      body: et("email.proposalAccepted.body", {
+        student: student.name,
+        when: formatSessionInstant(session.startTime, existing.tutor.language),
+      }),
     });
     revalidateSessions();
     return;
@@ -206,9 +234,12 @@ export async function studentRespondToReschedule(
   });
   await sendSessionEmail({
     to: existing.tutor.email,
-    subject: "Student proposed a different time",
-    heading: "A different time was proposed",
-    body: `${student.name} countered with ${formatSessionInstant(altTime)} instead. Accept or propose another time in the Sessions tab.`,
+    subject: et("email.studentProposed.subject"),
+    heading: et("email.proposedHeading"),
+    body: et("email.studentProposed.body", {
+      student: student.name,
+      when: formatSessionInstant(altTime, existing.tutor.language),
+    }),
   });
   revalidateSessions();
 }
@@ -253,11 +284,16 @@ export async function completeSession(
 
   // Only email when there's something new to read.
   if (notes && notes !== hadNotes) {
+    const et = makeT(session.student.language);
     await sendSessionEmail({
       to: session.student.email,
-      subject: "Notes from your session",
-      heading: "Session notes",
-      body: `${escapeHtml(tutor.name)} left notes on your ${formatSessionInstant(session.startTime)} session:\n\n${escapeHtml(notes)}`,
+      subject: et("email.notes.subject"),
+      heading: et("email.notes.heading"),
+      body: et("email.notes.body", {
+        tutor: escapeHtml(tutor.name),
+        when: formatSessionInstant(session.startTime, session.student.language),
+        notes: escapeHtml(notes),
+      }),
     });
   }
   revalidateSessions();
@@ -282,6 +318,7 @@ export async function cancelSessionWithReason(
   if (session.status === "CANCELLED" || session.status === "COMPLETED") {
     return { error: t("action.sessionClosed") };
   }
+  const et = makeT(session.student.language);
 
   if (input.offerReschedule) {
     await db.session.update({
@@ -290,9 +327,13 @@ export async function cancelSessionWithReason(
     });
     await sendSessionEmail({
       to: session.student.email,
-      subject: "Your session needs a new time",
-      heading: "Please pick a new time",
-      body: `${escapeHtml(tutor.name)} can't make your ${formatSessionInstant(session.startTime)} session.\n\nReason: ${escapeHtml(reason)}\n\nChoose a new time from the open slots on your Sessions page.`,
+      subject: et("email.needsNewTime.subject"),
+      heading: et("email.needsNewTime.heading"),
+      body: et("email.needsNewTime.body", {
+        tutor: escapeHtml(tutor.name),
+        when: formatSessionInstant(session.startTime, session.student.language),
+        reason: escapeHtml(reason),
+      }),
     });
   } else {
     await db.session.update({
@@ -301,9 +342,13 @@ export async function cancelSessionWithReason(
     });
     await sendSessionEmail({
       to: session.student.email,
-      subject: "Your session was cancelled",
-      heading: "A session was cancelled",
-      body: `${escapeHtml(tutor.name)} cancelled your ${formatSessionInstant(session.startTime)} session.\n\nReason: ${escapeHtml(reason)}`,
+      subject: et("email.cancelled.subject"),
+      heading: et("email.cancelled.heading"),
+      body: et("email.cancelledReason.body", {
+        tutor: escapeHtml(tutor.name),
+        when: formatSessionInstant(session.startTime, session.student.language),
+        reason: escapeHtml(reason),
+      }),
     });
   }
   revalidateSessions();
@@ -327,11 +372,16 @@ export async function requestStudentReschedule(
     where: { id: sessionId },
     data: { status: "AWAITING_RESCHEDULE", statusReason: note || null, proposedAltTime: null },
   });
+  const et = makeT(session.student.language);
   await sendSessionEmail({
     to: session.student.email,
-    subject: "Please pick a new time for your session",
-    heading: "Your session is being rescheduled",
-    body: `${escapeHtml(tutor.name)} needs to move your ${formatSessionInstant(session.startTime)} session.${note ? `\n\n${escapeHtml(note)}` : ""}\n\nChoose a new time from the open slots on your Sessions page.`,
+    subject: et("email.beingRescheduled.subject"),
+    heading: et("email.beingRescheduled.heading"),
+    body: et("email.beingRescheduled.body", {
+      tutor: escapeHtml(tutor.name),
+      when: formatSessionInstant(session.startTime, session.student.language),
+      note: note ? `\n\n${escapeHtml(note)}` : "",
+    }),
   });
   revalidateSessions();
   return {};
@@ -379,11 +429,15 @@ export async function studentPickRescheduleSlot(
     where: { id: session.id },
     data: { startTime: start, status: "CONFIRMED", statusReason: null, proposedAltTime: null },
   });
+  const et = makeT(session.tutor.language);
   await sendSessionEmail({
     to: session.tutor.email,
-    subject: "Session rescheduled",
-    heading: "Your student picked a new time",
-    body: `${escapeHtml(student.name)} moved their session to ${formatSessionInstant(start)}.`,
+    subject: et("email.studentPicked.subject"),
+    heading: et("email.studentPicked.heading"),
+    body: et("email.studentPicked.body", {
+      student: escapeHtml(student.name),
+      when: formatSessionInstant(start, session.tutor.language),
+    }),
   });
   revalidateSessions();
   return {};

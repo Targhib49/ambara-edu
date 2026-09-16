@@ -2,6 +2,7 @@
 
 import { randomBytes } from "crypto";
 import { getT } from "@/lib/i18n/server";
+import { makeT } from "@/lib/i18n/translate";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireStudent, requireTutor, requireUser } from "@/lib/auth";
@@ -63,21 +64,32 @@ export async function bookSlot(
     },
   });
 
+  // Two recipients, two languages — each gets their own translator.
+  const tutorT = makeT(window.tutor.language);
   await sendSessionEmail({
     to: window.tutor.email,
-    subject: "A session was booked",
-    heading: "New booking",
-    body: `${student.name} booked the ${formatSessionInstant(start)} slot (${window.durationMinutes} minutes).`,
+    subject: tutorT("email.newBooking.subject"),
+    heading: tutorT("email.newBooking.heading"),
+    body: tutorT("email.newBooking.body", {
+      student: student.name,
+      when: formatSessionInstant(start, window.tutor.language),
+      minutes: window.durationMinutes,
+    }),
   });
+  const studentT = makeT(student.language);
   await sendSessionEmail({
     to: student.email,
-    subject: "Your session is booked",
-    heading: "Session confirmed",
-    body: `You're booked with ${window.tutor.name} for ${formatSessionInstant(start)} (${window.durationMinutes} minutes).`,
+    subject: studentT("email.bookingConfirmed.subject"),
+    heading: studentT("email.bookingConfirmed.heading"),
+    body: studentT("email.bookingConfirmed.body", {
+      tutor: window.tutor.name,
+      when: formatSessionInstant(start, student.language),
+      minutes: window.durationMinutes,
+    }),
   });
 
   revalidateScheduling();
-  return { success: `Booked for ${formatSessionInstant(start)} ✓` };
+  return { success: t("action.bookedFor", { when: formatSessionInstant(start, student.language) }) };
 }
 
 /**
@@ -142,19 +154,24 @@ export async function createSeries(
     })),
   });
 
+  const et = makeT(student.language);
   await sendSessionEmail({
     to: student.email,
-    subject: "Recurring sessions scheduled",
-    heading: "A repeating session was set up",
-    body: `${tutor.name} scheduled ${free.length} weekly sessions with you, starting ${formatSessionInstant(free[0])}.`,
+    subject: et("email.recurring.subject"),
+    heading: et("email.recurring.heading"),
+    body: et("email.recurring.body", {
+      tutor: tutor.name,
+      n: free.length,
+      when: formatSessionInstant(free[0], student.language),
+    }),
   });
 
   const skipped = instants.length - free.length;
   revalidateScheduling();
   return {
     success:
-      `Created ${free.length} session${free.length === 1 ? "" : "s"} for ${student.name}` +
-      (skipped > 0 ? ` — ${skipped} skipped, they clashed with existing bookings.` : " ✓"),
+      t(free.length === 1 ? "action.seriesCreatedOne" : "action.seriesCreated", { n: free.length, name: student.name }) +
+      (skipped > 0 ? t("action.seriesSkipped", { n: skipped }) : " ✓"),
   };
 }
 

@@ -2,10 +2,14 @@ import "server-only";
 import crypto from "crypto";
 import { db } from "@/lib/db";
 import { sendSessionEmail } from "@/lib/email";
+import { makeT } from "@/lib/i18n/translate";
+import type { Language } from "@/lib/i18n/messages";
 
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-export async function sendVerificationEmail(user: { id: string; email: string; name: string }) {
+/** The copy follows the recipient's own language, not whoever triggered the send. */
+export async function sendVerificationEmail(user: { id: string; email: string; name: string; language: Language }) {
+  const et = makeT(user.language);
   const token = crypto.randomUUID();
   await db.emailVerificationToken.create({
     data: { token, userId: user.id, expiresAt: new Date(Date.now() + TOKEN_TTL_MS) },
@@ -16,8 +20,8 @@ export async function sendVerificationEmail(user: { id: string; email: string; n
 
   await sendSessionEmail({
     to: user.email,
-    subject: "Verify your email — AmbaraEdu",
-    heading: `Welcome, ${user.name}`,
-    body: `Please confirm this is your email address:\n\n<a href="${link}">${link}</a>\n\nThis is just for our records — you can already log in with the credentials your tutor gave you.`,
+    subject: et("email.verify.subject"),
+    heading: et("email.verify.heading", { name: user.name }),
+    body: et("email.verify.body", { link: `<a href="${link}">${link}</a>` }),
   });
 }

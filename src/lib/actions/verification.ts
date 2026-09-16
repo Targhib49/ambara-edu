@@ -39,5 +39,5 @@ export async function resendMyVerificationEmail(): Promise<ResendState> {
   const student = await requireStudent();
   if (student.emailVerifiedAt) return { success: t("action.alreadyConfirmed") };
   await sendVerificationEmail(student);
-  return { success: `Sent — check ${student.email}.` };
+  return { success: t("action.verificationSent", { email: student.email }) };
 }

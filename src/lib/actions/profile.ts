@@ -34,7 +34,7 @@ export async function updateProfile(
       email,
       email_confirm: true,
     });
-    if (error) return { error: `Could not update email: ${error.message}` };
+    if (error) return { error: t("action.emailUpdateFailed", { message: error.message }) };
   }
 
   await db.user.update({ where: { id: user.id }, data: { name, email } });
@@ -80,7 +80,7 @@ export async function changePassword(
   // very request (the action then dies mid-flight and the user is logged out).
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.updateUser({ password: newPassword });
-  if (error) return { error: `Could not change password: ${error.message}` };
+  if (error) return { error: t("action.passwordChangeFailed", { message: error.message }) };
 
   return { success: t("action.passwordChanged") };
 }

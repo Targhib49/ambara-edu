@@ -97,10 +97,10 @@ export function formatTimeOnly(iso: string | Date) {
  * lean on. Rendered in the app's timezone rather than UTC — telling someone in
  * Jakarta their lesson is at "09:00 UTC" is technically true and useless.
  */
-export function formatSessionInstant(instant: Date) {
+export function formatSessionInstant(instant: Date, language: Language) {
   const shifted = new Date(instant.getTime() + APP_TZ_OFFSET_MINUTES * 60_000);
   return (
-    shifted.toLocaleString("en-GB", {
+    shifted.toLocaleString(localeFor(language), {
       weekday: "long",
       day: "numeric",
       month: "long",

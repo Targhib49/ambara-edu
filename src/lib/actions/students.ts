@@ -36,15 +36,16 @@ export async function createStudent(
     email_confirm: true, // skips Supabase's own confirmation UI — our own
     // informational verification (below) runs separately and never gates login
   });
-  if (error) return { error: `Could not create account: ${error.message}` };
+  if (error) return { error: t("action.accountCreateFailed", { message: error.message }) };
 
-  await db.user.create({
+  const created = await db.user.create({
     data: { id: data.user.id, email, name, role: "STUDENT", studentGroup },
   });
-  await sendVerificationEmail({ id: data.user.id, email, name });
+  // A brand-new student has the default language until they change it.
+  await sendVerificationEmail({ id: created.id, email, name, language: created.language });
 
   revalidatePath("/tutor/students");
-  return { success: `Created ${email} — hand them the password you just set.` };
+  return { success: t("action.studentCreated", { email }) };
 }
 
 export async function resendVerificationEmail(studentId: string) {

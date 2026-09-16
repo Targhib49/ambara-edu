@@ -144,7 +144,7 @@ export async function setCourseCover(courseId: string, _prev: CoverState, formDa
   const path = `course-covers/${courseId}/${crypto.randomUUID()}.${ext}`;
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.storage.from(ATTACHMENTS_BUCKET).upload(path, file, { contentType: file.type });
-  if (error) return { error: `Upload failed: ${error.message}` };
+  if (error) return { error: t("action.uploadFailed", { message: error.message }) };
 
   await db.course.update({ where: { id: courseId }, data: { coverImagePath: path } });
   if (course.coverImagePath) {
