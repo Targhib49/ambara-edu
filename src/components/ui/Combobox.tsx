@@ -3,6 +3,7 @@
 import { useId, useMemo, useRef, useState } from "react";
 import { CheckIcon, ChevronDownIcon, CloseIcon } from "@/components/ui/icons";
 import { inputCls } from "@/components/ui/styles";
+import { useT } from "@/lib/i18n/client";
 
 export type ComboOption = { value: string; label: string; hint?: string };
 
@@ -19,10 +20,10 @@ export function Combobox({
   value,
   defaultValue,
   onChange,
-  placeholder = "Search…",
+  placeholder,
   required,
   disabled,
-  emptyText = "No matches",
+  emptyText,
   "aria-label": ariaLabel,
   id,
 }: {
@@ -38,6 +39,10 @@ export function Combobox({
   "aria-label"?: string;
   id?: string;
 }) {
+  const t = useT();
+  // Defaults come from the dictionary, so they can't sit in the parameter list.
+  const placeholderText = placeholder ?? t("combobox.search");
+  const emptyLabel = emptyText ?? t("placement.noMatches");
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [internal, setInternal] = useState(defaultValue ?? "");
@@ -100,7 +105,7 @@ export function Combobox({
         autoComplete="off"
         disabled={disabled}
         value={open ? query : selectedOption?.label ?? ""}
-        placeholder={selectedOption ? selectedOption.label : placeholder}
+        placeholder={selectedOption ? selectedOption.label : placeholderText}
         onFocus={() => {
           setOpen(true);
           setActive(0);
@@ -121,7 +126,7 @@ export function Combobox({
         {selectedOption && !disabled && (
           <button
             type="button"
-            aria-label="Clear"
+            aria-label={t("combobox.clear")}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               choose(null);
@@ -159,7 +164,7 @@ export function Combobox({
           className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-zinc-200 bg-white py-1 shadow-lg"
         >
           {matches.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-zinc-500">{emptyText}</li>
+            <li className="px-3 py-2 text-sm text-zinc-500">{emptyLabel}</li>
           ) : (
             matches.map((o, i) => (
               <li
@@ -181,7 +186,7 @@ export function Combobox({
             ))
           )}
           {matches.length === MAX_SHOWN && (
-            <li className="border-t border-zinc-100 px-3 py-1.5 text-xs text-zinc-400">Keep typing to narrow the list</li>
+            <li className="border-t border-zinc-100 px-3 py-1.5 text-xs text-zinc-400">{t("combobox.keepTyping")}</li>
           )}
         </ul>
       )}

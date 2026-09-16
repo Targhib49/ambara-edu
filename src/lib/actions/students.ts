@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getT } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { requireTutor } from "@/lib/auth";
 import { StudentGroup } from "@/generated/prisma/enums";
@@ -14,6 +15,7 @@ export async function createStudent(
   _prev: CreateStudentState,
   formData: FormData
 ): Promise<CreateStudentState> {
+  const t = await getT();
   await requireTutor();
 
   const name = String(formData.get("name") ?? "").trim();
@@ -24,8 +26,8 @@ export async function createStudent(
     ? (groupRaw as StudentGroup)
     : null;
 
-  if (!name || !email) return { error: "Name and email are required." };
-  if (password.length < 8) return { error: "Password must be at least 8 characters." };
+  if (!name || !email) return { error: t("action.nameEmailRequired") };
+  if (password.length < 8) return { error: t("action.passwordShort") };
 
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.auth.admin.createUser({
@@ -64,9 +66,10 @@ export type ResetPasswordState = { error?: string; password?: string };
  * the account being changed.
  */
 export async function resetStudentPassword(studentId: string): Promise<ResetPasswordState> {
+  const t = await getT();
   await requireTutor();
   const student = await db.user.findUnique({ where: { id: studentId }, select: { role: true } });
-  if (!student || student.role !== "STUDENT") return { error: "That account is not a student." };
+  if (!student || student.role !== "STUDENT") return { error: t("action.notAStudent") };
 
   const password = generatePassword();
   const supabase = createSupabaseAdminClient();

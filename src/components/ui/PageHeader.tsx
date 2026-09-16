@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 import type { ReactNode } from "react";
 import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
 import { LinkPendingIndicator } from "@/components/ui/LinkPendingIndicator";
@@ -40,9 +41,10 @@ export type PageTab = { key: string; label: string; href: string; count?: number
  * Sections of one page, as links. Each tab is its own URL, so a tab survives a
  * reload and can be linked to, and the server only loads what the tab shows.
  */
-export function PageTabs({ tabs, active }: { tabs: PageTab[]; active: string }) {
+export async function PageTabs({ tabs, active }: { tabs: PageTab[]; active: string }) {
+  const t = await getT();
   return (
-    <nav className="flex gap-6 overflow-x-auto border-b border-zinc-200" aria-label="Sections">
+    <nav className="flex gap-6 overflow-x-auto border-b border-zinc-200" aria-label={t("pageTabs.sections")}>
       {tabs.map((t) => {
         const isActive = t.key === active;
         return (

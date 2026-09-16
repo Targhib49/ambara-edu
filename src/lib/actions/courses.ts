@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getT } from "@/lib/i18n/server";
 import { ATTACHMENTS_BUCKET, createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -90,10 +91,11 @@ export async function setEnrollment(courseId: string, studentId: string, enrolle
 
 /** Enroll several students at once — the bulk "Assign course" on the Students list. */
 export async function enrollStudents(courseId: string, studentIds: string[]): Promise<{ error?: string; count?: number }> {
+  const t = await getT();
   await requireTutor();
-  if (!courseId) return { error: "Pick a course." };
+  if (!courseId) return { error: t("action.pickCourse") };
   const students = await db.user.findMany({ where: { id: { in: studentIds }, role: "STUDENT" }, select: { id: true } });
-  if (students.length === 0) return { error: "Pick at least one student." };
+  if (students.length === 0) return { error: t("action.pickOneStudent") };
   const { count } = await db.enrollment.createMany({
     data: students.map((s) => ({ studentId: s.id, courseId })),
     skipDuplicates: true,
@@ -128,15 +130,16 @@ function revalidateCourse(courseId: string) {
  * request under Vercel's payload ceiling, so it can't only live client-side.
  */
 export async function setCourseCover(courseId: string, _prev: CoverState, formData: FormData): Promise<CoverState> {
+  const t = await getT();
   await requireTutor();
   const file = formData.get("cover");
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose an image first." };
+  if (!(file instanceof File) || file.size === 0) return { error: t("action.chooseImage") };
   const ext = COVER_TYPES[file.type];
-  if (!ext) return { error: "Use a JPG, PNG or WebP image." };
-  if (file.size > MAX_COVER_BYTES) return { error: "That image is over 3 MB — try a smaller or compressed one." };
+  if (!ext) return { error: t("action.imageType") };
+  if (file.size > MAX_COVER_BYTES) return { error: t("action.imageTooBig") };
 
   const course = await db.course.findUnique({ where: { id: courseId }, select: { coverImagePath: true } });
-  if (!course) return { error: "That course no longer exists." };
+  if (!course) return { error: t("action.courseGone") };
 
   const path = `course-covers/${courseId}/${crypto.randomUUID()}.${ext}`;
   const supabase = createSupabaseAdminClient();
@@ -148,7 +151,7 @@ export async function setCourseCover(courseId: string, _prev: CoverState, formDa
     await supabase.storage.from(ATTACHMENTS_BUCKET).remove([course.coverImagePath]);
   }
   revalidateCourse(courseId);
-  return { success: "Cover updated ✓" };
+  return { success: t("action.coverUpdated") };
 }
 
 export async function removeCourseCover(courseId: string) {

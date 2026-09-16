@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getT } from "@/lib/i18n/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
@@ -34,8 +35,9 @@ export type ResendState = { error?: string; success?: string };
 
 /** A student asking for their own confirmation email again, from their profile. */
 export async function resendMyVerificationEmail(): Promise<ResendState> {
+  const t = await getT();
   const student = await requireStudent();
-  if (student.emailVerifiedAt) return { success: "Your email is already confirmed." };
+  if (student.emailVerifiedAt) return { success: t("action.alreadyConfirmed") };
   await sendVerificationEmail(student);
   return { success: `Sent — check ${student.email}.` };
 }

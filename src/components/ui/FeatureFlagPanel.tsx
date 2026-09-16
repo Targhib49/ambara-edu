@@ -1,4 +1,5 @@
 import { setFeatureFlag } from "@/lib/actions/flags";
+import { getT } from "@/lib/i18n/server";
 import { FEATURE_FLAGS, FEATURE_FLAG_NAMES, type FeatureFlag, type FlagState } from "@/lib/flags";
 
 const CHOICES = [
@@ -18,10 +19,11 @@ function sourceNote(state: FlagState) {
  * browser alone, so v2 work can be checked against real content while students
  * keep seeing the finished app.
  */
-export function FeatureFlagPanel({ states }: { states: Record<FeatureFlag, FlagState> }) {
+export async function FeatureFlagPanel({ states }: { states: Record<FeatureFlag, FlagState> }) {
+  const t = await getT();
   return (
     <section className="rounded-xl border border-zinc-200 bg-white p-6">
-      <h2 className="font-medium text-zinc-900">Preview features</h2>
+      <h2 className="font-medium text-zinc-900">{t("flags.title")}</h2>
       <p className="mt-1 text-sm text-zinc-500">
         Work in progress, off for everyone until it&rsquo;s ready. Switching one on here affects
         only this browser — your students keep seeing the current version.

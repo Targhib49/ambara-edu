@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getT } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { requireTutor, requireStudent } from "@/lib/auth";
 import { sendSessionEmail } from "@/lib/email";
@@ -29,16 +30,17 @@ export async function createSession(
   _prev: CreateSessionState,
   formData: FormData
 ): Promise<CreateSessionState> {
+  const t = await getT();
   const tutor = await requireTutor();
   const studentId = String(formData.get("studentId") ?? "");
   const startTime = parseAppDateTime(String(formData.get("startTime") ?? ""));
   const durationMinutes = Number(formData.get("durationMinutes") ?? 60);
-  if (!studentId) return { error: "Pick a student." };
-  if (Number.isNaN(startTime.getTime())) return { error: "Pick a valid start time." };
-  if (!durationMinutes || durationMinutes < 15) return { error: "Duration must be at least 15 minutes." };
+  if (!studentId) return { error: t("action.pickStudent") };
+  if (Number.isNaN(startTime.getTime())) return { error: t("action.pickValidStart") };
+  if (!durationMinutes || durationMinutes < 15) return { error: t("action.durationMin15") };
 
   const student = await db.user.findUnique({ where: { id: studentId } });
-  if (!student) return { error: "That student no longer exists." };
+  if (!student) return { error: t("action.studentGone") };
   await db.session.create({
     data: { studentId, tutorId: tutor.id, startTime, durationMinutes, status: "CONFIRMED" },
   });
@@ -232,13 +234,14 @@ export async function completeSession(
   sessionId: string,
   input: { attendance: "ATTENDED" | "NO_SHOW"; notes: string }
 ): Promise<SessionActionResult> {
+  const t = await getT();
   const tutor = await requireTutor();
   const session = await ownSession(tutor.id, sessionId);
-  if (!session) return { error: "That session no longer exists." };
-  if (session.status === "CANCELLED") return { error: "A cancelled session can't be marked done." };
-  if (session.startTime.getTime() > Date.now()) return { error: "This session hasn't started yet." };
+  if (!session) return { error: t("action.sessionGone") };
+  if (session.status === "CANCELLED") return { error: t("action.cancelledNotDone") };
+  if (session.startTime.getTime() > Date.now()) return { error: t("action.notStartedYet") };
   if (input.attendance !== "ATTENDED" && input.attendance !== "NO_SHOW") {
-    return { error: "Choose whether the student attended." };
+    return { error: t("action.chooseAttendance") };
   }
 
   const notes = input.notes.trim();
@@ -270,13 +273,14 @@ export async function cancelSessionWithReason(
   sessionId: string,
   input: { reason: string; offerReschedule: boolean }
 ): Promise<SessionActionResult> {
+  const t = await getT();
   const tutor = await requireTutor();
   const reason = input.reason.trim();
-  if (!reason) return { error: "Add a short reason — your student will see it." };
+  if (!reason) return { error: t("action.reasonRequired") };
   const session = await ownSession(tutor.id, sessionId);
-  if (!session) return { error: "That session no longer exists." };
+  if (!session) return { error: t("action.sessionGone") };
   if (session.status === "CANCELLED" || session.status === "COMPLETED") {
-    return { error: "This session is already closed." };
+    return { error: t("action.sessionClosed") };
   }
 
   if (input.offerReschedule) {
@@ -311,11 +315,12 @@ export async function requestStudentReschedule(
   sessionId: string,
   input: { note: string }
 ): Promise<SessionActionResult> {
+  const t = await getT();
   const tutor = await requireTutor();
   const session = await ownSession(tutor.id, sessionId);
-  if (!session) return { error: "That session no longer exists." };
+  if (!session) return { error: t("action.sessionGone") };
   if (session.status !== "CONFIRMED" && session.status !== "PROPOSED") {
-    return { error: "Only a confirmed session can be rescheduled." };
+    return { error: t("action.onlyConfirmedReschedule") };
   }
   const note = input.note.trim();
   await db.session.update({
@@ -342,19 +347,20 @@ export async function studentPickRescheduleSlot(
   availabilityId: string,
   startIso: string
 ): Promise<SessionActionResult> {
+  const t = await getT();
   const student = await requireStudent();
   const session = await db.session.findUnique({ where: { id: sessionId }, include: { tutor: true } });
-  if (!session || session.studentId !== student.id) return { error: "That session no longer exists." };
-  if (session.status !== "AWAITING_RESCHEDULE") return { error: "This session isn't waiting for a new time." };
+  if (!session || session.studentId !== student.id) return { error: t("action.sessionGone") };
+  if (session.status !== "AWAITING_RESCHEDULE") return { error: t("action.notAwaitingTime") };
 
   const start = new Date(startIso);
-  if (Number.isNaN(start.getTime())) return { error: "That time is no longer valid." };
+  if (Number.isNaN(start.getTime())) return { error: t("action.timeInvalid") };
 
   const window = await db.availability.findFirst({
     where: { id: availabilityId, tutorId: session.tutorId, active: true },
   });
-  if (!window) return { error: "That time is no longer offered." };
-  if (window.durationMinutes < session.durationMinutes) return { error: "That slot is too short for this session." };
+  if (!window) return { error: t("action.timeNotOffered") };
+  if (window.durationMinutes < session.durationMinutes) return { error: t("action.slotTooShort") };
 
   const busy = await db.session.findMany({
     where: {
@@ -367,7 +373,7 @@ export async function studentPickRescheduleSlot(
   const open = generateSlots([window], busy, new Date(), BOOKING_HORIZON_DAYS).some(
     (slot) => slot.start.getTime() === start.getTime()
   );
-  if (!open) return { error: "Someone just took that time — pick another." };
+  if (!open) return { error: t("action.justTaken") };
 
   await db.session.update({
     where: { id: session.id },

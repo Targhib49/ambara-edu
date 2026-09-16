@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
@@ -28,6 +29,7 @@ export default async function StudentQuizPage({
   const { retake } = await searchParams;
   const student = await requireStudent();
 
+  const t = await getT();
   const quiz = await db.quiz.findFirst({
     where: {
       id: quizId,
@@ -82,8 +84,8 @@ export default async function StudentQuizPage({
   // The access filter guarantees a chapter; the fallbacks only keep types honest.
   const courseHref = quiz.chapter ? `/courses/${quiz.chapter.courseId}` : "/courses";
   const crumbs: Crumb[] = [
-    { label: "Home", href: "/dashboard" },
-    { label: "My courses", href: "/courses" },
+    { label: t("nav.home"), href: "/dashboard" },
+    { label: t("nav.myCourses"), href: "/courses" },
     ...(quiz.chapter ? [{ label: quiz.chapter.course.title, href: courseHref }] : []),
     ...(quiz.lesson ? [{ label: quiz.lesson.title, href: `${courseHref}/lessons/${quiz.lesson.id}` }] : []),
     { label: quiz.title },
@@ -91,15 +93,15 @@ export default async function StudentQuizPage({
 
   const backHref = quiz.lesson ? `${courseHref}/lessons/${quiz.lesson.id}` : courseHref;
   const backLabel = quiz.lesson
-    ? `Back to lesson: ${quiz.lesson.title}`
-    : `Back to ${quiz.chapter?.course.title ?? "course"}`;
+    ? t("quizPage.backToLesson", { title: quiz.lesson.title })
+    : t("quizPage.backToCourse", { title: quiz.chapter?.course.title ?? t("quizPage.courseFallback") });
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
       <PageHeader
         crumbs={crumbs}
         title={quiz.title}
-        meta={`${quiz.questions.length} questions · ${totalPoints} points total`}
+        meta={t("quizPage.metaCounts", { q: quiz.questions.length, p: totalPoints })}
         actions={
           <Link href={backHref} className={`${btnSecondary} max-w-full`}>
             <span className="truncate">← {backLabel}</span>
@@ -181,7 +183,7 @@ export default async function StudentQuizPage({
   );
 }
 
-function QuizResults({
+async function QuizResults({
   quiz,
   submission,
   totalPoints,
@@ -204,6 +206,7 @@ function QuizResults({
   /** Timed quizzes render their own "start next attempt" card instead. */
   hideRetakeLink?: boolean;
 }) {
+  const t = await getT();
   // A submission whose stored answers don't parse shouldn't take the whole page
   // down — show the questions with nothing filled in rather than an error.
   const parsedAnswers = submissionAnswersSchema.safeParse(submission.answers);
@@ -225,9 +228,9 @@ function QuizResults({
         <div>
           <p className="text-sm font-medium text-blue-800">
             {submission.status === "PENDING_REVIEW" &&
-              `Provisional score — awaiting review on ${pendingCount} question${pendingCount > 1 ? "s" : ""}`}
-            {submission.status === "AUTO_GRADED" && "Auto-graded"}
-            {submission.status === "REVIEWED" && "Final score"}
+              t(pendingCount > 1 ? "quizPage.provisionalPlural" : "quizPage.provisional", { n: pendingCount })}
+            {submission.status === "AUTO_GRADED" && t("quizPage.autoGraded")}
+            {submission.status === "REVIEWED" && t("quizPage.finalScore")}
           </p>
           <p className="text-lg font-semibold text-blue-900">
             {displayScore} / {totalPoints}
@@ -242,7 +245,7 @@ function QuizResults({
         return (
           <div key={q.id} className="rounded-xl border border-zinc-200 bg-white p-5">
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Q{i + 1} · {q.points} pt{q.points === 1 ? "" : "s"}
+              {t(q.points === 1 ? "quizPage.questionLabel" : "quizPage.questionLabelPlural", { i: i + 1, p: q.points })}
             </p>
             <p className="mt-1 text-sm font-medium text-zinc-900">{q.prompt}</p>
             {q.type === "CODE" ? (
@@ -251,7 +254,7 @@ function QuizResults({
               </div>
             ) : (
               <p className="mt-2 text-sm text-zinc-600">
-                Your answer: {formatResponse(q.type, answer?.response, q.options)}
+                {t("quizPage.yourAnswer", { answer: formatResponse(q.type, answer?.response, q.options) })}
               </p>
             )}
             <div className="mt-2">
@@ -261,11 +264,11 @@ function QuizResults({
                     grade.correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                   }`}
                 >
-                  {grade.correct ? "Correct" : "Incorrect"}
+                  {grade.correct ? t("quiz.correct") : t("quiz.incorrect")}
                 </span>
               ) : submission.status === "REVIEWED" ? (
                 <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                  Reviewed by your tutor
+                  {t("quizPage.reviewedByTutor")}
                 </span>
               ) : (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
@@ -305,7 +308,7 @@ function NoAttemptsLeftCard({ maxAttempts }: { maxAttempts: number }) {
   );
 }
 
-function StartAttemptCard({
+async function StartAttemptCard({
   quizId,
   questionCount,
   timeLimitMinutes,
@@ -318,28 +321,29 @@ function StartAttemptCard({
   attemptsRemaining: number | null;
   isRetry: boolean;
 }) {
+  const t = await getT();
   return (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 text-center">
       <p className="text-lg font-semibold text-blue-900">
-        {isRetry ? "Ready for another attempt?" : "Ready to start this try-out?"}
+        {isRetry ? t("quizPage.readyAnother") : t("quizPage.readyStart")}
       </p>
       <p className="mx-auto mt-2 max-w-sm text-sm text-blue-800">
-        {questionCount} questions, in random order, once you start you&rsquo;ll have{" "}
-        <strong>{timeLimitMinutes} minutes</strong> on the clock — it keeps running even if you
-        close the tab.
+        {t("quizPage.startBlurbBefore", { n: questionCount })}{" "}
+        <strong>{t("schedule.minutesOption", { n: timeLimitMinutes })}</strong>{" "}
+        {t("quizPage.startBlurbAfter")}
         {attemptsRemaining !== null && (
           <>
             {" "}
-            {attemptsRemaining} attempt{attemptsRemaining === 1 ? "" : "s"} remaining.
+            {t(attemptsRemaining === 1 ? "quizPage.attemptRemaining" : "quizPage.attemptsRemaining", { n: attemptsRemaining })}
           </>
         )}
       </p>
       <form action={startTimedAttempt.bind(null, quizId)} className="mt-4">
         <SubmitButton
-          pendingLabel="Starting…"
+          pendingLabel={t("quizPage.starting")}
           className="rounded-md bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
         >
-          {isRetry ? "Start next attempt →" : "Start try-out →"}
+          {isRetry ? t("quizPage.startNext") : t("quizPage.startTryout")}
         </SubmitButton>
       </form>
     </div>

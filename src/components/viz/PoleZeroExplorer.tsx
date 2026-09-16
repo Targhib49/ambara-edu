@@ -6,6 +6,7 @@ import type { poleZeroExplorerProps } from "@/lib/viz/schemas";
 import { simulateResponse, stepInfo } from "@/lib/viz/control";
 import { ResponseChart, StepStats } from "./ResponseChart";
 import { vizBtn } from "./controls";
+import { useT } from "@/lib/i18n/client";
 
 type Props = z.infer<typeof poleZeroExplorerProps>;
 
@@ -34,6 +35,7 @@ function regimeLabel(zeta: number): string {
 }
 
 function SPlane({ poles }: { poles: Pole[] }) {
+  const t = useT();
   const S = 60; // square viewBox
   const maxMag = Math.max(...poles.map((p) => Math.hypot(p.re, p.im)), 1.5);
   const range = maxMag * 1.25;
@@ -44,7 +46,7 @@ function SPlane({ poles }: { poles: Pole[] }) {
   const originX = px(0);
 
   return (
-    <svg viewBox={`0 0 ${S} ${S}`} className="w-full" role="img" aria-label="Pole locations on the s-plane">
+    <svg viewBox={`0 0 ${S} ${S}`} className="w-full" role="img" aria-label={t("viz.poleAria")}>
       {/* stable left half-plane tint */}
       <rect x={0} y={0} width={originX} height={S} fill="#f0fdf4" />
       <line x1={0} y1={S / 2} x2={S} y2={S / 2} stroke="#d4d4d8" strokeWidth={0.4} />

@@ -1,6 +1,7 @@
 "use server";
 
 import { randomBytes } from "crypto";
+import { getT } from "@/lib/i18n/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireStudent, requireTutor, requireUser } from "@/lib/auth";
@@ -27,17 +28,18 @@ export async function bookSlot(
   _prev: BookingState,
   formData: FormData
 ): Promise<BookingState> {
+  const t = await getT();
   const student = await requireStudent();
   const availabilityId = String(formData.get("availabilityId") ?? "");
   const startIso = String(formData.get("start") ?? "");
   const start = new Date(startIso);
-  if (Number.isNaN(start.getTime())) return { error: "That time is no longer valid." };
+  if (Number.isNaN(start.getTime())) return { error: t("action.timeInvalid") };
 
   const window = await db.availability.findFirst({
     where: { id: availabilityId, active: true },
     include: { tutor: true },
   });
-  if (!window) return { error: "That slot is no longer offered." };
+  if (!window) return { error: t("action.slotGone") };
 
   const busy = await db.session.findMany({
     where: { tutorId: window.tutorId, status: { notIn: ["CANCELLED", "AWAITING_RESCHEDULE"] } },
@@ -49,7 +51,7 @@ export async function bookSlot(
     new Date(),
     BOOKING_HORIZON_DAYS
   ).some((s) => s.start.getTime() === start.getTime());
-  if (!open) return { error: "Someone just booked that time — pick another." };
+  if (!open) return { error: t("action.justBooked") };
 
   await db.session.create({
     data: {
@@ -88,6 +90,7 @@ export async function createSeries(
   _prev: BookingState,
   formData: FormData
 ): Promise<BookingState> {
+  const t = await getT();
   const tutor = await requireTutor();
 
   const studentId = String(formData.get("studentId") ?? "");
@@ -97,17 +100,17 @@ export async function createSeries(
   const occurrences = Number(formData.get("occurrences") ?? 4);
   const startsOn = new Date(String(formData.get("startsOn") ?? ""));
 
-  if (!studentId) return { error: "Pick a student." };
-  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return { error: "Pick a day." };
-  if (startMinute === null) return { error: "Enter a start time as HH:MM." };
-  if (!durationMinutes || durationMinutes < 15) return { error: "Sessions need to be at least 15 minutes." };
+  if (!studentId) return { error: t("action.pickStudent") };
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return { error: t("action.pickDay") };
+  if (startMinute === null) return { error: t("action.startTimeFormat") };
+  if (!durationMinutes || durationMinutes < 15) return { error: t("action.min15") };
   if (!Number.isInteger(occurrences) || occurrences < 2 || occurrences > 52) {
-    return { error: "Repeat between 2 and 52 times." };
+    return { error: t("action.repeatRange") };
   }
-  if (Number.isNaN(startsOn.getTime())) return { error: "Pick a start date." };
+  if (Number.isNaN(startsOn.getTime())) return { error: t("action.pickStartDate") };
 
   const student = await db.user.findUnique({ where: { id: studentId } });
-  if (!student) return { error: "That student no longer exists." };
+  if (!student) return { error: t("action.studentGone") };
 
   const instants = seriesOccurrences(weekday, startMinute, startsOn, occurrences);
   const busy = await db.session.findMany({
@@ -123,7 +126,7 @@ export async function createSeries(
     });
 
   const free = instants.filter((d) => !clashes(d));
-  if (free.length === 0) return { error: "Every occurrence clashes with an existing session." };
+  if (free.length === 0) return { error: t("action.allClash") };
 
   const series = await db.sessionSeries.create({
     data: { tutorId: tutor.id, studentId, weekday, startMinute, durationMinutes, occurrences, startsOn },

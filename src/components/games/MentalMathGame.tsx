@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LEVELS, displayAnswer, isCorrect, makeQuestion, type Level, type Question } from "@/lib/games/mentalMath";
 import { btnPrimary, btnSecondary, cardCls } from "@/components/ui/styles";
 import { nowMs } from "@/lib/sessions/format";
+import { useT } from "@/lib/i18n/client";
 
 const ROUND_MS = 60_000;
 const BEST_KEY = "lms:mentalMath:best";
@@ -40,6 +41,7 @@ function saveBest(level: Level, score: number) {
 }
 
 export function MentalMathGame() {
+  const t = useT();
   const bestRaw = useSyncExternalStore(subscribeBest, readBestRaw, () => "{}");
   const bests = JSON.parse(bestRaw) as Partial<Record<Level, number>>;
 
@@ -103,7 +105,7 @@ export function MentalMathGame() {
   if (!playing) {
     return (
       <div className="space-y-5">
-        <p className="text-sm text-zinc-600">You get 60 seconds. Every right answer scores a point; wrong answers don&rsquo;t cost anything, so keep going.</p>
+        <p className="text-sm text-zinc-600">{t("game.rules")}</p>
         <div className="grid gap-3 sm:grid-cols-2">
           {LEVELS.map((l) => (
             <button
@@ -157,7 +159,7 @@ export function MentalMathGame() {
         </div>
         {answered.length > 0 && (
           <div className={`${cardCls} overflow-hidden`}>
-            <p className="border-b border-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-900">Your answers</p>
+            <p className="border-b border-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-900">{t("game.yourAnswers")}</p>
             <ul className="max-h-72 divide-y divide-zinc-100 overflow-y-auto">
               {answered.map((a, i) => (
                 <li key={i} className="flex items-center gap-3 px-4 py-2 text-sm">
@@ -226,7 +228,7 @@ export function MentalMathGame() {
               setInput((v) => (v.startsWith("-") ? v.slice(1) : `-${v}`));
               inputRef.current?.focus();
             }}
-            aria-label="Toggle negative"
+            aria-label={t("game.toggleNegative")}
             className={`${btnSecondary} w-14 font-mono text-lg`}
           >
             ±
@@ -237,8 +239,8 @@ export function MentalMathGame() {
             onChange={(e) => setInput(e.target.value.replace(/[^0-9\-−]/g, ""))}
             inputMode="numeric"
             autoComplete="off"
-            aria-label="Your answer"
-            placeholder="Answer"
+            aria-label={t("game.yourAnswers")}
+            placeholder={t("game.answerPlaceholder")}
             className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-4 py-3 text-center font-mono text-2xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
           <button type="submit" className={`${btnPrimary} px-6 text-base`}>
@@ -251,7 +253,7 @@ export function MentalMathGame() {
         <button onClick={backToLevels} className="hover:text-zinc-800 hover:underline">
           Quit round
         </button>
-        <span>Press Enter to answer</span>
+        <span>{t("game.pressEnter")}</span>
       </div>
     </div>
   );

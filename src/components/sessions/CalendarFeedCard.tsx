@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { regenerateCalendarToken } from "@/lib/actions/booking";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * `url` is built on the server from the request's own host, so there is no env
@@ -10,6 +11,7 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
  * the server and client markup agree.
  */
 export function CalendarFeedCard({ url }: { url: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   return (
@@ -36,11 +38,11 @@ export function CalendarFeedCard({ url }: { url: string }) {
           }}
           className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
         >
-          {copied ? "Copied ✓" : "Copy"}
+          {copied ? t("calendarFeed.copied") : t("calendarFeed.copy")}
         </button>
         <form action={regenerateCalendarToken}>
           <SubmitButton
-            pendingLabel="Replacing…"
+            pendingLabel={t("calendarFeed.replacing")}
             className="rounded-md px-3 py-2 text-xs text-zinc-500 hover:text-zinc-800 hover:underline disabled:opacity-50"
           >
             Replace link

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getT } from "@/lib/i18n/server";
 import { createClient } from "@supabase/supabase-js";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
@@ -13,16 +14,17 @@ export async function updateProfile(
   _prev: ProfileState,
   formData: FormData
 ): Promise<ProfileState> {
+  const t = await getT();
   const user = await requireUser();
 
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
 
-  if (!name || !email) return { error: "Name and email are required." };
+  if (!name || !email) return { error: t("action.nameEmailRequired") };
 
   if (email !== user.email) {
     const taken = await db.user.findUnique({ where: { email } });
-    if (taken) return { error: "That email is already in use by another account." };
+    if (taken) return { error: t("action.emailTaken") };
 
     const supabase = createSupabaseAdminClient();
     // email_confirm skips the verification round-trip — accounts here are
@@ -50,14 +52,15 @@ export async function changePassword(
   _prev: ProfileState,
   formData: FormData
 ): Promise<ProfileState> {
+  const t = await getT();
   const user = await requireUser();
 
   const currentPassword = String(formData.get("currentPassword") ?? "");
   const newPassword = String(formData.get("newPassword") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-  if (newPassword.length < 8) return { error: "New password must be at least 8 characters." };
-  if (newPassword !== confirmPassword) return { error: "New passwords don't match." };
+  if (newPassword.length < 8) return { error: t("action.newPasswordShort") };
+  if (newPassword !== confirmPassword) return { error: t("action.passwordsDiffer") };
 
   // Verify the current password with a throwaway client so the sign-in
   // doesn't touch this request's session cookies.
@@ -70,7 +73,7 @@ export async function changePassword(
     email: user.email,
     password: currentPassword,
   });
-  if (verifyError) return { error: "Current password is incorrect." };
+  if (verifyError) return { error: t("action.currentPasswordWrong") };
 
   // Update through the session-bound client, not the admin API — the admin
   // route revokes every session for the user, including the one making this
@@ -79,5 +82,5 @@ export async function changePassword(
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) return { error: `Could not change password: ${error.message}` };
 
-  return { success: "Password changed." };
+  return { success: t("action.passwordChanged") };
 }

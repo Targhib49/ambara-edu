@@ -3,6 +3,8 @@
 // Shared time-response SVG chart for the control-systems visualizations.
 // Deliberately hand-rolled (no chart library, per spec §6 tech notes).
 
+import { useT } from "@/lib/i18n/client";
+
 const M = { left: 11, right: 2, top: 3, bottom: 8 };
 const W = 100;
 const H = 52;
@@ -26,6 +28,8 @@ export function ResponseChart({
   /** Optional dashed reference line (e.g. the step target, 1). */
   yRef?: number;
 }) {
+  // `t` is already the time array here, so the translator gets a different name.
+  const tr = useT();
   const dataMax = Math.max(...y, yRef ?? 0, 0.001);
   const dataMin = Math.min(...y, 0);
   const pad = (dataMax - dataMin) * 0.08;
@@ -41,7 +45,7 @@ export function ResponseChart({
   const xTicks = [0, tMax / 2, tMax];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Time response plot">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={tr("viz.responseAria")}>
       {/* axes */}
       <line x1={M.left} y1={M.top} x2={M.left} y2={H - M.bottom} stroke="#d4d4d8" strokeWidth={0.4} />
       <line x1={M.left} y1={py(0)} x2={W - M.right} y2={py(0)} stroke="#d4d4d8" strokeWidth={0.4} />

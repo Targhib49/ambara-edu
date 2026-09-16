@@ -1,8 +1,13 @@
+"use client";
+
+import { useT } from "@/lib/i18n/client";
+
 /**
  * Filled tick when done, hollow ring when not. No hooks, so it renders in both
  * server and client components — the course outline needs it in each.
  */
 export function CompletionMark({ done, className = "" }: { done: boolean; className?: string }) {
+  const t = useT();
   if (!done) {
     return (
       <span
@@ -17,7 +22,7 @@ export function CompletionMark({ done, className = "" }: { done: boolean; classN
       fill="currentColor"
       className={`h-4 w-4 shrink-0 text-green-600 ${className}`}
       role="img"
-      aria-label="Completed"
+      aria-label={t("lesson.completed")}
     >
       <path
         fillRule="evenodd"

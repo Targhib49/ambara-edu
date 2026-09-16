@@ -7,6 +7,7 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { LessonCompletion } from "@/components/student/LessonCompletion";
 import { cardCls } from "@/components/ui/styles";
 import { isEnabled } from "@/lib/flags";
+import { getT } from "@/lib/i18n/server";
 
 export default async function StudentLessonPage({
   params,
@@ -15,6 +16,7 @@ export default async function StudentLessonPage({
 }) {
   const { courseId, lessonId } = await params;
   const student = await requireStudent();
+  const t = await getT();
   const courseV2 = await isEnabled("course_v2");
 
   const lesson = await db.lesson.findFirst({
@@ -78,7 +80,7 @@ export default async function StudentLessonPage({
             <BlockRenderer key={block.id} block={block} />
           ))}
           {lesson.blocks.length === 0 && (
-            <p className="text-sm text-zinc-500">This lesson has no content yet.</p>
+            <p className="text-sm text-zinc-500">{t("studentLesson.noContent")}</p>
           )}
         </div>
       </article>
@@ -92,7 +94,7 @@ export default async function StudentLessonPage({
 
       {lesson.quizzes.length > 0 && (
         <section className={`${cardCls} p-5`}>
-          <h2 className="mb-3 font-medium text-zinc-900">Quizzes</h2>
+          <h2 className="mb-3 font-medium text-zinc-900">{t("nav.quizzes")}</h2>
           <ul className="space-y-2">
             {lesson.quizzes.map((quiz) => (
               <li key={quiz.id}>
@@ -101,7 +103,7 @@ export default async function StudentLessonPage({
                   className="flex items-center justify-between rounded-md border border-zinc-200 px-4 py-2.5 text-sm hover:border-blue-300 hover:bg-zinc-50"
                 >
                   <span className="font-medium text-zinc-900">{quiz.title}</span>
-                  <span className="text-blue-700">Take quiz →</span>
+                  <span className="text-blue-700">{t("studentLesson.takeQuiz")}</span>
                 </Link>
               </li>
             ))}
@@ -126,7 +128,7 @@ export default async function StudentLessonPage({
             href={`/courses/${courseId}/lessons/${next.id}`}
             className="ml-auto max-w-[48%] rounded-lg border border-zinc-200 bg-white px-4 py-3 text-right text-sm text-zinc-700 hover:border-blue-400 hover:text-blue-700"
           >
-            <span className="block text-xs text-zinc-400">Next →</span>
+            <span className="block text-xs text-zinc-400">{t("studentLesson.next")}</span>
             <span className="mt-0.5 block truncate font-medium">{next.title}</span>
           </Link>
         ) : (

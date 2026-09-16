@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import { getT } from "@/lib/i18n/server";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -61,7 +62,7 @@ const fileBtn =
   "items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm hover:bg-zinc-100";
 
 /** Compact download row — the shape used for anything we don't preview in place. */
-function FileDownloadRow({
+async function FileDownloadRow({
   blockId,
   fileName,
   sizeBytes,
@@ -70,6 +71,7 @@ function FileDownloadRow({
   fileName: string;
   sizeBytes: number;
 }) {
+  const t = await getT();
   return (
     <a
       href={`/api/files/${blockId}`}
@@ -84,7 +86,7 @@ function FileDownloadRow({
         </span>
         <span className="block text-xs text-zinc-500">{formatBytes(sizeBytes)}</span>
       </span>
-      <span className="shrink-0 text-xs font-medium text-blue-700">Download ↓</span>
+      <span className="shrink-0 text-xs font-medium text-blue-700">{t("file.download")}</span>
     </a>
   );
 }
@@ -198,12 +200,13 @@ function FileAttachmentRenderer({
   return <FileDownloadRow {...props} />;
 }
 
-function VideoEmbedRenderer({ url, caption }: { url: string; caption: string }) {
+async function VideoEmbedRenderer({ url, caption }: { url: string; caption: string }) {
+  const t = await getT();
   const video = url ? parseVideoUrl(url) : null;
   if (!video) {
     return (
       <p className="rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500">
-        {url ? "This video link isn’t a recognised YouTube or Vimeo URL." : "No video linked yet."}
+        {url ? t("video.unrecognised") : t("video.none")}
       </p>
     );
   }

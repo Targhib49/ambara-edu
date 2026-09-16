@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import { getT } from "@/lib/i18n/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -35,19 +36,20 @@ async function resolvePlacement(
   chapterIdRaw: unknown,
   lessonIdRaw: unknown
 ): Promise<{ chapterId: string; lessonId: string | null } | { error: string }> {
+  const t = await getT();
   const chapterId = String(chapterIdRaw ?? "");
   const lessonId = String(lessonIdRaw ?? "") || null;
   const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
-  if (!chapterId || !isUuid(chapterId)) return { error: "Choose the course and chapter this quiz belongs to." };
+  if (!chapterId || !isUuid(chapterId)) return { error: t("action.chooseCourseChapter") };
   // Also catches the picker's "After a lesson, but none chosen" marker.
   if (lessonId && !isUuid(lessonId)) {
-    return { error: "Choose the lesson this quiz follows, or put it at the end of the chapter." };
+    return { error: t("action.chooseLessonOrEnd") };
   }
   const chapter = await db.chapter.findUnique({ where: { id: chapterId }, select: { id: true } });
-  if (!chapter) return { error: "That chapter no longer exists." };
+  if (!chapter) return { error: t("action.chapterGone") };
   if (lessonId) {
     const lesson = await db.lesson.findFirst({ where: { id: lessonId, chapterId }, select: { id: true } });
-    if (!lesson) return { error: "That lesson isn't part of the chosen chapter." };
+    if (!lesson) return { error: t("action.lessonNotInChapter") };
   }
   return { chapterId, lessonId };
 }
@@ -76,9 +78,10 @@ export async function commitImport(
   target: CommitImportTarget,
   drafts: DraftQuestionInput[]
 ): Promise<{ error?: string } | undefined> {
+  const t = await getT();
   await requireTutor();
-  if (drafts.length === 0) return { error: "There are no questions to import." };
-  if (target.mode === "new" && !target.title.trim()) return { error: "Give the quiz a title." };
+  if (drafts.length === 0) return { error: t("action.nothingToImport") };
+  if (target.mode === "new" && !target.title.trim()) return { error: t("action.quizTitleRequired") };
 
   let placement: { chapterId: string; lessonId: string | null } | null = null;
   if (target.mode === "new") {
@@ -137,9 +140,10 @@ export async function deleteQuiz(quizId: string) {
 export type CreateQuizState = { error?: string };
 
 export async function createQuiz(_prev: CreateQuizState, formData: FormData): Promise<CreateQuizState> {
+  const t = await getT();
   await requireTutor();
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) return { error: "Give the quiz a title." };
+  if (!title) return { error: t("action.quizTitleRequired") };
   const placement = await resolvePlacement(formData.get("chapterId"), formData.get("lessonId"));
   if ("error" in placement) return { error: placement.error };
 
@@ -240,9 +244,10 @@ export async function updateQuestion(
   questionId: string,
   input: UpdateQuestionInput
 ): Promise<UpdateQuestionState> {
+  const t = await getT();
   await requireTutor();
   const question = await db.question.findUniqueOrThrow({ where: { id: questionId } });
-  if (!input.prompt.trim()) return { error: "Prompt is required." };
+  if (!input.prompt.trim()) return { error: t("action.promptRequired") };
 
   const parsed = correctAnswerSchemas[question.type].safeParse(input.correctAnswer);
   if (!parsed.success) {

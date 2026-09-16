@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { bookSlot, type BookingState } from "@/lib/actions/booking";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { useT } from "@/lib/i18n/client";
 
 export type OpenSlot = {
   availabilityId: string;
@@ -26,6 +27,7 @@ function groupByDay(slots: OpenSlot[]) {
 }
 
 export function BookingPanel({ slots }: { slots: OpenSlot[] }) {
+  const t = useT();
   const [state, formAction] = useActionState<BookingState, FormData>(bookSlot, {});
   const days = groupByDay(slots);
 
@@ -49,7 +51,7 @@ export function BookingPanel({ slots }: { slots: OpenSlot[] }) {
                     <input type="hidden" name="availabilityId" value={slot.availabilityId} />
                     <input type="hidden" name="start" value={slot.startIso} />
                     <SubmitButton
-                      pendingLabel="Booking…"
+                      pendingLabel={t("sessionRow.booking")}
                       className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-800 shadow-sm hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
                     >
                       {slot.timeLabel}

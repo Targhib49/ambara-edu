@@ -9,6 +9,7 @@ import { summarizeCourseProgress } from "@/lib/progress";
 import { buildChapterItems, chapterStatus } from "@/lib/courseItems";
 import { ChapterSection } from "@/components/student/ChapterSection";
 import { btnPrimary, cardCls } from "@/components/ui/styles";
+import { getT } from "@/lib/i18n/server";
 
 const UPCOMING_LIMIT = 5;
 
@@ -19,6 +20,7 @@ export default async function StudentTrackPage({
 }) {
   const { courseId } = await params;
   const student = await requireStudent();
+  const t = await getT();
   const courseV2 = await isEnabled("course_v2");
 
   const course = await db.course.findFirst({
@@ -153,7 +155,7 @@ export default async function StudentTrackPage({
               className={`${btnPrimary} mt-5 max-w-full`}
             >
               <span className="truncate">
-                {progress.started ? "Continue" : "Start learning"}: {resumeLesson.title} →
+                {progress.started ? t("studentCourse.continue") : t("studentCourse.startLearning")}: {resumeLesson.title} →
               </span>
             </Link>
           ) : courseV2 && progress.total > 0 ? (
@@ -205,16 +207,16 @@ export default async function StudentTrackPage({
                   </div>
                 ))}
           {course.chapters.every((m) => m.lessons.length === 0) && (
-            <p className="px-6 py-5 text-sm text-zinc-500">No published lessons yet.</p>
+            <p className="px-6 py-5 text-sm text-zinc-500">{t("studentCourse.noPublishedLessons")}</p>
           )}
         </div>
       </div>
 
       <aside className="xl:sticky xl:top-14 xl:self-start">
         <div className={`${cardCls} p-5`}>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">Upcoming</h2>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">{t("tutorSessions.tabUpcoming")}</h2>
           {upcomingSessions.length === 0 ? (
-            <p className="text-sm text-zinc-500">No upcoming sessions.</p>
+            <p className="text-sm text-zinc-500">{t("studentSessions.noUpcoming")}</p>
           ) : (
             <ul className="space-y-3">
               {upcomingSessions.map((s) => (

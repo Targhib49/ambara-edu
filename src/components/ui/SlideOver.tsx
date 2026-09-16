@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { CloseIcon, PlusIcon, UploadIcon } from "@/components/ui/icons";
 import { btnPrimary, btnSecondary, btnSmall } from "@/components/ui/styles";
+import { useT } from "@/lib/i18n/client";
 
 const SlideOverContext = createContext<{ close: () => void } | null>(null);
 
@@ -32,6 +33,7 @@ export function SlideOver({
   width?: keyof typeof WIDTH;
   children: ReactNode;
 }) {
+  const t = useT();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -71,7 +73,7 @@ export function SlideOver({
           </div>
           <button
             onClick={onClose}
-            aria-label="Close panel"
+            aria-label={t("slideOver.close")}
             className="-mr-2 rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
           >
             <CloseIcon className="h-5 w-5" />

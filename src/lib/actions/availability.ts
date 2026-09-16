@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getT } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { requireTutor } from "@/lib/auth";
 import { parseTimeOfDay } from "@/lib/scheduling";
@@ -16,19 +17,20 @@ export async function addAvailability(
   _prev: AvailabilityState,
   formData: FormData
 ): Promise<AvailabilityState> {
+  const t = await getT();
   const tutor = await requireTutor();
 
   const weekday = Number(formData.get("weekday"));
   const startMinute = parseTimeOfDay(String(formData.get("startTime") ?? ""));
   const durationMinutes = Number(formData.get("durationMinutes") ?? 60);
 
-  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return { error: "Pick a day." };
-  if (startMinute === null) return { error: "Enter a start time as HH:MM." };
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return { error: t("action.pickDay") };
+  if (startMinute === null) return { error: t("action.startTimeFormat") };
   if (!durationMinutes || durationMinutes < 15) {
-    return { error: "Sessions need to be at least 15 minutes." };
+    return { error: t("action.min15") };
   }
   if (startMinute + durationMinutes > 24 * 60) {
-    return { error: "That window runs past midnight — split it across two days." };
+    return { error: t("action.pastMidnight") };
   }
 
   // Overlapping windows would generate duplicate slots for the same time.
@@ -37,13 +39,13 @@ export async function addAvailability(
     (w) =>
       startMinute < w.startMinute + w.durationMinutes && w.startMinute < startMinute + durationMinutes
   );
-  if (clash) return { error: "That overlaps a window you already have on this day." };
+  if (clash) return { error: t("action.overlaps") };
 
   await db.availability.create({
     data: { tutorId: tutor.id, weekday, startMinute, durationMinutes },
   });
   revalidateScheduling();
-  return { success: "Window added ✓" };
+  return { success: t("action.windowAdded") };
 }
 
 export async function setAvailabilityActive(availabilityId: string, active: boolean) {

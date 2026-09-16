@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { z } from "zod";
 import type { sortingVisualizerProps } from "@/lib/viz/schemas";
 import { vizBtn, vizBtnPrimary } from "./controls";
+import { useT } from "@/lib/i18n/client";
 
 type Props = z.infer<typeof sortingVisualizerProps>;
 
@@ -122,6 +123,7 @@ function shuffle(values: number[]): number[] {
 }
 
 export function SortingVisualizer({ algorithm, values }: Props) {
+  const t = useT();
   const [order, setOrder] = useState(values);
   const [stepIdx, setStepIdx] = useState(0); // 0 = initial state, n = after steps[n-1]
   const [playing, setPlaying] = useState(false);
@@ -164,7 +166,7 @@ export function SortingVisualizer({ algorithm, values }: Props) {
           Step {stepIdx} / {steps.length}
         </span>
       </div>
-      <svg viewBox="0 0 100 46" className="w-full" role="img" aria-label="Bar chart of the array being sorted">
+      <svg viewBox="0 0 100 46" className="w-full" role="img" aria-label={t("viz.sortingAria")}>
         {current.array.map((v, i) => {
           const fill = current.sorted.includes(i)
             ? "#22c55e" // locked in place — green

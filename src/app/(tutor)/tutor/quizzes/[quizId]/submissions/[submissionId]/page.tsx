@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getT } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { gradeQuestion } from "@/lib/quiz/grading";
 import { formatCorrectAnswer, formatResponse } from "@/lib/quiz/format";
@@ -12,6 +13,7 @@ export default async function SubmissionReviewPage({
 }: {
   params: Promise<{ quizId: string; submissionId: string }>;
 }) {
+  const t = await getT();
   const { quizId, submissionId } = await params;
   const submission = await db.submission.findUnique({
     where: { id: submissionId },
@@ -73,11 +75,11 @@ export default async function SubmissionReviewPage({
             ) : (
               <div className="mt-3 space-y-1 text-sm">
                 <p>
-                  <span className="text-zinc-500">Answer: </span>
+                  <span className="text-zinc-500">{t("review.answer")}</span>
                   {formatResponse(question.type, response, question.options)}
                 </p>
                 <p>
-                  <span className="text-zinc-500">Correct answer: </span>
+                  <span className="text-zinc-500">{t("review.correctAnswer")}</span>
                   {formatCorrectAnswer(question.type, question.correctAnswer, question.options)}
                 </p>
               </div>
@@ -90,7 +92,7 @@ export default async function SubmissionReviewPage({
                     grade.correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                   }`}
                 >
-                  {grade.correct ? "Correct" : "Incorrect"} (auto-graded)
+                  {t("review.autoGradedVerdict", { verdict: grade.correct ? t("quiz.correct") : t("quiz.incorrect") })}
                 </span>
               ) : submission.status === "REVIEWED" ? (
                 <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
