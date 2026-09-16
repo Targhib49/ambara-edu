@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dot &amp; Cross Product Playground</title>
+<style>
+  :root{--ink:#1a1a1a;--muted:#6b6b6b;--rule:#d8d4cc;--paper:#faf9f6;
+        --a:#1f6f8b;--b:#c0392b;--x:#7d3c98;--good:#1e8449;--bad:#b03a2e;}
+  *{box-sizing:border-box}
+  body{margin:0;padding:20px;background:var(--paper);color:var(--ink);line-height:1.5;
+       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:1.25rem;margin:0 0 4px;font-weight:650}
+  .sub{color:var(--muted);font-size:.9rem;margin-bottom:16px}
+  .panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,296px);gap:22px;align-items:start}
+  @media(max-width:780px){.panel{grid-template-columns:1fr}}
+  svg{width:100%;height:auto;display:block;background:#fff;border:1px solid var(--rule);
+      border-radius:8px;touch-action:none}
+  .card{background:#fff;border:1px solid var(--rule);border-radius:7px;padding:10px 12px;
+        margin-bottom:11px;font-size:.8rem}
+  .card h3{margin:0 0 7px;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
+           color:var(--muted);font-weight:700}
+  .row{display:flex;justify-content:space-between;font-family:ui-monospace,Menlo,monospace;
+       font-size:.78rem;margin:3px 0}
+  .row span:first-child{color:var(--muted);font-family:inherit}
+  .vA{color:var(--a);font-weight:700} .vB{color:var(--b);font-weight:700}
+  .vX{color:var(--x);font-weight:700}
+  button{font:inherit;font-size:.8rem;padding:6px 10px;margin:0 5px 5px 0;border:1px solid var(--rule);
+         background:#fff;border-radius:6px;cursor:pointer;color:var(--ink)}
+  button:hover{background:#f0ede8}
+  button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .flag{border-radius:7px;padding:8px 11px;font-size:.79rem;margin-bottom:11px;display:none}
+  .flag.perp{display:block;background:#eaf4ee;border:1px solid #bcdcc8;color:var(--good)}
+  .flag.para{display:block;background:#fdf3f2;border:1px solid #e8c9c4;color:var(--bad)}
+  .note{font-size:.85rem;color:var(--muted);border-left:3px solid var(--rule);
+        padding:8px 0 8px 12px;margin-top:16px}
+  .note strong{color:var(--ink)}
+  label{display:block;font-weight:600;margin-bottom:5px;font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Dot product measures overlap. Cross product measures spread.</h1>
+  <div class="sub">Drag either arrowhead. Watch which quantity dies when the vectors line up, and which dies when they square off.</div>
+
+  <div class="panel">
+    <svg id="stage" viewBox="0 0 500 420" aria-label="Two draggable vectors showing dot and cross products"></svg>
+
+    <div class="controls">
+      <div class="flag" id="flag"></div>
+
+      <div class="card">
+        <h3>Vectors</h3>
+        <div class="row"><span class="vA">A</span><b id="oA"></b></div>
+        <div class="row"><span class="vB">B</span><b id="oB"></b></div>
+        <div class="row"><span>angle &theta;</span><b id="oTh"></b></div>
+      </div>
+
+      <div class="card">
+        <h3>Dot product &mdash; a scalar</h3>
+        <div class="row"><span>A &middot; B</span><b id="oDot"></b></div>
+        <div class="row"><span>|A||B|cos&theta;</span><b id="oDot2"></b></div>
+        <div class="row"><span>scalar proj</span><b id="oProj"></b></div>
+      </div>
+
+      <div class="card">
+        <h3>Cross product &mdash; a vector</h3>
+        <div class="row"><span id="lblX">A &times; B</span><b class="vX" id="oCr"></b></div>
+        <div class="row"><span>|A||B|sin&theta;</span><b id="oCr2"></b></div>
+        <div class="row"><span>direction</span><b id="oDir"></b></div>
+      </div>
+
+      <label>Show</label>
+      <button id="tProj" class="on">Projection</button>
+      <button id="tArea" class="on">Parallelogram</button>
+      <button id="tOrder">Swap to B &times; A</button>
+
+      <label>Jump to</label>
+      <button data-set="perp">Perpendicular</button>
+      <button data-set="para">Parallel</button>
+      <button data-set="anti">Antiparallel</button>
+      <button data-set="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>The two zero-conditions are opposites.</strong> Drag the arrows until they lie on top of
+    each other: the shaded area collapses and the cross product goes to zero, while the dot product
+    hits its maximum. Now drag them square to each other: the dot product goes to zero and the area
+    is at its largest. Students swap these two tests constantly &mdash; dot zero means
+    <em>perpendicular</em>, cross zero means <em>parallel</em>. Press &ldquo;Swap to B &times; A&rdquo;
+    and note that the number changes sign while the dot product does not.
+  </div>
+</div>
+
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  var svg=document.getElementById("stage");
+  function $(id){return document.getElementById(id);}
+  var CX=250, CY=225, S=1.0;      // origin on screen
+  var A={x:120,y:70}, B={x:60,y:135};   // world coords (y up)
+  var showProj=true, showArea=true, swapped=false, drag=null;
+
+  function el(t,a,txt){var n=document.createElementNS(NS,t);
+    for(var k in a)n.setAttribute(k,a[k]); if(txt!==undefined)n.textContent=txt; return n;}
+  function sx(v){return CX+v.x*S;} function sy(v){return CY-v.y*S;}
+  function pt(v){return [sx(v),sy(v)];}
+
+  function arrow(a,b,col,w,head){
+    var dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1;
+    var ux=dx/L, uy=dy/L, h=head||10;
+    var bx=b[0]-ux*h, by=b[1]-uy*h;
+    svg.appendChild(el("line",{x1:a[0],y1:a[1],x2:bx,y2:by,stroke:col,
+      "stroke-width":w,"stroke-linecap":"round"}));
+    var px=-uy, py=ux;
+    svg.appendChild(el("polygon",{points:
+      b[0]+","+b[1]+" "+(bx+px*h*0.42)+","+(by+py*h*0.42)+" "+(bx-px*h*0.42)+","+(by-py*h*0.42),
+      fill:col}));
+  }
+  function txt(x,y,s,col,size,anchor,weight){
+    svg.appendChild(el("text",{x:x,y:y,"font-size":size||13,fill:col||"#6b6b6b",
+      "text-anchor":anchor||"start","font-weight":weight||400},s));
+  }
+
+  function dot(){return A.x*B.x+A.y*B.y;}
+  function cross(){return A.x*B.y-A.y*B.x;}     // z-component
+  function magA(){return Math.hypot(A.x,A.y);}
+  function magB(){return Math.hypot(B.x,B.y);}
+  function angle(){
+    var d=dot()/((magA()*magB())||1);
+    return Math.acos(Math.max(-1,Math.min(1,d)))*180/Math.PI;
+  }
+
+  function draw(){
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var O=[CX,CY];
+
+    // grid
+    for(var g=-240;g<=240;g+=40){
+      svg.appendChild(el("line",{x1:CX+g,y1:10,x2:CX+g,y2:410,stroke:"#f2efe9","stroke-width":1}));
+      svg.appendChild(el("line",{x1:10,y1:CY+g,x2:490,y2:CY+g,stroke:"#f2efe9","stroke-width":1}));
+    }
+    svg.appendChild(el("line",{x1:14,y1:CY,x2:486,y2:CY,stroke:"#c9c4ba","stroke-width":1.2}));
+    svg.appendChild(el("line",{x1:CX,y1:14,x2:CX,y2:410,stroke:"#c9c4ba","stroke-width":1.2}));
+    txt(478,CY-8,"x","#9a958c",12); txt(CX+8,24,"y","#9a958c",12);
+
+    // parallelogram spanned by A and B
+    if(showArea){
+      var p=[O,pt(A),[sx(A)+B.x*S,sy(A)-B.y*S],pt(B)];
+      svg.appendChild(el("polygon",{points:p.map(function(q){return q[0]+","+q[1];}).join(" "),
+        fill:"#7d3c98",opacity:0.13,stroke:"#7d3c98","stroke-width":1,
+        "stroke-dasharray":"4 3"}));
+    }
+
+    // dropped perpendicular from A to the line of B (drawn under the arrows)
+    var Pp=null;
+    if(showProj && magB()>1){
+      var k=dot()/(magB()*magB());
+      Pp={x:B.x*k,y:B.y*k};
+      svg.appendChild(el("line",{x1:sx(A),y1:sy(A),x2:sx(Pp),y2:sy(Pp),
+        stroke:"#9a958c","stroke-width":1.3,"stroke-dasharray":"4 3"}));
+    }
+
+    // angle arc
+    if(magA()>4&&magB()>4){
+      var a1=Math.atan2(A.y,A.x), a2=Math.atan2(B.y,B.x);
+      var d=a2-a1; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+      var R=44, pp=[];
+      for(var i=0;i<=30;i++){var t=a1+d*i/30; pp.push((CX+R*Math.cos(t))+","+(CY-R*Math.sin(t)));}
+      svg.appendChild(el("polyline",{points:pp.join(" "),fill:"none",stroke:"#7d3c98",
+        "stroke-width":1.8}));
+      var tm=a1+d/2;
+      txt(CX+(R+16)*Math.cos(tm),CY-(R+16)*Math.sin(tm)+4,
+          angle().toFixed(0)+"\u00B0","#7d3c98",12.5,"middle",600);
+    }
+
+    arrow(O,pt(A),"#1f6f8b",3.4);
+    arrow(O,pt(B),"#c0392b",3.4);
+    txt(sx(A)+12,sy(A)-8,"A","#1f6f8b",16,"start",700);
+    txt(sx(B)+12,sy(B)-8,"B","#c0392b",16,"start",700);
+
+    // projection drawn on top of B, offset sideways so both stay visible
+    if(Pp){
+      var bl=magB()||1, nx=-B.y/bl*9, ny=B.x/bl*9;
+      arrow([CX+nx,CY-ny],[sx(Pp)+nx,sy(Pp)-ny],"#1e8449",3.4,10);
+      txt(sx(Pp)/2+CX/2+nx*2.6,sy(Pp)/2+CY/2-ny*2.6,"proj of A on B","#1e8449",
+          11.5,"middle",600);
+    }
+
+    // drag handles
+    svg.appendChild(el("circle",{cx:sx(A),cy:sy(A),r:9,fill:"#1f6f8b",opacity:0.22,
+      style:"cursor:grab"}));
+    svg.appendChild(el("circle",{cx:sx(B),cy:sy(B),r:9,fill:"#c0392b",opacity:0.22,
+      style:"cursor:grab"}));
+
+    // out-of / into-page indicator for the cross product
+    var c=swapped?-cross():cross();
+    if(Math.abs(c)>40){
+      var ix=CX-190, iy=CY+150;
+      svg.appendChild(el("circle",{cx:ix,cy:iy,r:13,fill:"#fff",stroke:"#7d3c98",
+        "stroke-width":2.2}));
+      if(c>0){ svg.appendChild(el("circle",{cx:ix,cy:iy,r:4,fill:"#7d3c98"})); }
+      else{
+        svg.appendChild(el("line",{x1:ix-8,y1:iy-8,x2:ix+8,y2:iy+8,stroke:"#7d3c98","stroke-width":2.2}));
+        svg.appendChild(el("line",{x1:ix-8,y1:iy+8,x2:ix+8,y2:iy-8,stroke:"#7d3c98","stroke-width":2.2}));
+      }
+      txt(ix+22,iy+5,c>0?"out of page":"into page","#7d3c98",12,"start",600);
+    }
+    txt(14,26,"drag either arrowhead","#9a958c",11.5);
+  }
+
+  function update(){
+    var f=function(v){return v.toFixed(1);};
+    $("oA").textContent=f(A.x)+"ax + "+f(A.y)+"ay";
+    $("oB").textContent=f(B.x)+"ax + "+f(B.y)+"ay";
+    $("oTh").textContent=angle().toFixed(1)+"\u00B0";
+    $("oDot").textContent=f(dot());
+    $("oDot2").textContent=f(magA()*magB()*Math.cos(angle()*Math.PI/180));
+    $("oProj").textContent=magB()>1?f(dot()/magB()):"\u2014";
+
+    var c=swapped?-cross():cross();
+    $("lblX").innerHTML=swapped?"B &times; A":"A &times; B";
+    $("oCr").textContent=f(c)+" az";
+    $("oCr2").textContent=f(magA()*magB()*Math.sin(angle()*Math.PI/180));
+    $("oDir").textContent=Math.abs(c)<40?"\u2014":(c>0?"+z (out)":"\u2212z (into)");
+
+    var fl=$("flag"); fl.className="flag";
+    var th=angle();
+    if(Math.abs(dot())<magA()*magB()*0.02 && magA()>4 && magB()>4){
+      fl.className="flag perp";
+      fl.innerHTML="<b>A \u00B7 B \u2248 0 \u2014 perpendicular.</b> The cross product is at its maximum here.";
+    } else if(Math.abs(cross())<magA()*magB()*0.02 && magA()>4 && magB()>4){
+      fl.className="flag para";
+      fl.innerHTML="<b>A \u00D7 B \u2248 0 \u2014 "+(th<90?"parallel":"antiparallel")+
+        ".</b> The dot product is at its extreme here, not zero.";
+    }
+    draw();
+  }
+
+  // ---- dragging
+  function toWorld(evt){
+    var r=svg.getBoundingClientRect();
+    var p=evt.touches?evt.touches[0]:evt;
+    var vx=(p.clientX-r.left)/r.width*500, vy=(p.clientY-r.top)/r.height*420;
+    return {x:(vx-CX)/S, y:(CY-vy)/S};
+  }
+  function near(w,v){return Math.hypot(w.x-v.x,w.y-v.y)<26;}
+  function down(e){
+    var w=toWorld(e);
+    if(near(w,A))drag="A"; else if(near(w,B))drag="B"; else drag=null;
+    if(drag)e.preventDefault();
+  }
+  function move(e){
+    if(!drag)return; e.preventDefault();
+    var w=toWorld(e);
+    w.x=Math.max(-230,Math.min(230,w.x)); w.y=Math.max(-190,Math.min(190,w.y));
+    if(drag==="A")A=w; else B=w;
+    update();
+  }
+  function up(){drag=null;}
+  svg.addEventListener("mousedown",down);
+  svg.addEventListener("touchstart",down,{passive:false});
+  window.addEventListener("mousemove",move);
+  window.addEventListener("touchmove",move,{passive:false});
+  window.addEventListener("mouseup",up);
+  window.addEventListener("touchend",up);
+
+  $("tProj").addEventListener("click",function(){
+    showProj=!showProj; this.classList.toggle("on",showProj); update();});
+  $("tArea").addEventListener("click",function(){
+    showArea=!showArea; this.classList.toggle("on",showArea); update();});
+  $("tOrder").addEventListener("click",function(){
+    swapped=!swapped; this.classList.toggle("on",swapped);
+    this.innerHTML=swapped?"Swap to A &times; B":"Swap to B &times; A"; update();});
+
+  Array.prototype.slice.call(document.querySelectorAll("[data-set]")).forEach(function(b){
+    b.addEventListener("click",function(){
+      var k=b.getAttribute("data-set"), m=magA();
+      if(k==="perp"){B={x:-A.y*0.9,y:A.x*0.9};}
+      else if(k==="para"){B={x:A.x*0.75,y:A.y*0.75};}
+      else if(k==="anti"){B={x:-A.x*0.75,y:-A.y*0.75};}
+      else{A={x:120,y:70};B={x:60,y:135};}
+      update();
+    });
+  });
+
+  update();
+})();
+</script>
+</body>
+</html>

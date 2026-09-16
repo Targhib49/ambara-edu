@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coordinate System Explorer</title>
+<style>
+  :root{--ink:#1a1a1a;--muted:#6b6b6b;--rule:#d8d4cc;--paper:#faf9f6;
+        --rho:#c0392b;--rad:#1f6f8b;--ang:#7d3c98;--good:#1e8449;--bad:#b03a2e;}
+  *{box-sizing:border-box}
+  body{margin:0;padding:20px;background:var(--paper);color:var(--ink);line-height:1.5;
+       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:1.25rem;margin:0 0 4px;font-weight:650}
+  .sub{color:var(--muted);font-size:.9rem;margin-bottom:16px}
+  .panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,286px);gap:22px;align-items:start}
+  @media(max-width:760px){.panel{grid-template-columns:1fr}}
+  svg{width:100%;height:auto;display:block;background:#fff;border:1px solid var(--rule);
+      border-radius:8px;touch-action:none;cursor:grab}
+  svg.drag{cursor:grabbing}
+  label{display:block;font-weight:600;margin-bottom:5px;font-size:.82rem}
+  input[type=range]{width:100%;margin-bottom:12px}
+  #r{accent-color:var(--rad)} #th{accent-color:var(--ang)} #ph{accent-color:var(--ang)}
+  .card{background:#fff;border:1px solid var(--rule);border-radius:7px;padding:10px 12px;
+        margin-bottom:11px;font-size:.8rem}
+  .card h3{margin:0 0 7px;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
+           color:var(--muted);font-weight:700}
+  .row{display:flex;justify-content:space-between;font-family:ui-monospace,Menlo,monospace;
+       font-size:.78rem;margin:2px 0}
+  .row span:first-child{color:var(--muted)}
+  .bridge{border-color:var(--rho);background:#fdf4f3}
+  .bridge .ok{color:var(--good);font-weight:700}
+  button{font:inherit;font-size:.8rem;padding:6px 10px;margin:0 5px 5px 0;border:1px solid var(--rule);
+         background:#fff;border-radius:6px;cursor:pointer;color:var(--ink)}
+  button:hover{background:#f0ede8}
+  .warn{background:#fdf3f2;border:1px solid #e8c9c4;border-radius:7px;padding:9px 11px;
+        font-size:.78rem;color:var(--bad);margin-bottom:11px;display:none}
+  .note{font-size:.85rem;color:var(--muted);border-left:3px solid var(--rule);
+        padding:8px 0 8px 12px;margin-top:16px}
+  .note strong{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>One point, three descriptions</h1>
+  <div class="sub">Drag the picture to rotate it. Move the sliders and watch which numbers change together.</div>
+
+  <div class="panel">
+    <svg id="stage" viewBox="0 0 520 430" aria-label="Rotatable 3D view of a point in three coordinate systems"></svg>
+
+    <div class="controls">
+      <label for="r">r (distance from origin) = <span id="rL"></span></label>
+      <input type="range" id="r" min="20" max="150" value="110" step="1">
+
+      <label for="th">&theta; (down from +z) = <span id="thL"></span></label>
+      <input type="range" id="th" min="0" max="180" value="52" step="1">
+
+      <label for="ph">&phi; (round from +x) = <span id="phL"></span></label>
+      <input type="range" id="ph" min="0" max="359" value="48" step="1">
+
+      <div class="warn" id="warn"></div>
+
+      <div class="card">
+        <h3>Cartesian</h3>
+        <div class="row"><span>x</span><b id="cx"></b></div>
+        <div class="row"><span>y</span><b id="cy"></b></div>
+        <div class="row"><span>z</span><b id="cz"></b></div>
+      </div>
+
+      <div class="card">
+        <h3>Cylindrical</h3>
+        <div class="row"><span>&rho;</span><b id="yrho"></b></div>
+        <div class="row"><span>&phi;</span><b id="yphi"></b></div>
+        <div class="row"><span>z</span><b id="yz"></b></div>
+      </div>
+
+      <div class="card">
+        <h3>Spherical</h3>
+        <div class="row"><span>r</span><b id="sr"></b></div>
+        <div class="row"><span>&theta;</span><b id="sth"></b></div>
+        <div class="row"><span>&phi;</span><b id="sph"></b></div>
+      </div>
+
+      <div class="card bridge">
+        <h3>The bridge relation</h3>
+        <div class="row"><span>&rho;</span><b id="b1"></b></div>
+        <div class="row"><span>r sin&theta;</span><b id="b2"></b></div>
+        <div class="row"><span>agree?</span><b class="ok" id="b3"></b></div>
+      </div>
+
+      <label>Jump to</label>
+      <button data-set="90,48">&theta; = 90&deg; (xy-plane)</button>
+      <button data-set="10,48">&theta; = 10&deg; (near pole)</button>
+      <button data-set="52,135">&phi; in quadrant II</button>
+      <button id="reset">Reset view</button>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Three things to try.</strong>
+    (1) Set &theta;&nbsp;=&nbsp;90&deg;. The point drops into the xy-plane and &rho; becomes equal
+    to r &mdash; the only place those two ever coincide.
+    (2) Drag &theta; toward 0&deg;. The point climbs to the pole and &rho; collapses to nothing,
+    which is exactly why the &phi; arc length carries a factor sin&nbsp;&theta;.
+    (3) Push &phi; past 90&deg; and watch the Cartesian x go negative. That is the situation your
+    calculator's arctan cannot represent, and the red warning tells you when you are in it.
+  </div>
+</div>
+
+<script>
+(function(){
+  const NS="http://www.w3.org/2000/svg";
+  const svg=document.getElementById("stage");
+  const $=id=>document.getElementById(id);
+  const D=Math.PI/180;
+
+  let az=-58*D, el=20*D;              // camera azimuth / elevation
+  const CX=250, CY=250;               // screen centre of the 3D scene
+
+  function el2(t,a,txt){const n=document.createElementNS(NS,t);
+    for(const k in a)n.setAttribute(k,a[k]); if(txt!==undefined)n.textContent=txt; return n;}
+
+  // 3D -> 2D with an orbiting camera
+  function P(v){
+    const ca=Math.cos(az), sa=Math.sin(az), ce=Math.cos(el), se=Math.sin(el);
+    const rx=-sa, ry=ca;                            // screen-right basis
+    const ux=-ca*se, uy=-sa*se, uz=ce;              // screen-up basis
+    return [CX + (v[0]*rx + v[1]*ry), CY - (v[0]*ux + v[1]*uy + v[2]*uz)];
+  }
+
+  function arrow(a,b,col,w,head){
+    const g=document.createDocumentFragment();
+    const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1;
+    const ux=dx/L, uy=dy/L, h=head||9;
+    const bx=b[0]-ux*h, by=b[1]-uy*h;
+    g.appendChild(el2("line",{x1:a[0],y1:a[1],x2:bx,y2:by,stroke:col,
+      "stroke-width":w,"stroke-linecap":"round"}));
+    const px=-uy, py=ux;
+    g.appendChild(el2("polygon",{points:
+      `${b[0]},${b[1]} ${bx+px*h*0.42},${by+py*h*0.42} ${bx-px*h*0.42},${by-py*h*0.42}`,
+      fill:col}));
+    return g;
+  }
+
+  function draw(){
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    const r=+$("r").value, th=+$("th").value*D, ph=+$("ph").value*D;
+    const S=1.35;                                   // world -> px
+    const X=r*Math.sin(th)*Math.cos(ph)*S,
+          Y=r*Math.sin(th)*Math.sin(ph)*S,
+          Z=r*Math.cos(th)*S;
+    const rho=Math.hypot(X,Y);
+
+    const O=P([0,0,0]);
+
+    // ground grid in the xy-plane
+    const G=190;
+    for(let i=-2;i<=2;i++){
+      const t=i*G/2;
+      seg(P([t,-G,0]),P([t,G,0]),"#eeebe5",1);
+      seg(P([-G,t,0]),P([G,t,0]),"#eeebe5",1);
+    }
+
+    // axes
+    svg.appendChild(arrow(O,P([210,0,0]),"#9a958c",1.5));
+    svg.appendChild(arrow(O,P([0,210,0]),"#9a958c",1.5));
+    svg.appendChild(arrow(O,P([0,0,205]),"#9a958c",1.5));
+    lab(P([224,0,0]),"x"); lab(P([0,224,0]),"y"); lab(P([0,0,220]),"z");
+
+    // circle of constant rho in the xy-plane
+    if(rho>1){
+      const pp=[];
+      for(let a=0;a<=360;a+=6){const t=a*D; pp.push(P([rho*Math.cos(t),rho*Math.sin(t),0]).join(","));}
+      svg.appendChild(el2("polyline",{points:pp.join(" "),fill:"none",
+        stroke:"#e0dbd2","stroke-width":1.2,"stroke-dasharray":"3 4"}));
+    }
+
+    const Pt=P([X,Y,Z]), Pxy=P([X,Y,0]);
+
+    // rho, then the vertical drop, then r
+    svg.appendChild(arrow(O,Pxy,"#c0392b",2.6));
+    seg(Pxy,Pt,"#cfc9bf",1.4,"4 3");
+    svg.appendChild(arrow(O,Pt,"#1f6f8b",2.8));
+
+    // theta arc, in the vertical plane through r
+    if(th>2*D){
+      const pp=[];
+      for(let i=0;i<=30;i++){
+        const t=th*i/30, R=52;
+        pp.push(P([R*Math.sin(t)*Math.cos(ph),R*Math.sin(t)*Math.sin(ph),R*Math.cos(t)]).join(","));
+      }
+      svg.appendChild(el2("polyline",{points:pp.join(" "),fill:"none",
+        stroke:"#7d3c98","stroke-width":2}));
+      const m=P([66*Math.sin(th/2)*Math.cos(ph),66*Math.sin(th/2)*Math.sin(ph),66*Math.cos(th/2)]);
+      lab(m,"\u03B8","#7d3c98",14,600);
+    }
+    // phi arc in the xy-plane
+    if(ph>2*D){
+      const pp=[];
+      for(let i=0;i<=40;i++){const t=ph*i/40, R=44;
+        pp.push(P([R*Math.cos(t),R*Math.sin(t),0]).join(","));}
+      svg.appendChild(el2("polyline",{points:pp.join(" "),fill:"none",
+        stroke:"#7d3c98","stroke-width":2}));
+      const m=P([60*Math.cos(ph/2),60*Math.sin(ph/2),0]);
+      lab(m,"\u03C6","#7d3c98",14,600);
+    }
+
+    svg.appendChild(el2("circle",{cx:Pt[0],cy:Pt[1],r:5,fill:"#1a1a1a"}));
+    lab([Pt[0]+11,Pt[1]-8],"P","#1a1a1a",14,600);
+
+    // inline labels on the two radial lines
+    const mr=P([X*0.58,Y*0.58,Z*0.58]);
+    lab([mr[0]+10,mr[1]+5],"r","#1f6f8b",14,600);
+    const mrho=P([X*0.5,Y*0.5,0]);
+    lab([mrho[0]-4,mrho[1]+17],"\u03C1","#c0392b",14,600);
+
+    svg.appendChild(el2("text",{x:14,y:22,"font-size":11.5,fill:"#8a8a8a"},
+      "drag to rotate"));
+  }
+
+  function seg(a,b,col,w,dash){
+    var o={x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:col,"stroke-width":w};
+    if(dash)o["stroke-dasharray"]=dash;
+    svg.appendChild(el2("line",o));
+  }
+  function lab(p,t,c,s,w){
+    svg.appendChild(el2("text",{x:p[0],y:p[1],"font-size":s||13,fill:c||"#8a8a8a",
+      "text-anchor":"middle","font-weight":w||400},t));
+  }
+
+  function update(){
+    const r=+$("r").value, thd=+$("th").value, phd=+$("ph").value;
+    const th=thd*D, ph=phd*D;
+    const x=r*Math.sin(th)*Math.cos(ph), y=r*Math.sin(th)*Math.sin(ph), z=r*Math.cos(th);
+    const rho=r*Math.sin(th);
+    const f=v=>v.toFixed(2);
+
+    $("rL").textContent=r; $("thL").textContent=thd+"\u00B0"; $("phL").textContent=phd+"\u00B0";
+    $("cx").textContent=f(x); $("cy").textContent=f(y); $("cz").textContent=f(z);
+    $("yrho").textContent=f(rho); $("yphi").textContent=phd+"\u00B0"; $("yz").textContent=f(z);
+    $("sr").textContent=f(r); $("sth").textContent=thd+"\u00B0"; $("sph").textContent=phd+"\u00B0";
+    $("b1").textContent=f(rho); $("b2").textContent=f(r*Math.sin(th));
+    $("b3").textContent="\u2713 always";
+
+    const w=$("warn");
+    if(x<-0.001){
+      const calc=Math.atan(y/x)/D;
+      w.style.display="block";
+      w.innerHTML="<b>arctan would mislead you here.</b> x is negative, so arctan(y/x) returns "+
+        calc.toFixed(2)+"\u00B0 instead of "+phd+"\u00B0. You must add 180\u00B0.";
+    } else { w.style.display="none"; }
+
+    draw();
+  }
+
+  // ---- drag to orbit
+  let dragging=false, lx=0, ly=0;
+  const down=e=>{dragging=true;svg.classList.add("drag");
+    const p=e.touches?e.touches[0]:e; lx=p.clientX; ly=p.clientY;};
+  const move=e=>{
+    if(!dragging)return; e.preventDefault();
+    const p=e.touches?e.touches[0]:e;
+    az-=(p.clientX-lx)*0.01;
+    el=Math.max(-1.35,Math.min(1.45,el+(p.clientY-ly)*0.008));
+    lx=p.clientX; ly=p.clientY; draw();
+  };
+  const up=()=>{dragging=false;svg.classList.remove("drag");};
+  svg.addEventListener("mousedown",down); svg.addEventListener("touchstart",down,{passive:true});
+  window.addEventListener("mousemove",move); window.addEventListener("touchmove",move,{passive:false});
+  window.addEventListener("mouseup",up); window.addEventListener("touchend",up);
+
+  ["r","th","ph"].forEach(id=>$(id).addEventListener("input",update));
+  Array.prototype.slice.call(document.querySelectorAll("[data-set]")).forEach(function(b){
+    b.addEventListener("click",function(){
+      var v=b.getAttribute("data-set").split(",");
+      $("th").value=v[0]; $("ph").value=v[1]; update();
+    });
+  });
+  $("reset").addEventListener("click",()=>{az=-58*D; el=20*D; draw();});
+
+  update();
+})();
+</script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import { StructureOps } from "./StructureOps";
 import { StepResponse } from "./StepResponse";
 import { PidTuning } from "./PidTuning";
 import { PoleZeroExplorer } from "./PoleZeroExplorer";
+import { EmWidget } from "./EmWidget";
 
 /**
  * Client-side dispatcher for the VISUALIZATION block: maps the stored
@@ -27,6 +28,8 @@ export function VizBlock({ data }: { data: VisualizationData }) {
       return <PidTuning {...data.props} />;
     case "pole_zero_explorer":
       return <PoleZeroExplorer {...data.props} />;
+    case "em_widget":
+      return <EmWidget {...data.props} />;
     default: {
       const _exhaustive: never = data;
       return _exhaustive;

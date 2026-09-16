@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cylindrical Unit Vector Explorer</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --rule: #d8d4cc;
+    --paper: #faf9f6;
+    --rho: #c0392b;
+    --phi: #1f6f8b;
+    --cart: #8a8a8a;
+    --sum: #7d3c98;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--paper); color: var(--ink);
+    line-height: 1.5;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; margin: 0 0 4px; font-weight: 650; }
+  .sub { color: var(--muted); font-size: .9rem; margin-bottom: 18px; }
+  .panel {
+    display: grid; grid-template-columns: minmax(0,1fr) minmax(0,300px);
+    gap: 22px; align-items: start;
+  }
+  @media (max-width: 720px) { .panel { grid-template-columns: 1fr; } }
+  svg { width: 100%; height: auto; display: block; background: #fff;
+        border: 1px solid var(--rule); border-radius: 8px; }
+  .controls { font-size: .9rem; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; font-size: .85rem; }
+  input[type=range] { width: 100%; margin-bottom: 14px; accent-color: var(--phi); }
+  .readout {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: .8rem; background: #fff; border: 1px solid var(--rule);
+    border-radius: 6px; padding: 10px 12px; margin-bottom: 12px;
+  }
+  .readout div { margin: 3px 0; }
+  .k { color: var(--muted); }
+  .rho { color: var(--rho); font-weight: 600; }
+  .phi { color: var(--phi); font-weight: 600; }
+  .sum { color: var(--sum); font-weight: 600; }
+  button {
+    font: inherit; font-size: .85rem; padding: 7px 12px; margin: 0 6px 6px 0;
+    border: 1px solid var(--rule); background: #fff; border-radius: 6px;
+    cursor: pointer; color: var(--ink);
+  }
+  button:hover { background: #f0ede8; }
+  button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .note {
+    font-size: .85rem; color: var(--muted); border-left: 3px solid var(--rule);
+    padding: 8px 0 8px 12px; margin-top: 16px;
+  }
+  .note strong { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cylindrical unit vectors are not constant</h1>
+  <div class="sub">Drag &phi; and watch what happens to the arrows that share the same name.</div>
+
+  <div class="panel">
+    <svg id="stage" viewBox="0 0 460 420" aria-label="Diagram of rotating cylindrical unit vectors"></svg>
+
+    <div class="controls">
+      <label for="phi">Azimuthal angle &phi; = <span id="phiLabel">45&deg;</span></label>
+      <input type="range" id="phi" min="0" max="360" value="45" step="1">
+
+      <div class="readout">
+        <div class="k">At this position:</div>
+        <div><span class="rho">a&#961;</span> = <span id="arho"></span></div>
+        <div><span class="phi">a&#966;</span> = <span id="aphi"></span></div>
+      </div>
+
+      <label>Accumulate &int; a&#961; d&#966; from 0 to &phi;</label>
+      <button id="toggleSum">Show running sum</button>
+      <div class="readout" id="sumBox" style="display:none">
+        <div><span class="sum">&Sigma;</span> = <span id="sumVal"></span></div>
+        <div class="k" id="sumHint"></div>
+      </div>
+
+      <label>Jump to</label>
+      <button data-go="0">0&deg;</button>
+      <button data-go="90">90&deg;</button>
+      <button data-go="180">180&deg;</button>
+      <button data-go="360">360&deg;</button>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>What to notice.</strong> At &phi;&nbsp;=&nbsp;0 the arrow labelled a&#961; points along
+    +x. At &phi;&nbsp;=&nbsp;90&deg; the <em>same label</em> points along +y. It is a different
+    arrow wearing the same name &mdash; which is exactly why a&#961; cannot be pulled out of an
+    integral over &phi;. Turn on the running sum and go to 360&deg;: the total is zero, because
+    every outward arrow is cancelled by the one diametrically opposite. Stop at 180&deg; instead
+    and the sum is 2a<sub>y</sub> &mdash; the cancellation is a property of the <em>complete</em>
+    period, not of a&#961; itself.
+  </div>
+</div>
+
+<script>
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("stage");
+  const slider = document.getElementById("phi");
+  const phiLabel = document.getElementById("phiLabel");
+  const arhoOut = document.getElementById("arho");
+  const aphiOut = document.getElementById("aphi");
+  const sumBtn = document.getElementById("toggleSum");
+  const sumBox = document.getElementById("sumBox");
+  const sumVal = document.getElementById("sumVal");
+  const sumHint = document.getElementById("sumHint");
+
+  const CX = 210, CY = 215, R = 120;   // circle centre and radius (screen px)
+  const LEN = 82;                       // drawn length of a unit vector
+  let showSum = false;
+
+  function el(tag, attrs, text) {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  // screen y is inverted relative to maths y
+  const sx = v => CX + v;
+  const sy = v => CY - v;
+
+  function arrow(x1, y1, x2, y2, color, width, head) {
+    const g = document.createDocumentFragment();
+    const dx = x2 - x1, dy = y2 - y1;
+    const L = Math.hypot(dx, dy) || 1;
+    const ux = dx / L, uy = dy / L;
+    const h = head === undefined ? 9 : head;
+    const bx = x2 - ux * h, by = y2 - uy * h;
+    g.appendChild(el("line", { x1, y1, x2: bx, y2: by, stroke: color,
+      "stroke-width": width, "stroke-linecap": "round" }));
+    const px = -uy, py = ux;
+    const pts = [
+      `${x2},${y2}`,
+      `${bx + px * h * 0.42},${by + py * h * 0.42}`,
+      `${bx - px * h * 0.42},${by - py * h * 0.42}`
+    ].join(" ");
+    g.appendChild(el("polygon", { points: pts, fill: color }));
+    return g;
+  }
+
+  function draw(phiDeg) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const p = phiDeg * Math.PI / 180;
+    const cos = Math.cos(p), sin = Math.sin(p);
+
+    // --- axes
+    svg.appendChild(arrow(sx(-165), sy(0), sx(175), sy(0), "#bbb", 1.5, 8));
+    svg.appendChild(arrow(sx(0), sy(-165), sx(0), sy(175), "#bbb", 1.5, 8));
+    svg.appendChild(el("text", { x: sx(180), y: sy(-5), "font-size": 13, fill: "#888" }, "x"));
+    svg.appendChild(el("text", { x: sx(6), y: sy(180), "font-size": 13, fill: "#888" }, "y"));
+
+    // --- unit circle
+    svg.appendChild(el("circle", { cx: CX, cy: CY, r: R, fill: "none",
+      stroke: "#e5e1d9", "stroke-width": 1.5, "stroke-dasharray": "3 4" }));
+
+    // --- swept angle arc
+    const arcR = 44;
+    const large = phiDeg > 180 ? 1 : 0;
+    if (phiDeg > 0.5) {
+      const ax = sx(arcR), ay = sy(0);
+      const bx = sx(arcR * cos), by = sy(arcR * sin);
+      svg.appendChild(el("path", {
+        d: `M ${ax} ${ay} A ${arcR} ${arcR} 0 ${large} 0 ${bx} ${by}`,
+        fill: "none", stroke: "#1f6f8b", "stroke-width": 1.6, opacity: 0.55
+      }));
+    }
+    const midA = p / 2;
+    svg.appendChild(el("text", {
+      x: sx((arcR + 15) * Math.cos(midA)), y: sy((arcR + 15) * Math.sin(midA) - 4),
+      "font-size": 13, fill: "#1f6f8b", "text-anchor": "middle"
+    }, "\u03C6"));
+
+    // --- position on circle
+    const px = R * cos, py = R * sin;
+    svg.appendChild(el("line", { x1: sx(0), y1: sy(0), x2: sx(px), y2: sy(py),
+      stroke: "#cfc9bf", "stroke-width": 1.5 }));
+    svg.appendChild(el("circle", { cx: sx(px), cy: sy(py), r: 4.5, fill: "#1a1a1a" }));
+
+    // --- a_rho (radially outward from the point)
+    svg.appendChild(arrow(sx(px), sy(py), sx(px + LEN * cos), sy(py + LEN * sin),
+      "#c0392b", 3));
+    svg.appendChild(el("text", {
+      x: sx(px + (LEN + 16) * cos), y: sy(py + (LEN + 16) * sin - 5),
+      "font-size": 14, fill: "#c0392b", "font-weight": 600, "text-anchor": "middle"
+    }, "a\u03C1"));
+
+    // --- a_phi (tangential, 90 deg ahead)
+    const tcos = -sin, tsin = cos;
+    svg.appendChild(arrow(sx(px), sy(py), sx(px + LEN * tcos), sy(py + LEN * tsin),
+      "#1f6f8b", 3));
+    svg.appendChild(el("text", {
+      x: sx(px + (LEN + 16) * tcos), y: sy(py + (LEN + 16) * tsin - 5),
+      "font-size": 14, fill: "#1f6f8b", "font-weight": 600, "text-anchor": "middle"
+    }, "a\u03C6"));
+
+    // --- Cartesian decomposition of a_rho, drawn from origin for clarity
+    svg.appendChild(arrow(sx(0), sy(0), sx(LEN * cos), sy(0), "#8a8a8a", 1.6, 7));
+    svg.appendChild(arrow(sx(LEN * cos), sy(0), sx(LEN * cos), sy(LEN * sin), "#8a8a8a", 1.6, 7));
+    svg.appendChild(el("line", { x1: sx(0), y1: sy(0), x2: sx(LEN * cos), y2: sy(LEN * sin),
+      stroke: "#c0392b", "stroke-width": 1.4, "stroke-dasharray": "4 3", opacity: 0.7 }));
+    svg.appendChild(el("text", { x: sx(LEN * cos / 2), y: sy(-14),
+      "font-size": 11, fill: "#8a8a8a", "text-anchor": "middle" }, "cos\u03C6"));
+    svg.appendChild(el("text", { x: sx(LEN * cos + 8), y: sy(LEN * sin / 2),
+      "font-size": 11, fill: "#8a8a8a" }, "sin\u03C6"));
+
+    // --- running sum of integral a_rho dphi  = (sin phi) a_x + (1 - cos phi) a_y
+    if (showSum) {
+      const Sx = Math.sin(p), Sy = 1 - Math.cos(p);
+      const scale = 42;
+      if (Math.hypot(Sx, Sy) > 0.02) {
+        svg.appendChild(arrow(sx(0), sy(0), sx(Sx * scale), sy(Sy * scale), "#7d3c98", 3.2));
+      } else {
+        svg.appendChild(el("circle", { cx: sx(0), cy: sy(0), r: 7, fill: "none",
+          stroke: "#7d3c98", "stroke-width": 2.5 }));
+      }
+      svg.appendChild(el("text", { x: sx(-150), y: sy(160), "font-size": 12,
+        fill: "#7d3c98", "font-weight": 600 }, "\u2211 a\u03C1 d\u03C6"));
+    }
+
+    // labels
+    svg.appendChild(el("text", { x: 14, y: 24, "font-size": 12, fill: "#6b6b6b" },
+      "unit circle in the xy-plane"));
+  }
+
+  function update() {
+    const d = +slider.value;
+    const p = d * Math.PI / 180;
+    const cos = Math.cos(p), sin = Math.sin(p);
+    phiLabel.textContent = d + "\u00B0";
+    arhoOut.textContent = `${cos.toFixed(3)} ax + ${sin.toFixed(3)} ay`;
+    aphiOut.textContent = `${(-sin).toFixed(3)} ax + ${cos.toFixed(3)} ay`;
+
+    const Sx = Math.sin(p), Sy = 1 - Math.cos(p);
+    sumVal.textContent = `${Sx.toFixed(3)} ax + ${Sy.toFixed(3)} ay`;
+    if (d === 0) sumHint.textContent = "nothing accumulated yet";
+    else if (Math.abs(d - 180) < 1) sumHint.textContent = "half circle \u2192 exactly 2 ay";
+    else if (Math.abs(d - 360) < 1) sumHint.textContent = "full circle \u2192 exactly zero";
+    else sumHint.textContent = "partial sweep \u2014 no full cancellation yet";
+
+    draw(d);
+  }
+
+  slider.addEventListener("input", update);
+  sumBtn.addEventListener("click", function () {
+    showSum = !showSum;
+    sumBtn.classList.toggle("on", showSum);
+    sumBtn.textContent = showSum ? "Hide running sum" : "Show running sum";
+    sumBox.style.display = showSum ? "block" : "none";
+    update();
+  });
+  Array.prototype.slice.call(document.querySelectorAll("[data-go]")).forEach(function (b) {
+    b.addEventListener("click", function () {
+      slider.value = b.getAttribute("data-go");
+      update();
+    });
+  });
+
+  update();
+})();
+</script>
+</body>
+</html>

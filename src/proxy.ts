@@ -8,8 +8,10 @@ export default async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Everything except static assets, the Pyodide worker script, and the
-    // calendar feed — subscribed by calendar apps that carry no session
-    // cookie, and which authenticates on the token in its own URL.
-    "/((?!_next/static|_next/image|favicon.ico|pyodide-worker.js|api/calendar/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // EM course widgets. The widgets are iframed inside lesson pages: gating
+    // them would render the login page *inside the frame* the moment a session
+    // expired, which reads as a broken widget rather than a broken session.
+    // They are standalone vector-algebra visualisations — no student data.
+    "/((?!_next/static|_next/image|favicon.ico|pyodide-worker.js|em-widgets/|api/calendar/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

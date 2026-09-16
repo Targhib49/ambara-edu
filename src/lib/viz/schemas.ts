@@ -68,6 +68,28 @@ export const poleZeroExplorerProps = z.object({
   omegaN: z.number().min(0.1).max(10),
 });
 
+/**
+ * Electromagnetics widgets. Unlike every other entry here, these are not React
+ * — they are the self-contained HTML files the EM course ships, served from
+ * `public/em-widgets/` and framed in place. `widget` is an enum rather than a
+ * free-form src so the block can't be pointed at an arbitrary page, and so the
+ * set stays closed like the rest of the registry.
+ */
+export const EM_WIDGETS = [
+  "unit_vector_explorer",
+  "coordinate_explorer",
+  "dot_cross_playground",
+] as const;
+
+export const emWidgetProps = z.object({
+  widget: z.enum(EM_WIDGETS),
+  // The widgets' own README specifies ~700px for the explorers, ~640px for the
+  // playground; they stack to a single column below ~760px, so the renderer
+  // frames them taller on narrow screens.
+  height: z.number().int().min(320).max(1200).default(700),
+  caption: z.string().default(""),
+});
+
 /** Discriminated union stored as the VISUALIZATION block's data payload. */
 export const visualizationDataSchema = z.discriminatedUnion("component", [
   z.object({ component: z.literal("sorting_visualizer"), props: sortingVisualizerProps }),
@@ -76,6 +98,7 @@ export const visualizationDataSchema = z.discriminatedUnion("component", [
   z.object({ component: z.literal("step_response"), props: stepResponseProps }),
   z.object({ component: z.literal("pid_tuning"), props: pidTuningProps }),
   z.object({ component: z.literal("pole_zero_explorer"), props: poleZeroExplorerProps }),
+  z.object({ component: z.literal("em_widget"), props: emWidgetProps }),
 ]);
 
 export type VisualizationData = z.infer<typeof visualizationDataSchema>;
@@ -88,6 +111,7 @@ export const VIZ_LABELS: Record<VizComponentName, string> = {
   step_response: "Step / impulse response",
   pid_tuning: "PID tuning",
   pole_zero_explorer: "Pole-zero explorer",
+  em_widget: "Electromagnetics widget",
 };
 
 export const vizDefaultProps: { [K in VizComponentName]: Extract<VisualizationData, { component: K }>["props"] } = {
@@ -102,6 +126,7 @@ export const vizDefaultProps: { [K in VizComponentName]: Extract<VisualizationDa
   // Plant 1 / (s(s + 1)) — the classic integrator-plus-lag teaching plant
   pid_tuning: { plantNum: [1], plantDen: [1, 1, 0], kp: 2, ki: 1, kd: 1 },
   pole_zero_explorer: { zeta: 0.3, omegaN: 2 },
+  em_widget: { widget: "unit_vector_explorer", height: 700, caption: "" },
 };
 
 export const defaultVisualizationData: VisualizationData = {
