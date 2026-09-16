@@ -4,19 +4,21 @@ import Link from "next/link";
 import { LinkPendingIndicator } from "@/components/ui/LinkPendingIndicator";
 import { usePathname } from "next/navigation";
 import { createCollapsibleStore } from "@/lib/ui/collapsibleStore";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
 import { mobileNav } from "@/lib/ui/mobileNavStore";
 import { BeakerIcon, BookIcon, CalendarIcon, ChevronLeftIcon, ClipboardIcon, HomeIcon, CloseIcon } from "@/components/ui/icons";
 
 const { useOpen, setOpen } = createCollapsibleStore("lms:studentNavOpen");
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
-  { href: "/courses", label: "My courses", icon: BookIcon },
-  { href: "/quizzes", label: "Quizzes", icon: ClipboardIcon },
-  { href: "/sessions", label: "My sessions", icon: CalendarIcon },
+  { href: "/dashboard", label: "nav.dashboard" as MessageKey, icon: HomeIcon },
+  { href: "/courses", label: "nav.myCourses" as MessageKey, icon: BookIcon },
+  { href: "/quizzes", label: "nav.quizzes" as MessageKey, icon: ClipboardIcon },
+  { href: "/sessions", label: "nav.mySessions" as MessageKey, icon: CalendarIcon },
 ] as const;
 
-const PLAYGROUND_ITEM = { href: "/playground", label: "Playground", icon: BeakerIcon } as const;
+const PLAYGROUND_ITEM = { href: "/playground", label: "nav.playground" as MessageKey, icon: BeakerIcon } as const;
 
 function NavLinks({
   pathname,
@@ -29,16 +31,18 @@ function NavLinks({
   showPlayground: boolean;
   onLinkClick?: () => void;
 }) {
+  const t = useT();
   const items = showPlayground ? [...NAV_ITEMS, PLAYGROUND_ITEM] : NAV_ITEMS;
   return (
     <nav className="flex-1 space-y-0.5 px-2 py-2">
       {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
+        const text = t(label);
         return (
           <Link
             key={href}
             href={href}
-            title={label}
+            title={text}
             onClick={onLinkClick}
             className={`flex items-center gap-3 rounded-md border-l-2 px-3 py-2 text-sm ${
               active
@@ -47,7 +51,7 @@ function NavLinks({
             }`}
           >
             <Icon className="h-5 w-5 shrink-0" />
-            {showLabels && <span className="truncate">{label}</span>}
+            {showLabels && <span className="truncate">{text}</span>}
             {showLabels && <LinkPendingIndicator className="ml-auto" />}
           </Link>
         );
@@ -59,6 +63,7 @@ function NavLinks({
 // Mirrors TutorSidebar's structure exactly, so both roles share one visual
 // shell language — same collapse behavior, same mobile drawer.
 export function StudentSidebar({ showPlayground = false }: { showPlayground?: boolean }) {
+  const t = useT();
   const pathname = usePathname();
   const open = useOpen();
   const mobileOpen = mobileNav.useOpen();
@@ -77,7 +82,7 @@ export function StudentSidebar({ showPlayground = false }: { showPlayground?: bo
         <NavLinks pathname={pathname} showLabels={open} showPlayground={showPlayground} />
         <button
           onClick={() => setOpen(!open)}
-          aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+          aria-label={t(open ? "nav.collapseSidebar" : "nav.expandSidebar")}
           className="flex h-10 items-center justify-center border-t border-white/10 text-slate-400 hover:bg-white/5 hover:text-white"
         >
           <ChevronLeftIcon className={`h-4 w-4 transition-transform ${open ? "" : "rotate-180"}`} />
@@ -88,7 +93,7 @@ export function StudentSidebar({ showPlayground = false }: { showPlayground?: bo
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
-            aria-label="Close menu"
+            aria-label={t("nav.closeMenu")}
             onClick={() => mobileNav.setOpen(false)}
             className="absolute inset-0 bg-black/40"
           />
@@ -97,7 +102,7 @@ export function StudentSidebar({ showPlayground = false }: { showPlayground?: bo
               <span className="text-lg font-bold text-white">AmbaraEdu</span>
               <button
                 onClick={() => mobileNav.setOpen(false)}
-                aria-label="Close menu"
+                aria-label={t("nav.closeMenu")}
                 className="text-slate-400 hover:text-white"
               >
                 <CloseIcon className="h-5 w-5" />

@@ -4,20 +4,22 @@ import Link from "next/link";
 import { LinkPendingIndicator } from "@/components/ui/LinkPendingIndicator";
 import { usePathname } from "next/navigation";
 import { createCollapsibleStore } from "@/lib/ui/collapsibleStore";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
 import { mobileNav } from "@/lib/ui/mobileNavStore";
 import { BeakerIcon, HomeIcon, BookIcon, ClipboardIcon, CalendarIcon, UsersIcon, ChevronLeftIcon, CloseIcon } from "@/components/ui/icons";
 
 const { useOpen, setOpen } = createCollapsibleStore("lms:tutorNavOpen");
 
 const NAV_ITEMS = [
-  { href: "/tutor", label: "Home", icon: HomeIcon, exact: true },
-  { href: "/tutor/courses", label: "Courses", icon: BookIcon, exact: false },
-  { href: "/tutor/quizzes", label: "Quizzes", icon: ClipboardIcon, exact: false },
-  { href: "/tutor/sessions", label: "Sessions", icon: CalendarIcon, exact: false },
-  { href: "/tutor/students", label: "Students", icon: UsersIcon, exact: false },
+  { href: "/tutor", label: "nav.home" as MessageKey, icon: HomeIcon, exact: true },
+  { href: "/tutor/courses", label: "nav.courses" as MessageKey, icon: BookIcon, exact: false },
+  { href: "/tutor/quizzes", label: "nav.quizzes" as MessageKey, icon: ClipboardIcon, exact: false },
+  { href: "/tutor/sessions", label: "nav.sessions" as MessageKey, icon: CalendarIcon, exact: false },
+  { href: "/tutor/students", label: "nav.students" as MessageKey, icon: UsersIcon, exact: false },
 ] as const;
 
-const PLAYGROUND_ITEM = { href: "/tutor/playground", label: "Playground", icon: BeakerIcon, exact: false } as const;
+const PLAYGROUND_ITEM = { href: "/tutor/playground", label: "nav.playground" as MessageKey, icon: BeakerIcon, exact: false } as const;
 
 function NavLinks({
   pathname,
@@ -30,16 +32,18 @@ function NavLinks({
   showPlayground: boolean;
   onLinkClick?: () => void;
 }) {
+  const t = useT();
   const items = showPlayground ? [...NAV_ITEMS, PLAYGROUND_ITEM] : NAV_ITEMS;
   return (
     <nav className="flex-1 space-y-0.5 px-2 py-2">
       {items.map(({ href, label, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
+        const text = t(label);
         return (
           <Link
             key={href}
             href={href}
-            title={label}
+            title={text}
             onClick={onLinkClick}
             className={`flex items-center gap-3 rounded-md border-l-2 px-3 py-2 text-sm ${
               active
@@ -48,7 +52,7 @@ function NavLinks({
             }`}
           >
             <Icon className="h-5 w-5 shrink-0" />
-            {showLabels && <span className="truncate">{label}</span>}
+            {showLabels && <span className="truncate">{text}</span>}
             {showLabels && <LinkPendingIndicator className="ml-auto" />}
           </Link>
         );
@@ -58,6 +62,7 @@ function NavLinks({
 }
 
 export function TutorSidebar({ showPlayground = false }: { showPlayground?: boolean }) {
+  const t = useT();
   const pathname = usePathname();
   const open = useOpen();
   const mobileOpen = mobileNav.useOpen();
@@ -76,7 +81,7 @@ export function TutorSidebar({ showPlayground = false }: { showPlayground?: bool
         <NavLinks pathname={pathname} showLabels={open} showPlayground={showPlayground} />
         <button
           onClick={() => setOpen(!open)}
-          aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+          aria-label={t(open ? "nav.collapseSidebar" : "nav.expandSidebar")}
           className="flex h-10 items-center justify-center border-t border-white/10 text-slate-400 hover:bg-white/5 hover:text-white"
         >
           <ChevronLeftIcon className={`h-4 w-4 transition-transform ${open ? "" : "rotate-180"}`} />
@@ -87,7 +92,7 @@ export function TutorSidebar({ showPlayground = false }: { showPlayground?: bool
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
-            aria-label="Close menu"
+            aria-label={t("nav.closeMenu")}
             onClick={() => mobileNav.setOpen(false)}
             className="absolute inset-0 bg-black/40"
           />
@@ -96,7 +101,7 @@ export function TutorSidebar({ showPlayground = false }: { showPlayground?: bool
               <span className="text-lg font-bold text-white">AmbaraEdu</span>
               <button
                 onClick={() => mobileNav.setOpen(false)}
-                aria-label="Close menu"
+                aria-label={t("nav.closeMenu")}
                 className="text-slate-400 hover:text-white"
               >
                 <CloseIcon className="h-5 w-5" />

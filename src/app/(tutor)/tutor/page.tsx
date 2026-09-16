@@ -4,11 +4,13 @@ import { requireTutor } from "@/lib/auth";
 import { appClock, nowMs, formatSessionTime } from "@/lib/sessions/format";
 import { StatusBadge } from "@/components/sessions/StatusBadge";
 import { badgeColorFor, badgeColorForKey, initialsFor } from "@/lib/ui/palette";
+import { getT } from "@/lib/i18n/server";
+import type { MessageKey } from "@/lib/i18n/messages";
 
-function greetingFor(hour: number) {
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+function greetingKey(hour: number): MessageKey {
+  if (hour < 12) return "tutor.greeting.morning";
+  if (hour < 18) return "tutor.greeting.afternoon";
+  return "tutor.greeting.evening";
 }
 
 function Pill({ children }: { children: React.ReactNode }) {
@@ -23,6 +25,7 @@ export default async function TutorDashboardPage() {
   const tutor = await requireTutor();
   const now = new Date(nowMs());
   const clock = appClock(now);
+  const t = await getT();
 
   const [courses, studentCount, sessions] = await Promise.all([
     db.course.findMany({
@@ -78,19 +81,15 @@ export default async function TutorDashboardPage() {
               {clock.longDate()}
             </p>
             <h1 className="text-2xl font-semibold">
-              {greetingFor(clock.hour)}, {tutor.name.split(" ")[0]}
+              {t(greetingKey(clock.hour))}, {tutor.name.split(" ")[0]}
             </h1>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Pill>{courses.length} courses</Pill>
-          <Pill>{studentCount} students</Pill>
-          <Pill>{sessionsThisWeek} sessions this week</Pill>
-          {draftLessons > 0 && (
-            <Pill>
-              {draftLessons} draft lesson{draftLessons > 1 ? "s" : ""}
-            </Pill>
-          )}
+          <Pill>{t("tutor.chip.courses", { n: courses.length })}</Pill>
+          <Pill>{t("tutor.chip.students", { n: studentCount })}</Pill>
+          <Pill>{t("tutor.chip.sessionsThisWeek", { n: sessionsThisWeek })}</Pill>
+          {draftLessons > 0 && <Pill>{t("tutor.chip.draftLessons", { n: draftLessons })}</Pill>}
         </div>
       </div>
 
@@ -103,23 +102,23 @@ export default async function TutorDashboardPage() {
             ⏰
           </span>
           <p className="flex-1 text-sm font-medium text-amber-800">
-            {needsResponse.length} reschedule request{needsResponse.length > 1 ? "s" : ""} waiting on you
+            {t("tutor.rescheduleWaiting", { n: needsResponse.length })}
           </p>
-          <span className="shrink-0 text-sm font-medium text-amber-700">Review →</span>
+          <span className="shrink-0 text-sm font-medium text-amber-700">{t("tutor.review")}</span>
         </Link>
       )}
 
       {/* Courses — subject grid */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-medium text-zinc-900">Your courses</h2>
+          <h2 className="font-medium text-zinc-900">{t("tutor.yourCourses")}</h2>
           <Link href="/tutor/courses" className="text-sm font-medium text-blue-700 hover:underline">
-            Manage all →
+            {t("tutor.manageAllArrow")}
           </Link>
         </div>
         {courses.length === 0 ? (
           <p className="rounded-xl border border-dashed border-zinc-300 px-5 py-6 text-center text-sm text-zinc-500">
-            No courses yet — head to Courses to create one.
+            {t("tutor.noCoursesYet")}
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -143,7 +142,7 @@ export default async function TutorDashboardPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-zinc-900">{course.title}</p>
                     <p className="truncate text-xs text-zinc-500">
-                      {published}/{lessonCount} published · {course._count.enrollments} students
+                      {t("tutor.publishedOf", { done: published, total: lessonCount, students: course._count.enrollments })}
                     </p>
                   </div>
                 </Link>
@@ -155,14 +154,14 @@ export default async function TutorDashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-zinc-200 bg-white p-5">
-          <h2 className="mb-4 font-medium text-zinc-900">This week</h2>
+          <h2 className="mb-4 font-medium text-zinc-900">{t("tutor.thisWeek")}</h2>
           <div className="flex items-end justify-between gap-2" style={{ height: 72 }}>
             {weekDays.map((d) => (
               <div key={d.key} className="flex flex-1 flex-col items-center gap-1.5">
                 <div
                   className={`w-full rounded-t-md ${d.count > 0 ? "bg-blue-500/70" : "bg-zinc-100"}`}
                   style={{ height: `${Math.max(6, (d.count / maxDayCount) * 56)}px` }}
-                  title={`${d.count} session${d.count === 1 ? "" : "s"}`}
+                  title={t("tutor.sessionCount", { n: d.count })}
                 />
                 <p className="text-[11px] text-zinc-400">{d.label}</p>
               </div>
@@ -172,15 +171,15 @@ export default async function TutorDashboardPage() {
 
         <section className="rounded-xl border border-zinc-200 bg-white p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-medium text-zinc-900">Upcoming sessions</h2>
+            <h2 className="font-medium text-zinc-900">{t("tutor.upcomingSessions")}</h2>
             <Link href="/tutor/sessions" className="text-sm font-medium text-blue-700 hover:underline">
-              View all →
+              {t("tutor.viewAll")}
             </Link>
           </div>
 
           {nextSession && (
             <div className="mb-3 rounded-lg bg-blue-50 px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-blue-700">Next up</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-blue-700">{t("tutor.nextUp")}</p>
               <p className="mt-0.5 font-medium text-zinc-900">{nextSession.student.name}</p>
               <p className="text-sm text-zinc-600">
                 {formatSessionTime(nextSession.startTime)} · {nextSession.durationMinutes} min
@@ -189,7 +188,7 @@ export default async function TutorDashboardPage() {
           )}
 
           {upcoming.length === 0 ? (
-            <p className="text-sm text-zinc-500">No upcoming sessions scheduled.</p>
+            <p className="text-sm text-zinc-500">{t("tutor.noUpcoming")}</p>
           ) : (
             <ul className="divide-y divide-zinc-100">
               {upcoming.slice(1, 6).map((s) => (

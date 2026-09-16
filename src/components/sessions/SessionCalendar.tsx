@@ -6,11 +6,12 @@ import {
   buildMonthGrid,
   dateKey,
   formatTimeOnly,
+  sessionStatusKey,
   nowMs,
   startOfMonth,
   SESSION_STATUS_BADGE_CLASS,
-  SESSION_STATUS_LABEL,
 } from "@/lib/sessions/format";
+import { useT } from "@/lib/i18n/client";
 import type { SessionStatus } from "@/generated/prisma/enums";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -33,6 +34,7 @@ export function SessionCalendar({
   onSelectSession: (sessionId: string) => void;
   legendStatuses?: SessionStatus[];
 }) {
+  const t = useT();
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date(nowMs())));
 
   const byDay = useMemo(() => {
@@ -128,7 +130,7 @@ export function SessionCalendar({
         {legendStatuses.map((status) => (
           <span key={status} className="flex items-center gap-1.5">
             <span className={`h-2.5 w-2.5 rounded-sm ${SESSION_STATUS_BADGE_CLASS[status].split(" ")[0]}`} />
-            {SESSION_STATUS_LABEL[status]}
+            {t(sessionStatusKey(status))}
           </span>
         ))}
       </div>

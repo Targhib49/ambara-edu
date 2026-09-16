@@ -1,11 +1,12 @@
 import { APP_TZ } from "@/lib/scheduling";
+import { getLanguage, getT } from "@/lib/i18n/server";
 
-const GREETINGS: [hour: number, text: string][] = [
-  [11, "Selamat pagi"],
-  [15, "Selamat siang"],
-  [19, "Selamat sore"],
-  [24, "Selamat malam"],
-];
+const GREETINGS = [
+  [11, "dash.greeting.morning"],
+  [15, "dash.greeting.midday"],
+  [19, "dash.greeting.afternoon"],
+  [24, "dash.greeting.evening"],
+] as const;
 
 /**
  * Greets by the student's clock. Both the hour and the date are formatted in
@@ -13,11 +14,13 @@ const GREETINGS: [hour: number, text: string][] = [
  * say "Selamat pagi" at 7 PM WIB), so this renders on the server with no
  * hydration dance.
  */
-export function DashboardHero({ name, chips }: { name: string; chips: string[] }) {
+export async function DashboardHero({ name, chips }: { name: string; chips: string[] }) {
+  const t = await getT();
+  const language = await getLanguage();
   const now = new Date();
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: APP_TZ }).format(now));
-  const greeting = GREETINGS.find(([until]) => hour < until)?.[1] ?? "Selamat malam";
-  const dateLabel = new Intl.DateTimeFormat("id-ID", {
+  const greeting = t(GREETINGS.find(([until]) => hour < until)?.[1] ?? "dash.greeting.evening");
+  const dateLabel = new Intl.DateTimeFormat(language === "ID" ? "id-ID" : "en-GB", {
     weekday: "long",
     day: "numeric",
     month: "long",

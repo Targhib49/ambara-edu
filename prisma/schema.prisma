@@ -52,6 +52,12 @@ enum Attendance {
   NO_SHOW
 }
 
+/** Interface language. Course and quiz content stays in whatever language it was written. */
+enum Language {
+  ID
+  EN
+}
+
 enum CourseStatus {
   DRAFT
   PUBLISHED
@@ -83,6 +89,7 @@ model User {
   name              String
   role              Role          @default(STUDENT)
   studentGroup      StudentGroup? // display/defaults only, not an access constraint
+  language          Language      @default(ID)
   emailVerifiedAt   DateTime?
   enrollments       Enrollment[]
   ownedCourses      Course[]      @relation("CourseOwner")

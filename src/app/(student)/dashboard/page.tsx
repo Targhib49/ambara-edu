@@ -3,16 +3,18 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { DashboardHero } from "@/components/student/DashboardHero";
 import { StudentSessionRow } from "@/components/sessions/StudentSessionRow";
-import { SUBMISSION_STATUS_BADGE_CLASS, SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
+import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/format";
 import { badgeColorForKey } from "@/lib/ui/palette";
 import { cardCls } from "@/components/ui/styles";
 import { isEnabled } from "@/lib/flags";
 import { summarizeCourseProgress } from "@/lib/progress";
 import { nowMs } from "@/lib/sessions/format";
+import { getT } from "@/lib/i18n/server";
 
 export default async function StudentDashboardPage() {
   const student = await requireStudent();
   const courseV2 = await isEnabled("course_v2");
+  const tr = await getT();
 
   const [enrollments, submissions, sessions, standaloneQuizzes] = await Promise.all([
     db.enrollment.findMany({
@@ -157,10 +159,10 @@ export default async function StudentDashboardPage() {
   }).length;
 
   const chips = [
-    `${courses.length} course${courses.length === 1 ? "" : "s"}`,
-    `${due.length} kuis menunggu`,
-    ...(avgPct !== null ? [`rata-rata nilai ${avgPct}%`] : []),
-    `${thisMonth} sesi bulan ini`,
+    tr("dash.chip.courses", { n: courses.length }),
+    tr("dash.chip.quizzesDue", { n: due.length }),
+    ...(avgPct !== null ? [tr("dash.chip.average", { pct: avgPct })] : []),
+    tr("dash.chip.sessionsThisMonth", { n: thisMonth }),
   ];
 
   return (
@@ -169,21 +171,33 @@ export default async function StudentDashboardPage() {
 
       {/* metric tiles */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <MetricTile label="Kuis selesai" value={`${scored.length}`} sub={due.length > 0 ? `${due.length} lagi menunggu` : "semua beres 🎉"} />
-        <MetricTile label="Rata-rata nilai" value={avgPct !== null ? `${avgPct}%` : "—"} sub={bestPct !== null ? `terbaik ${bestPct}%` : "belum ada nilai"} />
         <MetricTile
-          label="Progres belajar"
-          value={progressSummary(courses)}
-          sub={courseV2 ? "materi selesai" : "dari materi ber-kuis"}
+          label={tr("dash.tile.quizzesDone")}
+          value={`${scored.length}`}
+          sub={due.length > 0 ? tr("dash.tile.quizzesLeft", { n: due.length }) : tr("dash.tile.allDone")}
         />
-        <MetricTile label="Sesi bulan ini" value={`${thisMonth}`} sub={upcoming.length > 0 ? "lanjutkan terus! 🔥" : "belum ada jadwal"} />
+        <MetricTile
+          label={tr("dash.tile.average")}
+          value={avgPct !== null ? `${avgPct}%` : "—"}
+          sub={bestPct !== null ? tr("dash.tile.best", { pct: bestPct }) : tr("dash.tile.noScores")}
+        />
+        <MetricTile
+          label={tr("dash.tile.progress")}
+          value={progressSummary(courses)}
+          sub={courseV2 ? tr("dash.tile.progressSub") : tr("dash.tile.progressSubLegacy")}
+        />
+        <MetricTile
+          label={tr("dash.tile.sessionsThisMonth")}
+          value={`${thisMonth}`}
+          sub={upcoming.length > 0 ? tr("dash.tile.keepGoing") : tr("dash.tile.noSessions")}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-6">
           {/* course progress */}
           <section className={`${cardCls} p-5`}>
-            <h2 className="text-sm font-medium text-zinc-700">Progres course</h2>
+            <h2 className="text-sm font-medium text-zinc-700">{tr("dash.courseProgress")}</h2>
             <div className="mt-4 space-y-5">
               {courses.map((t) => (
                 <div key={t.id}>
@@ -193,7 +207,7 @@ export default async function StudentDashboardPage() {
                       <span>{t.title}</span>
                     </Link>
                     <span className="shrink-0 text-xs text-zinc-500">
-                      {t.done} / {t.total} materi · {t.pct}%
+                      {tr("dash.materialCount", { done: t.done, total: t.total, pct: t.pct })}
                     </span>
                   </div>
                   <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-zinc-100">
@@ -201,7 +215,7 @@ export default async function StudentDashboardPage() {
                   </div>
                   {t.nextUp && (
                     <p className="mt-1.5 text-xs text-zinc-500">
-                      Lanjut belajar:{" "}
+                      {tr("dash.continueLearning")}{" "}
                       <Link href={`/courses/${t.id}/lessons/${t.nextUp.id}`} className="text-blue-700 hover:underline">
                         {t.nextUp.title}
                       </Link>
@@ -209,15 +223,15 @@ export default async function StudentDashboardPage() {
                   )}
                 </div>
               ))}
-              {courses.length === 0 && <p className="text-sm text-zinc-500">Belum terdaftar di course manapun.</p>}
+              {courses.length === 0 && <p className="text-sm text-zinc-500">{tr("dash.noCourses")}</p>}
             </div>
           </section>
 
           {/* recent scores + sparkline */}
           <section className={`${cardCls} p-5`}>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-zinc-700">Nilai terbaru</h2>
-              {scored.length >= 2 && <ScoreSparkline points={scored.map((s) => s.pct)} />}
+              <h2 className="text-sm font-medium text-zinc-700">{tr("dash.recentScores")}</h2>
+              {scored.length >= 2 && <ScoreSparkline points={scored.map((s) => s.pct)} label={tr("dash.scoreTrend")} />}
             </div>
             <ul className="mt-3 divide-y divide-zinc-100">
               {recent.map((s) => (
@@ -226,14 +240,14 @@ export default async function StudentDashboardPage() {
                     {s.title}
                   </Link>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SUBMISSION_STATUS_BADGE_CLASS[s.status]}`}>
-                    {SUBMISSION_STATUS_LABEL[s.status]}
+                    {tr(submissionStatusKey(s.status))}
                   </span>
                   <span className="w-20 text-right font-mono font-medium text-zinc-800">
                     {s.score}/{s.total} · {s.pct}%
                   </span>
                 </li>
               ))}
-              {recent.length === 0 && <p className="py-2 text-sm text-zinc-500">Belum ada kuis yang dikerjakan.</p>}
+              {recent.length === 0 && <p className="py-2 text-sm text-zinc-500">{tr("dash.noQuizzesYet")}</p>}
             </ul>
           </section>
         </div>
@@ -241,7 +255,7 @@ export default async function StudentDashboardPage() {
         <div className="space-y-6">
           {/* quizzes due */}
           <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-5">
-            <h2 className="text-sm font-medium text-amber-800">Kuis menunggu ({due.length})</h2>
+            <h2 className="text-sm font-medium text-amber-800">{tr("dash.quizzesWaiting", { n: due.length })}</h2>
             <ul className="mt-3 space-y-2">
               {due.slice(0, 5).map((q) => (
                 <li key={q.id}>
@@ -251,10 +265,10 @@ export default async function StudentDashboardPage() {
                   </Link>
                 </li>
               ))}
-              {due.length === 0 && <p className="text-sm text-amber-700">Tidak ada — kerja bagus! 🎉</p>}
+              {due.length === 0 && <p className="text-sm text-amber-700">{tr("dash.nothingWaiting")}</p>}
               {due.length > 5 && (
                 <Link href="/quizzes" className="block text-xs text-amber-800 underline">
-                  +{due.length - 5} lainnya — lihat semua kuis
+                  {tr("dash.moreQuizzes", { n: due.length - 5 })}
                 </Link>
               )}
             </ul>
@@ -263,9 +277,9 @@ export default async function StudentDashboardPage() {
           {/* upcoming sessions */}
           <section className="space-y-3">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-sm font-medium text-zinc-700">Sesi berikutnya</h2>
+              <h2 className="text-sm font-medium text-zinc-700">{tr("dash.nextSessions")}</h2>
               <Link href="/sessions" className="text-xs text-blue-700 hover:underline">
-                Lihat semua →
+                {tr("action.viewAll")} →
               </Link>
             </div>
             {upcoming.map((s) => (
@@ -273,7 +287,7 @@ export default async function StudentDashboardPage() {
             ))}
             {upcoming.length === 0 && (
               <p className={`${cardCls} p-4 text-sm text-zinc-500`}>
-                Belum ada sesi terjadwal.
+                {tr("dash.noSessionsScheduled")}
               </p>
             )}
           </section>
@@ -300,7 +314,7 @@ function MetricTile({ label, value, sub }: { label: string; value: string; sub: 
 }
 
 /** Tiny inline sparkline of score percentages over time (oldest → newest). */
-function ScoreSparkline({ points }: { points: number[] }) {
+function ScoreSparkline({ points, label }: { points: number[]; label: string }) {
   const w = 120;
   const h = 28;
   const step = w / Math.max(points.length - 1, 1);
@@ -308,7 +322,7 @@ function ScoreSparkline({ points }: { points: number[] }) {
     .map((p, i) => `${(i * step).toFixed(1)},${(h - 3 - (p / 100) * (h - 6)).toFixed(1)}`)
     .join(" ");
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-label="Tren nilai" className="text-blue-600">
+    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-label={label} className="text-blue-600">
       <polyline points={path} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
       {points.map((p, i) => (
         <circle key={i} cx={i * step} cy={h - 3 - (p / 100) * (h - 6)} r="2" fill="currentColor" />

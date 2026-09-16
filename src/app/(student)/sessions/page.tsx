@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { SessionsBoard } from "@/components/sessions/SessionsBoard";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { getT } from "@/lib/i18n/server";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { nowMs } from "@/lib/sessions/format";
 import { BookingPanel } from "@/components/sessions/BookingPanel";
@@ -14,6 +15,7 @@ import { feedUrlFor } from "@/lib/sessions/feedUrl";
 export default async function StudentSessionsPage() {
   const student = await requireStudent();
   const schedulingV2 = await isEnabled("scheduling_v2");
+  const t = await getT();
 
   const sessions = await db.session.findMany({
     where: { studentId: student.id },
@@ -87,12 +89,14 @@ export default async function StudentSessionsPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <PageHeader
-        crumbs={[{ label: "Home", href: "/dashboard" }, { label: "My sessions" }]}
-        title="My sessions"
+        crumbs={[{ label: t("nav.home"), href: "/dashboard" }, { label: t("sessions.title") }]}
+        title={t("sessions.title")}
         meta={
           <>
-            {upcomingCount} upcoming
-            {needsResponse > 0 && <span className="text-amber-700"> · {needsResponse} needs your response</span>}
+            {t("sessions.upcomingMeta", { n: upcomingCount })}
+            {needsResponse > 0 && (
+              <span className="text-amber-700"> · {t("sessions.needsResponse", { n: needsResponse })}</span>
+            )}
           </>
         }
         actions={
@@ -100,8 +104,8 @@ export default async function StudentSessionsPage() {
             <>
               {feedUrl && (
                 <SlideOverButton
-                  label="Calendar feed"
-                  title="Add your sessions to a calendar"
+                  label={t("sessions.calendarFeed")}
+                  title={t("sessions.calendarFeedTitle")}
                   variant="secondary"
                   icon="none"
                 >
@@ -109,9 +113,9 @@ export default async function StudentSessionsPage() {
                 </SlideOverButton>
               )}
               <SlideOverButton
-                label="Book a session"
-                title="Book a session"
-                description="Open times over the next four weeks, in WIB. Booking confirms it straight away."
+                label={t("sessions.book")}
+                title={t("sessions.book")}
+                description={t("sessions.bookDescription")}
               >
                 <BookingPanel slots={openSlots} />
               </SlideOverButton>

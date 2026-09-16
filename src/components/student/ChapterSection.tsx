@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { CompletionMark } from "@/components/ui/CompletionMark";
 import { ScoreRing } from "@/components/quiz/ScoreRing";
-import { SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
+import { submissionStatusKey } from "@/lib/quiz/format";
+import { getT } from "@/lib/i18n/server";
 import type { CourseItem } from "@/lib/courseItems";
 
 /**
@@ -54,7 +55,8 @@ export function ChapterSection({
   );
 }
 
-function ItemRow({ item, isNext }: { item: CourseItem; isNext: boolean }) {
+async function ItemRow({ item, isNext }: { item: CourseItem; isNext: boolean }) {
+  const t = await getT();
   return (
     <li>
       <Link
@@ -69,14 +71,15 @@ function ItemRow({ item, isNext }: { item: CourseItem; isNext: boolean }) {
           <span className="block truncate text-sm font-medium text-zinc-900">{item.title}</span>
           <span className="block truncate text-xs text-zinc-500">
             {item.label}
-            {item.status && ` · ${SUBMISSION_STATUS_LABEL[item.status]}`}
-            {item.scorePct !== null && ` · Grade: ${item.scorePct.toFixed(item.scorePct % 1 === 0 ? 0 : 2)}%`}
+            {item.status && ` · ${t(submissionStatusKey(item.status))}`}
+            {item.scorePct !== null &&
+              ` · ${t("outline.grade")}: ${item.scorePct.toFixed(item.scorePct % 1 === 0 ? 0 : 2)}%`}
           </span>
         </span>
 
         {isNext ? (
           <span className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-white">
-            Get started
+            {t("outline.getStarted")}
           </span>
         ) : (
           item.scorePct !== null && <ScoreRing pct={item.scorePct} size={34} />

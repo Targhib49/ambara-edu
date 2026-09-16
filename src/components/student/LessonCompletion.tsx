@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { recordLessonView, setLessonComplete } from "@/lib/actions/progress";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * Completion toggle for a lesson, and the thing that records the visit.
@@ -18,6 +19,7 @@ export function LessonCompletion({
   lessonId: string;
   initialComplete: boolean;
 }) {
+  const t = useT();
   const [complete, setComplete] = useState(initialComplete);
   const [pending, startTransition] = useTransition();
 
@@ -41,25 +43,25 @@ export function LessonCompletion({
       {complete ? (
         <>
           <span className="inline-flex items-center gap-2 text-sm font-medium text-green-700">
-            <CheckCircle /> Completed
+            <CheckCircle /> {t("lesson.completed")}
           </span>
           <button
             onClick={toggle}
             disabled={pending}
             className="ml-auto text-xs text-zinc-500 hover:text-zinc-800 hover:underline disabled:opacity-50"
           >
-            {pending ? "Saving…" : "Mark as not complete"}
+            {pending ? t("action.saving") : t("lesson.markNotComplete")}
           </button>
         </>
       ) : (
         <>
-          <span className="text-sm text-zinc-600">Finished this lesson?</span>
+          <span className="text-sm text-zinc-600">{t("lesson.finished")}</span>
           <button
             onClick={toggle}
             disabled={pending}
             className="ml-auto rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
           >
-            {pending ? "Saving…" : "Mark as complete"}
+            {pending ? t("action.saving") : t("lesson.markComplete")}
           </button>
         </>
       )}

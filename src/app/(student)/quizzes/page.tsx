@@ -1,10 +1,12 @@
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { getT } from "@/lib/i18n/server";
 import { QuizList, type StudentQuizRow } from "./QuizList";
 
 export default async function StudentQuizzesPage() {
   const student = await requireStudent();
+  const t = await getT();
 
   const quizzes = await db.quiz.findMany({
     where: {
@@ -56,9 +58,9 @@ export default async function StudentQuizzesPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <PageHeader
-        crumbs={[{ label: "Home", href: "/dashboard" }, { label: "Quizzes" }]}
-        title="Quizzes"
-        meta={`${done} of ${rows.length} attempted`}
+        crumbs={[{ label: t("nav.home"), href: "/dashboard" }, { label: t("quizzes.title") }]}
+        title={t("quizzes.title")}
+        meta={t("quizzes.attemptedMeta", { done, total: rows.length })}
       />
 
       <QuizList quizzes={rows} />

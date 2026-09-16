@@ -2,7 +2,8 @@
 
 import { formatSessionTime } from "@/lib/sessions/format";
 import type { SubmissionStatus } from "@/generated/prisma/enums";
-import { SUBMISSION_STATUS_BADGE_CLASS, SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
+import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/format";
+import { useT } from "@/lib/i18n/client";
 
 type AttemptRow = {
   attemptNumber: number;
@@ -32,6 +33,7 @@ export function ScoreHistory({
   current: AttemptRow | null; // the live submission, shown on top
   totalPoints: number;
 }) {
+  const t = useT();
   const rows = current ? [current, ...attempts] : attempts;
   if (rows.length <= 1) return null; // history is only interesting with 2+ attempts
 
@@ -49,7 +51,7 @@ export function ScoreHistory({
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${SUBMISSION_STATUS_BADGE_CLASS[row.status]}`}
             >
-              {SUBMISSION_STATUS_LABEL[row.status]}
+              {t(submissionStatusKey(row.status))}
             </span>
             <span className="ml-auto text-xs text-zinc-400">{formatSessionTime(row.submittedAt)}</span>
           </li>

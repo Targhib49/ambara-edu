@@ -3,11 +3,13 @@ import { requireStudent } from "@/lib/auth";
 import { isEnabled } from "@/lib/flags";
 import { summarizeCourseProgress } from "@/lib/progress";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { getT } from "@/lib/i18n/server";
 import { StudentCourseGrid, type StudentCourseCard } from "@/components/student/StudentCourseGrid";
 
 export default async function StudentCoursesPage() {
   const student = await requireStudent();
   const courseV2 = await isEnabled("course_v2");
+  const t = await getT();
 
   const courses = await db.course.findMany({
     where: { status: "PUBLISHED", enrollments: { some: { studentId: student.id } } },
@@ -44,12 +46,12 @@ export default async function StudentCoursesPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <PageHeader
-        crumbs={[{ label: "Home", href: "/dashboard" }, { label: "My courses" }]}
-        title="My courses"
+        crumbs={[{ label: t("nav.home"), href: "/dashboard" }, { label: t("courses.title") }]}
+        title={t("courses.title")}
         meta={
           cards.length === 0
-            ? "Nothing yet"
-            : `${cards.length} course${cards.length === 1 ? "" : "s"}${inProgress ? ` · ${inProgress} in progress` : ""}`
+            ? t("courses.nothingYet")
+            : `${t("courses.countMeta", { n: cards.length })}${inProgress ? ` · ${t("courses.inProgress", { n: inProgress })}` : ""}`
         }
       />
       <StudentCourseGrid courses={cards} />

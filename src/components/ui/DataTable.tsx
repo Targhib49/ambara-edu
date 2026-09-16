@@ -16,6 +16,7 @@ import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from "@/components/ui/icons";
 import { startNavigation } from "@/lib/ui/navigationProgress";
+import { useT } from "@/lib/i18n/client";
 
 export type Column<T> = {
   key: string;
@@ -113,6 +114,7 @@ export function DataTable<T>({
   bulkActions?: (selected: T[], clear: () => void) => ReactNode;
 }) {
   const router = useRouter();
+  const t = useT();
   // The row being opened, so it can show it's loading until the page arrives.
   const [opening, startOpening] = useTransition();
   const [openingKey, setOpeningKey] = useState<string | null>(null);
@@ -285,9 +287,9 @@ export function DataTable<T>({
             )}
             {dateOf && (
               <div className="flex items-center gap-2">
-                <input type="date" value={from} onChange={(e) => changeFrom(e.target.value)} className={control} aria-label="From date" />
+                <input type="date" value={from} onChange={(e) => changeFrom(e.target.value)} className={control} aria-label={t("table.from")} />
                 <span className="text-sm text-zinc-400">to</span>
-                <input type="date" value={to} onChange={(e) => changeTo(e.target.value)} className={control} aria-label="To date" />
+                <input type="date" value={to} onChange={(e) => changeTo(e.target.value)} className={control} aria-label={t("table.to")} />
               </div>
             )}
             {toolbar}
@@ -296,8 +298,8 @@ export function DataTable<T>({
                 <button
                   onClick={exportRows}
                   disabled={sorted.length === 0}
-                  title="Download CSV"
-                  aria-label="Download CSV"
+                  title={t("action.downloadCsv")}
+                  aria-label={t("action.downloadCsv")}
                   className="grid h-10 place-items-center rounded-md border border-zinc-300 px-3 text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <DownloadIcon className="h-[18px] w-[18px]" />
@@ -310,10 +312,10 @@ export function DataTable<T>({
 
         {bulkActions && selectedRows.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 border-b border-blue-100 bg-blue-50 px-4 py-2.5">
-            <span className="text-sm font-medium text-blue-900">{selectedRows.length} selected</span>
+            <span className="text-sm font-medium text-blue-900">{t("table.selected", { n: selectedRows.length })}</span>
             <div className="flex flex-wrap items-center gap-2">{bulkActions(selectedRows, clearSelection)}</div>
             <button onClick={clearSelection} className="ml-auto text-xs font-medium text-blue-700 hover:underline">
-              Clear
+              {t("table.clear")}
             </button>
           </div>
         )}
@@ -321,10 +323,10 @@ export function DataTable<T>({
         {sorted.length === 0 ? (
           <div className="px-5 py-10 text-center">
             <p className="text-sm font-medium text-zinc-700">
-              {rows.length === 0 ? empty.title : "Nothing matches that."}
+              {rows.length === 0 ? empty.title : t("table.noMatches")}
             </p>
             <p className="mt-1 text-sm text-zinc-500">
-              {rows.length === 0 ? empty.hint : "Try a different search, tab or date range."}
+              {rows.length === 0 ? empty.hint : t("table.noMatchesHint")}
             </p>
           </div>
         ) : (
@@ -338,7 +340,7 @@ export function DataTable<T>({
                         type="checkbox"
                         checked={allOnPageSelected}
                         onChange={togglePage}
-                        aria-label="Select every row on this page"
+                        aria-label={t("table.selectAllOnPage")}
                         className="h-4 w-4 rounded border-zinc-300"
                       />
                     </th>
@@ -402,7 +404,7 @@ export function DataTable<T>({
                               type="checkbox"
                               checked={selectedKeys.has(key)}
                               onChange={() => toggleRow(key)}
-                              aria-label="Select row"
+                              aria-label={t("table.selectRow")}
                               className="h-4 w-4 rounded border-zinc-300"
                             />
                           </td>
@@ -432,7 +434,7 @@ export function DataTable<T>({
                 {start + 1}–{Math.min(start + pageSize, sorted.length)} of {sorted.length}
               </span>
               <label className="flex items-center gap-1.5 text-xs text-zinc-500">
-                Rows
+                {t("table.rows")}
                 <select
                   value={pageSize}
                   onChange={(e) => {
@@ -453,7 +455,7 @@ export function DataTable<T>({
               <button
                 onClick={() => setPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                aria-label="Previous page"
+                aria-label={t("action.previousPage")}
                 className="grid h-9 place-items-center rounded-md border border-zinc-300 px-3 text-zinc-700 disabled:opacity-40"
               >
                 <ChevronLeftIcon className="h-4 w-4" />
@@ -464,7 +466,7 @@ export function DataTable<T>({
               <button
                 onClick={() => setPage(Math.min(pages, currentPage + 1))}
                 disabled={currentPage >= pages}
-                aria-label="Next page"
+                aria-label={t("action.nextPage")}
                 className="grid h-9 place-items-center rounded-md border border-zinc-300 px-3 text-zinc-700 disabled:opacity-40"
               >
                 <ChevronRightIcon className="h-4 w-4" />

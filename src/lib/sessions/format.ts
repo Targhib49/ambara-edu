@@ -1,6 +1,12 @@
 import type { SessionStatus } from "@/generated/prisma/enums";
+import type { MessageKey } from "@/lib/i18n/messages";
 import { fromLocalParts, toLocalParts } from "@/lib/scheduling";
 import { APP_TZ, APP_TZ_OFFSET_MINUTES } from "@/lib/scheduling";
+
+/** Dictionary key for a session status, so both roles show it in their own language. */
+export const sessionStatusKey = (status: SessionStatus) => `session.status.${status}` as MessageKey;
+
+export const attendanceKey = (value: "ATTENDED" | "NO_SHOW") => `attendance.${value}` as MessageKey;
 
 export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   PROPOSED: "Proposed",

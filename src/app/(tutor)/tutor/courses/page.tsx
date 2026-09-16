@@ -4,10 +4,12 @@ import { SlideOverButton } from "@/components/ui/SlideOver";
 import { NewCourseForm } from "@/components/courses/NewCourseForm";
 import { CourseCatalog, type CatalogCourse } from "@/components/courses/CourseCatalog";
 import { facetSuggestions } from "@/lib/courses/facets";
+import { getT } from "@/lib/i18n/server";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
 
 export default async function TutorCoursesPage() {
+  const t = await getT();
   const [courses, suggestions] = await Promise.all([
     db.course.findMany({
       orderBy: { updatedAt: "desc" },
@@ -51,11 +53,15 @@ export default async function TutorCoursesPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8">
       <PageHeader
-        crumbs={[{ label: "Home", href: "/tutor" }, { label: "Courses" }]}
-        title="Courses"
-        meta={`${published} published · ${drafts} draft${drafts === 1 ? "" : "s"}`}
+        crumbs={[{ label: t("nav.home"), href: "/tutor" }, { label: t("tutorCourses.title") }]}
+        title={t("tutorCourses.title")}
+        meta={t("tutorCourses.meta", { published, drafts })}
         actions={
-          <SlideOverButton label="New course" title="New course" description="You'll add chapters and lessons next.">
+          <SlideOverButton
+            label={t("tutorCourses.new")}
+            title={t("tutorCourses.new")}
+            description={t("tutorCourses.newDescription")}
+          >
             <NewCourseForm suggestions={suggestions} />
           </SlideOverButton>
         }

@@ -14,7 +14,8 @@ import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import { cardCls } from "@/components/ui/styles";
 import { studentOptions } from "@/lib/students/options";
 import { courseOptions } from "@/lib/courses/options";
-import { SUBMISSION_STATUS_BADGE_CLASS, SUBMISSION_STATUS_LABEL } from "@/lib/quiz/format";
+import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/format";
+import { getT } from "@/lib/i18n/server";
 import { ResetPasswordPanel } from "./ResetPasswordPanel";
 import {
   AssignCourseForm,
@@ -46,6 +47,7 @@ export default async function StudentDetailPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const tutor = await requireTutor();
+  const t = await getT();
   const { studentId } = await params;
   const { tab: requestedTab } = await searchParams;
   const tab: TabKey = (TABS as readonly string[]).includes(requestedTab ?? "") ? (requestedTab as TabKey) : "overview";
@@ -263,7 +265,7 @@ export default async function StudentDetailPage({
                         </span>
                         <span className="shrink-0 text-sm tabular-nums text-zinc-700">{q.pct === null ? "—" : `${q.pct}%`}</span>
                         <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${SUBMISSION_STATUS_BADGE_CLASS[q.status]}`}>
-                          {SUBMISSION_STATUS_LABEL[q.status]}
+                          {t(submissionStatusKey(q.status))}
                         </span>
                       </Link>
                     </li>

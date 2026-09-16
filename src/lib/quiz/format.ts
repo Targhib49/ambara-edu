@@ -1,5 +1,9 @@
 import type { QuestionType, SubmissionStatus } from "@/generated/prisma/enums";
+import type { MessageKey } from "@/lib/i18n/messages";
 import { parseCorrectAnswer, parseResponse } from "@/lib/quiz/schema";
+
+/** Dictionary key for a submission status. */
+export const submissionStatusKey = (status: SubmissionStatus) => `submission.${status}` as MessageKey;
 
 export const SUBMISSION_STATUS_LABEL: Record<SubmissionStatus, string> = {
   AUTO_GRADED: "Auto-graded",

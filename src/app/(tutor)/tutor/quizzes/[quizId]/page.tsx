@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { deleteQuiz, updateQuizMeta, setQuizStatus, addQuestion } from "@/lib/actions/quizzes";
-import { SUBMISSION_STATUS_LABEL, SUBMISSION_STATUS_BADGE_CLASS } from "@/lib/quiz/format";
+import { submissionStatusKey, SUBMISSION_STATUS_BADGE_CLASS } from "@/lib/quiz/format";
+import { getT } from "@/lib/i18n/server";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { QuestionsSection } from "@/components/quiz/QuestionsSection";
@@ -26,6 +27,7 @@ const QUESTION_TYPE_BUTTONS: { type: QuestionType; label: string }[] = [
 
 export default async function TutorQuizDetailPage({ params }: { params: Promise<{ quizId: string }> }) {
   const { quizId } = await params;
+  const t = await getT();
   const [quiz, tree] = await Promise.all([
     db.quiz.findUnique({
       where: { id: quizId },
@@ -192,7 +194,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${SUBMISSION_STATUS_BADGE_CLASS[s.status]}`}
                 >
-                  {SUBMISSION_STATUS_LABEL[s.status]}
+                  {t(submissionStatusKey(s.status))}
                 </span>
               </Link>
             ))}

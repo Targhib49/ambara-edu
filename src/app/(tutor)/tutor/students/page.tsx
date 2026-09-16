@@ -4,8 +4,10 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { formatSessionShort, nowMs } from "@/lib/sessions/format";
 import { courseOptions } from "@/lib/courses/options";
+import { getT } from "@/lib/i18n/server";
 
 export default async function StudentsPage() {
+  const t = await getT();
   const now = new Date(nowMs());
   const [students, courses] = await Promise.all([
     db.user.findMany({
@@ -43,16 +45,22 @@ export default async function StudentsPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <PageHeader
-        crumbs={[{ label: "Home", href: "/tutor" }, { label: "Students" }]}
-        title="Students"
+        crumbs={[{ label: t("nav.home"), href: "/tutor" }, { label: t("tutorStudents.title") }]}
+        title={t("tutorStudents.title")}
         meta={
           <>
-            {rows.length} student{rows.length === 1 ? "" : "s"}
-            {unenrolled > 0 && <span className="text-amber-700"> · {unenrolled} not enrolled in any course</span>}
+            {t("tutorStudents.meta", { n: rows.length })}
+            {unenrolled > 0 && (
+              <span className="text-amber-700"> · {t("tutorStudents.notEnrolledMeta", { n: unenrolled })}</span>
+            )}
           </>
         }
         actions={
-          <SlideOverButton label="Add student" title="Add a student" description="Creates their login straight away.">
+          <SlideOverButton
+            label={t("tutorStudents.add")}
+            title={t("tutorStudents.add")}
+            description={t("tutorStudents.addDescription")}
+          >
             <CreateStudentForm />
           </SlideOverButton>
         }

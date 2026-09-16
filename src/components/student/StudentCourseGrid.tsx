@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SearchIcon } from "@/components/ui/icons";
 import { badgeColorForKey } from "@/lib/ui/palette";
 import { cardCls, inputCls } from "@/components/ui/styles";
+import { useT } from "@/lib/i18n/client";
 
 export type StudentCourseCard = {
   id: string;
@@ -23,6 +24,7 @@ export type StudentCourseCard = {
 const SEARCH_FROM = 6;
 
 export function StudentCourseGrid({ courses }: { courses: StudentCourseCard[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -33,8 +35,8 @@ export function StudentCourseGrid({ courses }: { courses: StudentCourseCard[] })
   if (courses.length === 0) {
     return (
       <div className={`${cardCls} px-5 py-12 text-center`}>
-        <p className="text-sm font-medium text-zinc-700">No courses yet</p>
-        <p className="mt-1 text-sm text-zinc-500">Your tutor will add you to one.</p>
+        <p className="text-sm font-medium text-zinc-700">{t("courses.empty")}</p>
+        <p className="mt-1 text-sm text-zinc-500">{t("courses.emptyHint")}</p>
       </div>
     );
   }
@@ -48,14 +50,14 @@ export function StudentCourseGrid({ courses }: { courses: StudentCourseCard[] })
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search your courses"
+            placeholder={t("courses.searchPlaceholder")}
             className={`${inputCls} pl-9`}
           />
         </div>
       )}
 
       {shown.length === 0 ? (
-        <p className={`${cardCls} px-5 py-10 text-center text-sm text-zinc-500`}>No course matches that.</p>
+        <p className={`${cardCls} px-5 py-10 text-center text-sm text-zinc-500`}>{t("courses.noMatch")}</p>
       ) : (
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {shown.map((course) => (
@@ -81,13 +83,11 @@ export function StudentCourseGrid({ courses }: { courses: StudentCourseCard[] })
                   {course.description && <p className="mt-1 line-clamp-2 text-xs text-zinc-500">{course.description}</p>}
                   <div className="mt-auto pt-3">
                     {course.pct === null ? (
-                      <p className="text-xs text-zinc-400">{course.lessonCount} lessons</p>
+                      <p className="text-xs text-zinc-400">{t("courses.lessonsCount", { n: course.lessonCount })}</p>
                     ) : (
                       <>
                         <div className="flex items-baseline justify-between gap-2 text-[11px] text-zinc-500">
-                          <span>
-                            {course.completed}/{course.lessonCount} lessons
-                          </span>
+                          <span>{t("courses.lessonsProgress", { done: course.completed ?? 0, total: course.lessonCount })}</span>
                           <span className="font-medium text-zinc-700">{course.pct}%</span>
                         </div>
                         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-100">
