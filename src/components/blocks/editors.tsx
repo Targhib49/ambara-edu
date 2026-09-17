@@ -175,7 +175,7 @@ function VisualizationEditor({ block }: { block: { id: string; data: BlockDataMa
         try {
           props = JSON.parse(propsText);
         } catch {
-          setError("Props must be valid JSON.");
+          setError(t("blockEditor.invalidJson"));
           return;
         }
         const result = visualizationDataSchema.safeParse({ component, props });

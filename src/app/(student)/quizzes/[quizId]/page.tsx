@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { gradeQuestion } from "@/lib/quiz/grading";
 import { formatResponse } from "@/lib/quiz/format";
+import { seededPermutation } from "@/lib/quiz/shuffle";
 import { parseCorrectAnswer, submissionAnswersSchema } from "@/lib/quiz/schema";
 import { startTimedAttempt } from "@/lib/actions/quizzes";
 import { CodeSubmissionView } from "@/components/quiz/CodeSubmissionView";
@@ -55,13 +56,16 @@ export default async function StudentQuizPage({
       where: { studentId: student.id, quizId },
       orderBy: { attemptNumber: "desc" },
     }),
-    quiz.timeLimitMinutes
+    quiz.style === "TRYOUT"
       ? db.timedQuizSession.findUnique({ where: { studentId_quizId: { studentId: student.id, quizId } } })
       : null,
   ]);
 
   const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
-  const isTimed = quiz.timeLimitMinutes !== null;
+  const isTimed = quiz.style === "TRYOUT";
+  // A try-out that shuffles also shuffles each question's options — which is
+  // why its results can't show letters: the student saw different ones.
+  const shuffleOptions = isTimed && quiz.randomizeQuestionOrder;
   const attemptsUsed = attempts.length + (submission ? 1 : 0);
   const attemptsRemaining = quiz.maxAttempts !== null ? quiz.maxAttempts - attemptsUsed : null;
   const outOfAttempts = attemptsRemaining !== null && attemptsRemaining <= 0 && !timedSession;
@@ -113,7 +117,13 @@ export default async function StudentQuizPage({
         <>
           {outOfAttempts && <NoAttemptsLeftCard maxAttempts={quiz.maxAttempts!} />}
           {!outOfAttempts && submission && !timedSession && (
-            <QuizResults quiz={quiz} submission={submission} totalPoints={totalPoints} hideRetakeLink />
+            <QuizResults
+              quiz={quiz}
+              submission={submission}
+              totalPoints={totalPoints}
+              hideRetakeLink
+              showOptionLetters={!shuffleOptions}
+            />
           )}
           {!outOfAttempts && !timedSession && (
             <StartAttemptCard
@@ -136,6 +146,11 @@ export default async function StudentQuizPage({
                 points: q.points,
                 options: q.options,
                 testCases: q.type === "CODE" ? parseCorrectAnswer("CODE", q.correctAnswer).testCases : [],
+                // Seeded by the attempt, so a reload keeps the order and a retake reshuffles.
+                optionOrder:
+                  shuffleOptions && q.options.length > 1
+                    ? seededPermutation(`${timedSession.id}:${q.id}`, q.options.length)
+                    : undefined,
               }))}
             />
           )}
@@ -155,7 +170,7 @@ export default async function StudentQuizPage({
           }))}
         />
       ) : submission ? (
-        <QuizResults quiz={quiz} submission={submission} totalPoints={totalPoints} />
+        <QuizResults quiz={quiz} submission={submission} totalPoints={totalPoints} showOptionLetters />
       ) : null}
 
       <ScoreHistory
@@ -188,6 +203,7 @@ async function QuizResults({
   submission,
   totalPoints,
   hideRetakeLink,
+  showOptionLetters,
 }: {
   quiz: {
     id: string;
@@ -205,6 +221,8 @@ async function QuizResults({
   totalPoints: number;
   /** Timed quizzes render their own "start next attempt" card instead. */
   hideRetakeLink?: boolean;
+  /** False when the student answered with shuffled options. */
+  showOptionLetters: boolean;
 }) {
   const t = await getT();
   // A submission whose stored answers don't parse shouldn't take the whole page
@@ -254,7 +272,12 @@ async function QuizResults({
               </div>
             ) : (
               <p className="mt-2 text-sm text-zinc-600">
-                {t("quizPage.yourAnswer", { answer: formatResponse(q.type, answer?.response, q.options) })}
+                {t("quizPage.yourAnswer", {
+                  answer: formatResponse(q.type, answer?.response, q.options, {
+                    letters: showOptionLetters,
+                    noAnswer: t("quiz.noAnswer"),
+                  }),
+                })}
               </p>
             )}
             <div className="mt-2">

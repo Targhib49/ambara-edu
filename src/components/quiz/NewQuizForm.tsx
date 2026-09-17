@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { createQuiz, type CreateQuizState } from "@/lib/actions/quizzes";
 import { QuizPlacementFields } from "@/components/quiz/QuizPlacementFields";
+import { QuizStyleField } from "@/components/quiz/QuizStyleField";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import { btnPrimary, btnSecondary, hintCls, inputCls, labelCls } from "@/components/ui/styles";
 import { useT } from "@/lib/i18n/client";
@@ -34,10 +35,12 @@ export function NewQuizForm({
         <label className={labelCls} htmlFor="quiz-title">
           {t("courseEditor.title")}
         </label>
-        <input id="quiz-title" name="title" required placeholder="e.g. Try Out — Bab 3: Perbandingan" className={inputCls} />
+        <input id="quiz-title" name="title" required placeholder={t("newQuiz.titlePlaceholder")} className={inputCls} />
       </div>
 
       <QuizPlacementFields tree={tree} defaultCourseId={defaultCourseId} defaultChapterId={defaultChapterId} defaultLessonId={defaultLessonId} />
+
+      <QuizStyleField />
 
       <p className={hintCls}>{t("newQuiz.hint")}</p>
       {state.error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
@@ -45,7 +48,7 @@ export function NewQuizForm({
       <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
-            Cancel
+            {t("action.cancel")}
           </button>
         )}
         <button disabled={pending} className={btnPrimary}>

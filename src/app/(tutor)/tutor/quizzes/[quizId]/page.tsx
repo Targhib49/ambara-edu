@@ -10,6 +10,8 @@ import { QuestionsSection } from "@/components/quiz/QuestionsSection";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { QuizPlacementFields } from "@/components/quiz/QuizPlacementFields";
+import { QuizStyleChip, QuizStyleField } from "@/components/quiz/QuizStyleField";
+import { TRYOUT_DEFAULTS } from "@/lib/quiz/styles";
 import { placementTree } from "@/lib/courses/placement";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { QuestionType } from "@/generated/prisma/enums";
@@ -64,6 +66,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
             >
               {quiz.status === "PUBLISHED" ? t("courseStatus.PUBLISHED") : t("status.draft")}
             </span>
+            <QuizStyleChip style={quiz.style} />
           </span>
         }
         meta={
@@ -89,35 +92,45 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
             <input name="title" defaultValue={quiz.title} required className={inputCls} />
           </div>
           <QuizPlacementFields tree={tree} defaultChapterId={quiz.chapterId} defaultLessonId={quiz.lessonId} />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div>
-              <label className={labelCls}>{t("quizDetail.timeLimit")}</label>
-              <input
-                name="timeLimitMinutes"
-                type="number"
-                min={1}
-                defaultValue={quiz.timeLimitMinutes ?? ""}
-                placeholder={t("quizDetail.untimedPlaceholder")}
-                className={inputCls}
-              />
+          <div className="group space-y-3">
+            <QuizStyleField defaultStyle={quiz.style} />
+            {/* Only while Try-out is picked. Done in CSS so the page stays a server
+                component; switching a classic quiz over shows the house defaults. */}
+            <div className="hidden space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3 group-has-[input[value=TRYOUT]:checked]:block">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">{t("quizStyle.tryoutSettings")}</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className={labelCls}>{t("quizDetail.timeLimit")}</label>
+                  <input
+                    name="timeLimitMinutes"
+                    type="number"
+                    min={1}
+                    defaultValue={quiz.timeLimitMinutes ?? TRYOUT_DEFAULTS.timeLimitMinutes}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>{t("quizDetail.maxAttempts")}</label>
+                  <input
+                    name="maxAttempts"
+                    type="number"
+                    min={1}
+                    defaultValue={quiz.style === "TRYOUT" ? (quiz.maxAttempts ?? "") : TRYOUT_DEFAULTS.maxAttempts}
+                    placeholder={t("quizDetail.unlimitedPlaceholder")}
+                    className={inputCls}
+                  />
+                </div>
+                <label className="col-span-2 flex items-center gap-2 self-end pb-2 text-sm text-zinc-600 sm:col-span-1">
+                  <input
+                    type="checkbox"
+                    name="randomizeQuestionOrder"
+                    defaultChecked={quiz.style === "TRYOUT" ? quiz.randomizeQuestionOrder : TRYOUT_DEFAULTS.randomizeQuestionOrder}
+                  />
+                  {t("quizDetail.randomizeTryout")}
+                </label>
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>{t("quizDetail.maxAttempts")}</label>
-              <input
-                name="maxAttempts"
-                type="number"
-                min={1}
-                defaultValue={quiz.maxAttempts ?? ""}
-                placeholder={t("quizDetail.unlimitedPlaceholder")}
-                className={inputCls}
-              />
-            </div>
-            <label className="flex items-center gap-2 self-end pb-2 text-sm text-zinc-600">
-              <input type="checkbox" name="randomizeQuestionOrder" defaultChecked={quiz.randomizeQuestionOrder} />
-              {t("quizDetail.randomize")}
-            </label>
           </div>
-          <p className="text-xs text-zinc-400">{t("quizDetail.settingsHint")}</p>
           <SubmitButton
             pendingLabel={t("action.saving")}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"

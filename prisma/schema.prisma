@@ -77,6 +77,13 @@ enum QuizStatus {
   PUBLISHED
 }
 
+// How a quiz plays for the student. New styles are added one at a time, each
+// with its own player, so a value here always means a style that works.
+enum QuizStyle {
+  CLASSIC // every question on one page, untimed, retake freely
+  TRYOUT  // exam simulation: one question at a time against the clock
+}
+
 enum SubmissionStatus {
   AUTO_GRADED
   PENDING_REVIEW
@@ -325,8 +332,10 @@ model Quiz {
   // re-uploading a corrected sheet targets the same quiz + batch id rather
   // than creating a duplicate. One upload always maps to exactly one quiz.
   importBatchId String?      @db.Uuid
-  // Timed try-out settings. All three are opt-in (null/false = the classic
-  // untimed, unlimited-retake quiz behavior every existing quiz already has).
+  style         QuizStyle    @default(CLASSIC)
+  // Try-out settings, only read when style is TRYOUT (which always has a time
+  // limit). A classic quiz is untimed with unlimited retakes and keeps these
+  // null/false — before styles existed, a time limit is what made a try-out.
   timeLimitMinutes       Int?     // null = untimed
   maxAttempts            Int?     // null = unlimited retakes
   randomizeQuestionOrder Boolean  @default(false)

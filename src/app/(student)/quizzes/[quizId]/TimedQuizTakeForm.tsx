@@ -6,6 +6,7 @@ import { submitQuizAnswers } from "@/lib/actions/quizzes";
 import { runTestCases } from "@/lib/quiz/codeRunner";
 import { useCountdown, formatCountdown } from "@/lib/quiz/countdown";
 import { QuestionAnswerInput, type QuestionForForm } from "@/components/quiz/QuestionAnswerInput";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * One-question-at-a-time exam flow for timed try-outs — the countdown and a
@@ -24,6 +25,7 @@ export function TimedQuizTakeForm({
   startedAt: string;
   timeLimitMinutes: number;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [responses, setResponses] = useState<Record<string, unknown>>({});
@@ -83,7 +85,7 @@ export function TimedQuizTakeForm({
       >
         <div className="flex items-center justify-between gap-3">
           <span className={`text-sm font-medium ${timeLow ? "text-red-800" : "text-blue-800"}`}>
-            {timeExpired ? "Time's up — submitting…" : "Time remaining"}
+            {timeExpired ? t("takeQuiz.timeUpSubmitting") : t("takeQuiz.timeRemaining")}
           </span>
           <span className={`font-mono text-base tabular-nums ${timeLow ? "text-red-800" : "text-blue-800"}`}>
             {formatCountdown(remainingMs ?? 0)}
@@ -95,18 +97,16 @@ export function TimedQuizTakeForm({
           >
             {pending
               ? hasCodeQuestions
-                ? "Running tests & submitting…"
-                : "Submitting…"
+                ? t("takeQuiz.runningAndSubmitting")
+                : t("takeQuiz.submitting")
               : timeExpired
-                ? "Time's up"
-                : "Submit quiz"}
+                ? t("takeQuiz.timeUp")
+                : t("takeQuiz.submit")}
           </button>
         </div>
         <div className="flex items-center justify-between gap-3 text-xs font-medium text-blue-700">
-          <span>
-            Question {currentIndex + 1} / {questions.length}
-          </span>
-          <span>{answeredCount} answered</span>
+          <span>{t("takeQuiz.questionOf", { n: currentIndex + 1, total: questions.length })}</span>
+          <span>{t("takeQuiz.answered", { n: answeredCount })}</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {questions.map((q, i) => {
@@ -135,7 +135,10 @@ export function TimedQuizTakeForm({
       <fieldset disabled={timeExpired} className="contents">
         <div className="rounded-xl border border-zinc-200 bg-white p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-            Q{currentIndex + 1} · {question.points} pt{question.points === 1 ? "" : "s"}
+            {t(question.points === 1 ? "quizPage.questionLabel" : "quizPage.questionLabelPlural", {
+              i: currentIndex + 1,
+              p: question.points,
+            })}
           </p>
           <p className="mt-1 text-sm font-medium text-zinc-900">{question.prompt}</p>
           <div className="mt-3">
@@ -154,14 +157,14 @@ export function TimedQuizTakeForm({
           disabled={currentIndex === 0}
           className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-40"
         >
-          ← Previous
+          {t("takeQuiz.previous")}
         </button>
         <button
           onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
           disabled={currentIndex === questions.length - 1}
           className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-40"
         >
-          Next →
+          {t("studentLesson.next")}
         </button>
       </div>
     </div>

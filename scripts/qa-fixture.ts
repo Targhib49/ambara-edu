@@ -217,7 +217,10 @@ async function create() {
       title: "ZZQA Chapter Test",
       chapterId: lesson.chapterId,
       status: "PUBLISHED",
+      // A shuffled try-out, so answer-option shuffling gets exercised.
+      style: "TRYOUT",
       timeLimitMinutes: 20,
+      randomizeQuestionOrder: true,
       questions: {
         create: [
           { order: 0, type: "MULTIPLE_CHOICE", prompt: "3 × 3 = ?", options: ["6", "9", "12", "33"], correctAnswer: { letter: "B" }, points: 5 },
@@ -231,6 +234,7 @@ async function create() {
       chapterId: lesson.chapterId,
       lessonId: lesson.id,
       status: "PUBLISHED",
+      style: "TRYOUT",
       timeLimitMinutes: 30,
       maxAttempts: 2,
       questions: {

@@ -1,17 +1,18 @@
 import { setFeatureFlag } from "@/lib/actions/flags";
 import { getT } from "@/lib/i18n/server";
-import { FEATURE_FLAGS, FEATURE_FLAG_NAMES, type FeatureFlag, type FlagState } from "@/lib/flags";
+import type { MessageKey } from "@/lib/i18n/messages";
+import { FEATURE_FLAG_NAMES, type FeatureFlag, type FlagState } from "@/lib/flags";
 
 const CHOICES = [
-  { value: "on", label: "On" },
-  { value: "off", label: "Off" },
-  { value: "default", label: "Use default" },
-] as const;
+  { value: "on", labelKey: "flags.on" },
+  { value: "off", labelKey: "flags.off" },
+  { value: "default", labelKey: "flags.useDefault" },
+] as const satisfies readonly { value: string; labelKey: MessageKey }[];
 
-function sourceNote(state: FlagState) {
-  if (state.source === "cookie") return "overridden in this browser";
-  if (state.source === "env") return "on for everyone (environment)";
-  return "off for everyone (environment)";
+function sourceNoteKey(state: FlagState): MessageKey {
+  if (state.source === "cookie") return "flags.sourceCookie";
+  if (state.source === "env") return "flags.sourceEnvOn";
+  return "flags.sourceEnvOff";
 }
 
 /**
@@ -24,10 +25,7 @@ export async function FeatureFlagPanel({ states }: { states: Record<FeatureFlag,
   return (
     <section className="rounded-xl border border-zinc-200 bg-white p-6">
       <h2 className="font-medium text-zinc-900">{t("flags.title")}</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        Work in progress, off for everyone until it&rsquo;s ready. Switching one on here affects
-        only this browser — your students keep seeing the current version.
-      </p>
+      <p className="mt-1 text-sm text-zinc-500">{t("flags.intro")}</p>
 
       <ul className="mt-5 space-y-5">
         {FEATURE_FLAG_NAMES.map((flag) => {
@@ -36,10 +34,10 @@ export async function FeatureFlagPanel({ states }: { states: Record<FeatureFlag,
           return (
             <li key={flag} className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-zinc-900">{FEATURE_FLAGS[flag].label}</p>
-                <p className="mt-0.5 text-sm text-zinc-500">{FEATURE_FLAGS[flag].description}</p>
+                <p className="text-sm font-medium text-zinc-900">{t(`flag.${flag}.label` as MessageKey)}</p>
+                <p className="mt-0.5 text-sm text-zinc-500">{t(`flag.${flag}.description` as MessageKey)}</p>
                 <p className="mt-1 text-xs text-zinc-400">
-                  Currently {state.enabled ? "on" : "off"} — {sourceNote(state)}
+                  {t(state.enabled ? "flags.currentlyOn" : "flags.currentlyOff", { source: t(sourceNoteKey(state)) })}
                 </p>
               </div>
               <div className="flex shrink-0 overflow-hidden rounded-md border border-zinc-300">
@@ -56,7 +54,7 @@ export async function FeatureFlagPanel({ states }: { states: Record<FeatureFlag,
                           : "bg-white text-zinc-600 hover:bg-zinc-50"
                       }`}
                     >
-                      {choice.label}
+                      {t(choice.labelKey)}
                     </button>
                   </form>
                 ))}

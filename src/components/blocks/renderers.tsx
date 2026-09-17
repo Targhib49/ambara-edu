@@ -215,7 +215,7 @@ async function VideoEmbedRenderer({ url, caption }: { url: string; caption: stri
       <div className="relative aspect-video overflow-hidden rounded-xl border border-zinc-200 bg-black shadow-sm">
         <iframe
           src={video.embedUrl}
-          title={caption || "Lesson video"}
+          title={caption || t("video.iframeTitle")}
           loading="lazy"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           referrerPolicy="strict-origin-when-cross-origin"

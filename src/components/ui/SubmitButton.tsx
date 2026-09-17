@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Spinner } from "@/components/ui/Spinner";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * Submit button for server-action forms: disables itself and shows a spinner
@@ -12,7 +13,7 @@ import { Spinner } from "@/components/ui/Spinner";
  */
 export function SubmitButton({
   children,
-  pendingLabel = "Working…",
+  pendingLabel,
   className,
   disabled,
   title,
@@ -25,6 +26,7 @@ export function SubmitButton({
   title?: string;
   "aria-label"?: string;
 }) {
+  const t = useT();
   const { pending } = useFormStatus();
   return (
     <button
@@ -38,7 +40,7 @@ export function SubmitButton({
       {pending ? (
         <span className="inline-flex items-center justify-center gap-1.5">
           <Spinner />
-          {pendingLabel}
+          {pendingLabel ?? t("action.working")}
         </span>
       ) : (
         children

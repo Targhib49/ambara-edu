@@ -11,6 +11,13 @@ export type QuestionForForm = {
   points: number;
   options: string[];
   testCases: TestCase[]; // CODE questions only, [] otherwise
+  /**
+   * Display order for choice options, as indexes into `options`. The student
+   * sees fresh A–D labels in this order, but the answer still records the
+   * authored letter — so grading, stored answers and the tutor's review never
+   * need to know a shuffle happened. Omitted means authored order.
+   */
+  optionOrder?: number[];
 };
 
 const LETTERS = ["A", "B", "C", "D"] as const;
@@ -30,16 +37,19 @@ export function QuestionAnswerInput({
   response: unknown;
   onChange: (response: unknown) => void;
 }) {
+  const order = question.optionOrder ?? question.options.map((_, i) => i);
+
   if (question.type === "MULTIPLE_CHOICE") {
     return (
       <div className="space-y-2">
-        {question.options.map((opt, oi) => {
-          const selected = (response as { letter?: string } | undefined)?.letter === LETTERS[oi];
+        {order.map((original, position) => {
+          const opt = question.options[original];
+          const selected = (response as { letter?: string } | undefined)?.letter === LETTERS[original];
           return (
             <button
-              key={oi}
+              key={original}
               type="button"
-              onClick={() => onChange({ letter: LETTERS[oi] })}
+              onClick={() => onChange({ letter: LETTERS[original] })}
               className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition ${
                 selected
                   ? "border-blue-500 bg-blue-50 text-blue-900"
@@ -51,7 +61,7 @@ export function QuestionAnswerInput({
                   selected ? "border-blue-600 bg-blue-600 text-white" : "border-zinc-300 text-zinc-400"
                 }`}
               >
-                {selected ? "✓" : LETTERS[oi]}
+                {selected ? "✓" : LETTERS[position]}
               </span>
               {opt}
             </button>
@@ -71,13 +81,14 @@ export function QuestionAnswerInput({
     }
     return (
       <div className="space-y-2">
-        {question.options.map((opt, oi) => {
-          const selected = selectedLetters.includes(LETTERS[oi]);
+        {order.map((original, position) => {
+          const opt = question.options[original];
+          const selected = selectedLetters.includes(LETTERS[original]);
           return (
             <button
-              key={oi}
+              key={original}
               type="button"
-              onClick={() => toggle(LETTERS[oi])}
+              onClick={() => toggle(LETTERS[original])}
               className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition ${
                 selected
                   ? "border-blue-500 bg-blue-50 text-blue-900"
@@ -89,7 +100,7 @@ export function QuestionAnswerInput({
                   selected ? "border-blue-600 bg-blue-600 text-white" : "border-zinc-300 text-zinc-400"
                 }`}
               >
-                {selected ? "✓" : LETTERS[oi]}
+                {selected ? "✓" : LETTERS[position]}
               </span>
               {opt}
             </button>

@@ -4,14 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { python } from "@codemirror/lang-python";
 import { isPythonReady, runPythonCode } from "@/lib/pyodideWorker";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
 
 type OutputLine = { stream: "stdout" | "stderr" | "result"; text: string };
 type RunState = "idle" | "booting" | "running";
 
-const RUN_STATE_LABELS: Record<RunState, string> = {
-  idle: "Run ▶",
-  booting: "Loading Python…",
-  running: "Running…",
+const RUN_STATE_KEYS: Record<RunState, MessageKey> = {
+  idle: "scratchpad.run",
+  booting: "scratchpad.loadingPython",
+  running: "code.running",
 };
 
 /**
@@ -19,6 +21,7 @@ const RUN_STATE_LABELS: Record<RunState, string> = {
  * edits freely and runs as often as they like; nothing is saved or submitted.
  */
 export function CodeEditorBlock({ starterCode }: { starterCode: string }) {
+  const t = useT();
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [runState, setRunState] = useState<RunState>("idle");
@@ -78,24 +81,24 @@ export function CodeEditorBlock({ starterCode }: { starterCode: string }) {
           disabled={runState !== "idle"}
           className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
         >
-          {RUN_STATE_LABELS[runState]}
+          {t(RUN_STATE_KEYS[runState])}
         </button>
         <button
           onClick={reset}
           disabled={runState !== "idle"}
           className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
         >
-          Reset
+          {t("scratchpad.reset")}
         </button>
         <span className="ml-auto text-xs text-zinc-400">
-          Python runs in your browser
-          {runState === "booting" && " — first load is ~10 MB, then cached"}
+          {t("scratchpad.runsInBrowser")}
+          {runState === "booting" && t("scratchpad.firstLoad")}
         </span>
       </div>
       {output !== null && (
         <pre className="max-h-64 overflow-auto border-t border-zinc-200 bg-zinc-900 px-4 py-3 text-xs leading-relaxed whitespace-pre-wrap">
           {output.length === 0 ? (
-            <span className="italic text-zinc-500">(no output)</span>
+            <span className="italic text-zinc-500">{t("code.noOutput")}</span>
           ) : (
             output.map((line, i) => (
               <span

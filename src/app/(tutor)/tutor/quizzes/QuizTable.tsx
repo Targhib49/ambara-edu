@@ -5,6 +5,9 @@ import Link from "next/link";
 import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { Combobox } from "@/components/ui/Combobox";
 import { controlCls } from "@/components/ui/styles";
+import { QuizStyleChip } from "@/components/quiz/QuizStyleField";
+import { QUIZ_STYLES, quizStyleKey } from "@/lib/quiz/styles";
+import type { QuizStyle } from "@/generated/prisma/enums";
 import { useT } from "@/lib/i18n/client";
 import type { Translate } from "@/lib/i18n/translate";
 
@@ -12,6 +15,7 @@ export type TutorQuizRow = {
   id: string;
   title: string;
   isDraft: boolean;
+  style: QuizStyle;
   courseId: string | null;
   courseTitle: string | null;
   chapterId: string | null;
@@ -49,6 +53,7 @@ const makeColumns = (t: Translate): Column<TutorQuizRow>[] => [
         <Link href={`/tutor/quizzes/${q.id}`} className="font-medium text-zinc-900 hover:text-blue-700">
           {q.title}
         </Link>
+        <QuizStyleChip style={q.style} />
         {q.isDraft && <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("status.draft")}</span>}
       </span>
     ),
@@ -148,6 +153,7 @@ export function QuizTable({
   const [courseId, setCourseId] = useState(initialCourseId ?? "");
   const [chapterId, setChapterId] = useState("");
   const [kind, setKind] = useState<"" | "lesson" | "chapter">("");
+  const [style, setStyle] = useState<"" | QuizStyle>("");
 
   const course = courses.find((c) => c.id === courseId) ?? null;
   const rows = useMemo(
@@ -156,15 +162,16 @@ export function QuizTable({
         (q) =>
           (!courseId || q.courseId === courseId) &&
           (!chapterId || q.chapterId === chapterId) &&
-          (!kind || (kind === "lesson" ? q.lessonTitle !== null : q.lessonTitle === null))
+          (!kind || (kind === "lesson" ? q.lessonTitle !== null : q.lessonTitle === null)) &&
+          (!style || q.style === style)
       ),
-    [quizzes, courseId, chapterId, kind]
+    [quizzes, courseId, chapterId, kind, style]
   );
 
   return (
     <DataTable
       // Remount on filter change so paging starts again from the first page.
-      key={`${courseId}|${chapterId}|${kind}`}
+      key={`${courseId}|${chapterId}|${kind}|${style}`}
       rows={rows}
       columns={makeColumns(t)}
       rowKey={(q) => q.id}
@@ -203,6 +210,19 @@ export function QuizTable({
             <option value="">{t("quizTable.anyPosition")}</option>
             <option value="lesson">{t("quizTable.afterLesson")}</option>
             <option value="chapter">{t("courseEditor.endOfChapter")}</option>
+          </select>
+          <select
+            value={style}
+            onChange={(e) => setStyle(e.target.value as typeof style)}
+            aria-label={t("quizStyle.filter")}
+            className={`${controlCls} w-40`}
+          >
+            <option value="">{t("quizStyle.anyStyle")}</option>
+            {QUIZ_STYLES.map((s) => (
+              <option key={s} value={s}>
+                {t(quizStyleKey(s))}
+              </option>
+            ))}
           </select>
         </div>
       }

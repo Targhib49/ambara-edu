@@ -118,7 +118,7 @@ export default async function StudentTrackPage({
         <Breadcrumbs
           items={[
             { label: "Home", href: "/dashboard" },
-            { label: "My courses", href: "/courses" },
+            { label: t("nav.myCourses"), href: "/courses" },
             { label: course.title },
           ]}
         />

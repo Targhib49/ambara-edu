@@ -63,7 +63,7 @@ export default async function StudentLessonPage({
       <Breadcrumbs
         items={[
           { label: "Home", href: "/dashboard" },
-          { label: "My courses", href: "/courses" },
+          { label: t("nav.myCourses"), href: "/courses" },
           { label: lesson.chapter.course.title, href: `/courses/${courseId}` },
           { label: lesson.title },
         ]}

@@ -76,7 +76,7 @@ export default async function SubmissionReviewPage({
               <div className="mt-3 space-y-1 text-sm">
                 <p>
                   <span className="text-zinc-500">{t("review.answer")}</span>
-                  {formatResponse(question.type, response, question.options)}
+                  {formatResponse(question.type, response, question.options, { noAnswer: t("quiz.noAnswer") })}
                 </p>
                 <p>
                   <span className="text-zinc-500">{t("review.correctAnswer")}</span>

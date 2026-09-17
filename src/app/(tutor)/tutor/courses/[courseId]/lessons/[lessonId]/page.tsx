@@ -13,6 +13,7 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { NewQuizForm } from "@/components/quiz/NewQuizForm";
 import { ClipboardIcon } from "@/components/ui/icons";
+import { QuizStyleChip } from "@/components/quiz/QuizStyleField";
 import { getT } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 
@@ -41,7 +42,7 @@ export default async function LessonEditorPage({
     include: {
       chapter: { select: { title: true, courseId: true, course: { select: { title: true } } } },
       blocks: { orderBy: { order: "asc" } },
-      quizzes: { select: { id: true, title: true, status: true, _count: { select: { questions: true } } }, orderBy: { createdAt: "asc" } },
+      quizzes: { select: { id: true, title: true, status: true, style: true, _count: { select: { questions: true } } }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!lesson || lesson.chapter.courseId !== courseId) notFound();
@@ -158,6 +159,7 @@ export default async function LessonEditorPage({
                 <Link href={`/tutor/quizzes/${quiz.id}`} className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-zinc-50">
                   <ClipboardIcon className="h-4 w-4 shrink-0 text-violet-500" />
                   <span className="min-w-0 flex-1 truncate text-zinc-800">{quiz.title}</span>
+                  <QuizStyleChip style={quiz.style} />
                   {quiz.status === "DRAFT" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("status.draft")}</span>}
                   <span className="text-xs tabular-nums text-zinc-500">
                     {t(quiz._count.questions === 1 ? "lessonEditor.questionCount" : "lessonEditor.questionCountPlural", {

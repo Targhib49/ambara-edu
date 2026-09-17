@@ -2,6 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { getT } from "@/lib/i18n/server";
+import { TRYOUT_DEFAULTS, parseQuizStyle } from "@/lib/quiz/styles";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -147,7 +148,17 @@ export async function createQuiz(_prev: CreateQuizState, formData: FormData): Pr
   const placement = await resolvePlacement(formData.get("chapterId"), formData.get("lessonId"));
   if ("error" in placement) return { error: placement.error };
 
-  const quiz = await db.quiz.create({ data: { title, ...placement, status: "DRAFT" } });
+  const style = parseQuizStyle(formData.get("style"));
+  const quiz = await db.quiz.create({
+    data: {
+      title,
+      ...placement,
+      status: "DRAFT",
+      style,
+      // A new try-out starts with the settings every existing one uses.
+      ...(style === "TRYOUT" ? TRYOUT_DEFAULTS : {}),
+    },
+  });
   revalidateQuizLists();
   redirect(`/tutor/quizzes/${quiz.id}`);
 }
@@ -160,19 +171,32 @@ export async function updateQuizMeta(quizId: string, formData: FormData) {
   // meanwhile) keeps the quiz where it was rather than failing the whole save.
   const placement = await resolvePlacement(formData.get("chapterId"), formData.get("lessonId"));
 
-  const timeLimitRaw = String(formData.get("timeLimitMinutes") ?? "").trim();
-  const maxAttemptsRaw = String(formData.get("maxAttempts") ?? "").trim();
-  const timeLimitMinutes = timeLimitRaw ? Math.max(1, Math.round(Number(timeLimitRaw))) : null;
-  const maxAttempts = maxAttemptsRaw ? Math.max(1, Math.round(Number(maxAttemptsRaw))) : null;
-  const randomizeQuestionOrder = formData.get("randomizeQuestionOrder") === "on";
+  const style = parseQuizStyle(formData.get("style"));
+  // The try-out fields stay in the form (hidden) whatever the style, so they
+  // are only read for a try-out. A classic quiz is untimed with unlimited
+  // retakes — before styles existed those settings did nothing for it anyway.
+  let tryout: { timeLimitMinutes: number | null; maxAttempts: number | null; randomizeQuestionOrder: boolean } = {
+    timeLimitMinutes: null,
+    maxAttempts: null,
+    randomizeQuestionOrder: false,
+  };
+  if (style === "TRYOUT") {
+    const timeLimitRaw = String(formData.get("timeLimitMinutes") ?? "").trim();
+    const maxAttemptsRaw = String(formData.get("maxAttempts") ?? "").trim();
+    tryout = {
+      // A try-out is defined by its clock, so a blank limit takes the default.
+      timeLimitMinutes: timeLimitRaw ? Math.max(1, Math.round(Number(timeLimitRaw))) : TRYOUT_DEFAULTS.timeLimitMinutes,
+      maxAttempts: maxAttemptsRaw ? Math.max(1, Math.round(Number(maxAttemptsRaw))) : null,
+      randomizeQuestionOrder: formData.get("randomizeQuestionOrder") === "on",
+    };
+  }
 
   await db.quiz.update({
     where: { id: quizId },
     data: {
       title,
-      timeLimitMinutes,
-      maxAttempts,
-      randomizeQuestionOrder,
+      style,
+      ...tryout,
       ...("error" in placement ? {} : placement),
     },
   });
@@ -305,7 +329,7 @@ export async function startTimedAttempt(quizId: string) {
     where: { id: quizId },
     include: { questions: { select: { id: true }, orderBy: { order: "asc" } } },
   });
-  if (!quiz.timeLimitMinutes) return;
+  if (quiz.style !== "TRYOUT" || !quiz.timeLimitMinutes) return;
 
   const existing = await db.timedQuizSession.findUnique({
     where: { studentId_quizId: { studentId: student.id, quizId } },

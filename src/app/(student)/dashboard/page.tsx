@@ -115,7 +115,7 @@ export default async function StudentDashboardPage() {
   );
   const tryOutsDue = standaloneQuizzes
     .filter((q) => !submittedQuizIds.has(q.id))
-    .map((q) => ({ id: q.id, title: q.title, context: q.chapter ? `${q.chapter.course.title} · ${q.chapter.title}` : "Chapter test" }));
+    .map((q) => ({ id: q.id, title: q.title, context: q.chapter ? `${q.chapter.course.title} · ${q.chapter.title}` : tr("courseEditor.chapterTest") }));
   const due = [...tryOutsDue, ...lessonQuizzesDue];
 
   // --- scores

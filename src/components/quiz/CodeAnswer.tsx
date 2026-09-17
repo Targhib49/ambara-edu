@@ -5,6 +5,7 @@ import { EditorView, basicSetup } from "codemirror";
 import { python } from "@codemirror/lang-python";
 import { runTestCases } from "@/lib/quiz/codeRunner";
 import type { TestCase, TestResult } from "@/lib/quiz/schema";
+import { useT } from "@/lib/i18n/client";
 
 type RunState = "idle" | "booting" | "running";
 
@@ -26,6 +27,7 @@ export function CodeAnswer({
   initialCode?: string;
   onCodeChange: (code: string) => void;
 }) {
+  const t = useT();
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [runState, setRunState] = useState<RunState>("idle");
@@ -86,12 +88,12 @@ export function CodeAnswer({
             disabled={runState !== "idle"}
             className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
           >
-            {runState === "idle" ? "Run tests" : "Running…"}
+            {runState === "idle" ? t("code.runTests") : t("code.running")}
           </button>
           <span className="text-xs text-zinc-500">
             {results
-              ? `${passedCount} / ${results.length} test case${results.length === 1 ? "" : "s"} passed`
-              : `${testCases.length} test case${testCases.length === 1 ? "" : "s"} — they run again when you submit`}
+              ? t(results.length === 1 ? "code.passedOne" : "code.passed", { passed: passedCount, total: results.length })
+              : t(testCases.length === 1 ? "code.pendingOne" : "code.pending", { n: testCases.length })}
           </span>
         </div>
       )}
@@ -108,11 +110,11 @@ export function CodeAnswer({
               </span>
               <div className="min-w-0 flex-1 space-y-0.5 font-mono">
                 {testCases[i]?.input && (
-                  <p className="truncate text-zinc-500">input: {testCases[i].input}</p>
+                  <p className="truncate text-zinc-500">{t("code.inputLabel", { value: testCases[i].input })}</p>
                 )}
-                <p className="truncate text-zinc-500">expected: {testCases[i]?.expectedOutput}</p>
+                <p className="truncate text-zinc-500">{t("code.expectedLabel", { value: testCases[i]?.expectedOutput ?? "" })}</p>
                 <p className={`truncate ${r.passed ? "text-zinc-700" : "text-red-600"}`}>
-                  got: {r.actualOutput.trim() || "(no output)"}
+                  {t("code.gotLabel", { value: r.actualOutput.trim() || t("code.noOutput") })}
                 </p>
               </div>
             </div>

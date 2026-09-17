@@ -20,12 +20,14 @@ import { btnDanger, btnPrimary, btnSecondary, btnSmall, cardCls, hintCls, inputC
 import { getT } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translate } from "@/lib/i18n/translate";
-import type { CourseStatus } from "@/generated/prisma/enums";
+import type { CourseStatus, QuizStyle } from "@/generated/prisma/enums";
+import { QuizStyleChip } from "@/components/quiz/QuizStyleField";
 
 const quizSelect = {
   id: true,
   title: true,
   status: true,
+  style: true,
   timeLimitMinutes: true,
   _count: { select: { questions: true, submissions: true } },
 } as const;
@@ -34,6 +36,7 @@ type QuizSummary = {
   id: string;
   title: string;
   status: "DRAFT" | "PUBLISHED";
+  style: QuizStyle;
   timeLimitMinutes: number | null;
   _count: { questions: number; submissions: number };
 };
@@ -175,6 +178,7 @@ async function QuizRow({ quiz, indent }: { quiz: QuizSummary; indent?: boolean }
     >
       <ClipboardIcon className="h-4 w-4 shrink-0 text-violet-500" />
       <span className="min-w-0 flex-1 truncate text-zinc-700">{quiz.title}</span>
+      <QuizStyleChip style={quiz.style} />
       {quiz.status === "DRAFT" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("status.draft")}</span>}
       {quiz.timeLimitMinutes && <span className="hidden whitespace-nowrap text-xs text-zinc-500 sm:inline">{t("count.minutes", { n: quiz.timeLimitMinutes })}</span>}
       <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums text-zinc-500 sm:inline">{count(t, quiz._count.questions, "count.question", "count.questions")}</span>
