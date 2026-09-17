@@ -142,6 +142,72 @@ export async function deleteQuiz(quizId: string) {
 
 export type CreateQuizState = { error?: string };
 
+export type DuplicateQuizState = { error?: string };
+
+/**
+ * Copies a quiz's questions into a new draft quiz — usually in another style,
+ * so the same material can run as, say, a classic quiz and mastery practice
+ * after one sesi without writing the questions twice.
+ *
+ * Only content is copied. Results, attempts and practice progress belong to
+ * the original, and the copy isn't tied to the original's import batch, so
+ * re-uploading that sheet still updates the original rather than both.
+ */
+export async function duplicateQuiz(
+  sourceQuizId: string,
+  _prev: DuplicateQuizState,
+  formData: FormData
+): Promise<DuplicateQuizState> {
+  const t = await getT();
+  await requireTutor();
+  const source = await db.quiz.findUnique({
+    where: { id: sourceQuizId },
+    include: { questions: { orderBy: { order: "asc" } } },
+  });
+  if (!source) return { error: t("action.quizGone") };
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { error: t("action.quizTitleRequired") };
+  const placement = await resolvePlacement(formData.get("chapterId"), formData.get("lessonId"));
+  if ("error" in placement) return { error: placement.error };
+  const style = parseQuizStyle(formData.get("style"));
+
+  // A try-out copied as a try-out keeps its clock and attempts; any other
+  // quiz becoming a try-out starts on the house defaults.
+  const tryout =
+    style !== "TRYOUT"
+      ? {}
+      : source.style === "TRYOUT"
+        ? {
+            timeLimitMinutes: source.timeLimitMinutes ?? TRYOUT_DEFAULTS.timeLimitMinutes,
+            maxAttempts: source.maxAttempts,
+            randomizeQuestionOrder: source.randomizeQuestionOrder,
+          }
+        : TRYOUT_DEFAULTS;
+
+  const copy = await db.$transaction(async (tx) => {
+    const quiz = await tx.quiz.create({
+      data: { title, ...placement, status: "DRAFT", style, ...tryout },
+    });
+    await tx.question.createMany({
+      data: source.questions.map((q) => ({
+        quizId: quiz.id,
+        order: q.order,
+        type: q.type,
+        prompt: q.prompt,
+        points: q.points,
+        explanation: q.explanation,
+        options: q.options,
+        correctAnswer: q.correctAnswer as Prisma.InputJsonValue,
+      })),
+    });
+    return quiz;
+  });
+
+  revalidateQuizLists();
+  redirect(`/tutor/quizzes/${copy.id}`);
+}
+
 export async function createQuiz(_prev: CreateQuizState, formData: FormData): Promise<CreateQuizState> {
   const t = await getT();
   await requireTutor();

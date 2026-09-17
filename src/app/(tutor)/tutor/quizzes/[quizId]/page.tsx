@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { isGradedStyle } from "@/lib/quiz/styles";
+import { SlideOverButton } from "@/components/ui/SlideOver";
+import { DuplicateQuizForm } from "@/components/quiz/DuplicateQuizForm";
+import { QUIZ_STYLES, isGradedStyle } from "@/lib/quiz/styles";
 import { isPracticable } from "@/lib/quiz/practice";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -160,6 +162,27 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
               {quiz.status === "PUBLISHED" ? t("lessonEditor.unpublish") : t("lessonEditor.publish")}
             </SubmitButton>
           </form>
+          <SlideOverButton
+            label={t("quizDuplicate.button")}
+            title={t("quizDuplicate.title")}
+            description={
+              quiz.questions.length === 1
+                ? t("quizDuplicate.descriptionOne")
+                : t("quizDuplicate.description", { n: quiz.questions.length })
+            }
+            variant="secondary"
+            icon="none"
+          >
+            <DuplicateQuizForm
+              sourceQuizId={quiz.id}
+              defaultTitle={t("quizDuplicate.titleDefault", { title: quiz.title })}
+              // Suggest another style — reuse in a different style is the point.
+              defaultStyle={QUIZ_STYLES.find((s) => s !== quiz.style) ?? quiz.style}
+              tree={tree}
+              chapterId={quiz.chapterId}
+              lessonId={quiz.lessonId}
+            />
+          </SlideOverButton>
           <form action={deleteQuiz.bind(null, quiz.id)}>
             <ConfirmButton
               message={t("quizDetail.deleteConfirm", { title: quiz.title })}
