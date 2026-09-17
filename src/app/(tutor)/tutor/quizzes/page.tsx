@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isGradedStyle } from "@/lib/quiz/styles";
 import { db } from "@/lib/db";
 import { QuizImportPanel } from "./QuizImportPanel";
 import { QuizTable, type TutorQuizRow } from "./QuizTable";
@@ -29,6 +30,7 @@ export default async function TutorQuizzesPage({ searchParams }: { searchParams:
         lesson: { select: { title: true, order: true } },
         questions: { select: { points: true } },
         submissions: { select: { status: true } },
+        practiceProgress: { where: { completedAt: { not: null } }, select: { studentId: true } },
       },
     }),
     placementTree(),
@@ -51,11 +53,13 @@ export default async function TutorQuizzesPage({ searchParams }: { searchParams:
     timeLimitMinutes: q.timeLimitMinutes,
     maxAttempts: q.maxAttempts,
     submissionCount: q.submissions.length,
+    practiceCompletions: q.practiceProgress.length,
     pendingCount: q.submissions.filter((s) => s.status === "PENDING_REVIEW").length,
     createdAt: q.createdAt.toISOString(),
   }));
 
-  const needsReview = rows.reduce((n, r) => n + r.pendingCount, 0);
+  // Graded quizzes only: a quiz switched to practice isn't waiting on a review.
+  const needsReview = rows.filter((r) => isGradedStyle(r.style)).reduce((n, r) => n + r.pendingCount, 0);
   const published = rows.filter((r) => !r.isDraft).length;
   const initialCourseId = tree.some((c) => c.id === courseParam) ? courseParam : undefined;
   const quizOptions = rows.map((r) => ({

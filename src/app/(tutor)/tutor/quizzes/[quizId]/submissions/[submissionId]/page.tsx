@@ -45,7 +45,7 @@ export default async function SubmissionReviewPage({
       <div>
         <Breadcrumbs
           items={[
-            { label: "Home", href: "/tutor" },
+            { label: t("nav.home"), href: "/tutor" },
             { label: "Quizzes", href: "/tutor/quizzes" },
             { label: submission.quiz.title, href: `/tutor/quizzes/${quizId}` },
             { label: `${submission.student.name}'s submission` },

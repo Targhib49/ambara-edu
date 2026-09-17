@@ -14,6 +14,8 @@ import { ScoreRing } from "@/components/quiz/ScoreRing";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { QuizTakeForm } from "./QuizTakeForm";
 import { TimedQuizTakeForm } from "./TimedQuizTakeForm";
+import { MasteryPractice } from "./MasteryPractice";
+import { isPracticable } from "@/lib/quiz/practice";
 import { type Crumb } from "@/components/ui/Breadcrumbs";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { btnSecondary } from "@/components/ui/styles";
@@ -48,7 +50,8 @@ export default async function StudentQuizPage({
   });
   if (!quiz) notFound();
 
-  const [submission, attempts, timedSession] = await Promise.all([
+  const isPractice = quiz.style === "MASTERY";
+  const [submission, attempts, timedSession, practice] = await Promise.all([
     db.submission.findUnique({
       where: { studentId_quizId: { studentId: student.id, quizId } },
     }),
@@ -58,6 +61,9 @@ export default async function StudentQuizPage({
     }),
     quiz.style === "TRYOUT"
       ? db.timedQuizSession.findUnique({ where: { studentId_quizId: { studentId: student.id, quizId } } })
+      : null,
+    isPractice
+      ? db.practiceProgress.findUnique({ where: { studentId_quizId: { studentId: student.id, quizId } } })
       : null,
   ]);
 
@@ -105,7 +111,11 @@ export default async function StudentQuizPage({
       <PageHeader
         crumbs={crumbs}
         title={quiz.title}
-        meta={t("quizPage.metaCounts", { q: quiz.questions.length, p: totalPoints })}
+        meta={
+          isPractice
+            ? t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })
+            : t("quizPage.metaCounts", { q: quiz.questions.length, p: totalPoints })
+        }
         actions={
           <Link href={backHref} className={`${btnSecondary} max-w-full`}>
             <span className="truncate">← {backLabel}</span>
@@ -113,7 +123,22 @@ export default async function StudentQuizPage({
         }
       />
 
-      {isTimed ? (
+      {isPractice ? (
+        <MasteryPractice
+          quizId={quiz.id}
+          // No correct answers leave the server: practice is checked there.
+          questions={quiz.questions.filter(isPracticable).map((q) => ({
+            id: q.id,
+            type: q.type,
+            prompt: q.prompt,
+            points: q.points,
+            options: q.options,
+            testCases: q.type === "CODE" ? parseCorrectAnswer("CODE", q.correctAnswer).testCases : [],
+          }))}
+          initialMasteredIds={practice?.masteredIds ?? []}
+          runs={practice?.runs ?? 0}
+        />
+      ) : isTimed ? (
         <>
           {outOfAttempts && <NoAttemptsLeftCard maxAttempts={quiz.maxAttempts!} />}
           {!outOfAttempts && submission && !timedSession && (

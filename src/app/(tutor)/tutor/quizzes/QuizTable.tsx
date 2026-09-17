@@ -6,7 +6,7 @@ import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { Combobox } from "@/components/ui/Combobox";
 import { controlCls } from "@/components/ui/styles";
 import { QuizStyleChip } from "@/components/quiz/QuizStyleField";
-import { QUIZ_STYLES, quizStyleKey } from "@/lib/quiz/styles";
+import { QUIZ_STYLES, isGradedStyle, quizStyleKey } from "@/lib/quiz/styles";
 import type { QuizStyle } from "@/generated/prisma/enums";
 import { useT } from "@/lib/i18n/client";
 import type { Translate } from "@/lib/i18n/translate";
@@ -28,6 +28,8 @@ export type TutorQuizRow = {
   timeLimitMinutes: number | null;
   maxAttempts: number | null;
   submissionCount: number;
+  /** Practice styles: students who have finished a run. */
+  practiceCompletions: number;
   pendingCount: number;
   createdAt: string;
 };
@@ -119,16 +121,22 @@ const makeColumns = (t: Translate): Column<TutorQuizRow>[] => [
     key: "results",
     header: t("quizTable.results"),
     sort: (q) => q.pendingCount * 10000 + q.submissionCount,
-    text: (q) => t("quizTable.resultsText", { n: q.submissionCount, p: q.pendingCount }),
+    text: (q) =>
+      isGradedStyle(q.style)
+        ? t("quizTable.resultsText", { n: q.submissionCount, p: q.pendingCount })
+        : t("quizTable.practiceDone", { n: q.practiceCompletions }),
     className: "whitespace-nowrap",
-    cell: (q) => (
+    cell: (q) =>
+      !isGradedStyle(q.style) ? (
+        <span className="text-emerald-700">{t("quizTable.practiceDone", { n: q.practiceCompletions })}</span>
+      ) : (
       <span className="flex items-center gap-2">
         <span className="tabular-nums">{q.submissionCount}</span>
         {q.pendingCount > 0 && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("quizTable.toReview", { n: q.pendingCount })}</span>
         )}
       </span>
-    ),
+      ),
   },
   {
     key: "createdAt",

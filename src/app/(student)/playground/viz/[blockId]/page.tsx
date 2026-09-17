@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { requireStudent } from "@/lib/auth";
 import { isEnabled } from "@/lib/flags";
@@ -9,6 +10,7 @@ import { btnSecondary } from "@/components/ui/styles";
 
 export default async function StudentCourseVizPage({ params }: { params: Promise<{ blockId: string }> }) {
   const student = await requireStudent();
+  const t = await getT();
   if (!(await isEnabled("playground"))) notFound();
   const { blockId } = await params;
   const viz = await findCourseVisualization(blockId, { studentId: student.id });
@@ -16,7 +18,7 @@ export default async function StudentCourseVizPage({ params }: { params: Promise
 
   return (
     <PlaygroundFrame
-      crumbs={[{ label: "Home", href: "/dashboard" }, { label: "Playground", href: "/playground" }, { label: viz.title }]}
+      crumbs={[{ label: t("nav.home"), href: "/dashboard" }, { label: t("playground.title"), href: "/playground" }, { label: viz.title }]}
       title={viz.title}
       meta={`${viz.course.title} › ${viz.chapterTitle} › ${viz.lesson.title}`}
       actions={

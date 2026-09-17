@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { isGradedStyle } from "@/lib/quiz/styles";
+import { isPracticable } from "@/lib/quiz/practice";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { deleteQuiz, updateQuizMeta, setQuizStatus, addQuestion } from "@/lib/actions/quizzes";
@@ -39,6 +41,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
         chapter: { select: { title: true, course: { select: { id: true, title: true } } } },
         questions: { orderBy: { order: "asc" } },
         submissions: { include: { student: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
+        practiceProgress: { include: { student: { select: { name: true } } }, orderBy: { updatedAt: "desc" } },
       },
     }),
     placementTree(),
@@ -46,6 +49,9 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
   if (!quiz) notFound();
 
   const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
+  // Practice can only use questions it can check instantly.
+  const practicableIds = new Set(quiz.questions.filter(isPracticable).map((q) => q.id));
+  const unpracticable = quiz.questions.length - practicableIds.size;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8">
@@ -79,7 +85,9 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
                 }`
               : t("quizDetail.notPlaced")}
             {" · "}
-            {t("quizDetail.metaCounts", { q: quiz.questions.length, p: totalPoints })}
+            {isGradedStyle(quiz.style)
+              ? t("quizDetail.metaCounts", { q: quiz.questions.length, p: totalPoints })
+              : t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })}
           </>
         }
       />
@@ -165,7 +173,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t("quizDetail.questions")}</h2>
-        <QuestionsSection questions={quiz.questions} />
+        <QuestionsSection questions={quiz.questions} practice={!isGradedStyle(quiz.style)} />
 
         <div className="rounded-xl border border-dashed border-zinc-300 p-4">
           <p className="mb-3 text-sm font-medium text-zinc-600">{t("quizDetail.addQuestion")}</p>
@@ -184,6 +192,44 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
         </div>
       </section>
 
+      {!isGradedStyle(quiz.style) ? (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">{t("quizDetail.practiceProgress")}</h2>
+          <p className="text-xs text-zinc-500">{t("quizDetail.practiceNotGraded")}</p>
+          {unpracticable > 0 && (
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {t("quizDetail.unpracticable", { n: unpracticable })}
+            </p>
+          )}
+          {quiz.practiceProgress.length === 0 ? (
+            <p className="text-sm text-zinc-500">{t("quizDetail.noPractice")}</p>
+          ) : (
+            <div className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white">
+              {quiz.practiceProgress.map((p) => {
+                const mastered = p.masteredIds.filter((id) => practicableIds.has(id)).length;
+                return (
+                  <div key={p.studentId} className="flex items-center gap-3 px-5 py-3">
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${badgeColorForKey(p.student.name)}`}
+                    >
+                      {initialsFor(p.student.name)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">{p.student.name}</span>
+                    <span className="shrink-0 text-sm tabular-nums text-zinc-500">
+                      {t("quizDetail.practiceMastered", { n: mastered, total: practicableIds.size })}
+                    </span>
+                    {p.runs > 0 && (
+                      <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        ✓ {p.runs === 1 ? t("quizDetail.practiceRunsOne") : t("quizDetail.practiceRuns", { n: p.runs })}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ) : (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t("quizDetail.submissions")}</h2>
         {quiz.submissions.length === 0 ? (
@@ -219,6 +265,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }

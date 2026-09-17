@@ -1,4 +1,5 @@
 import type { PlaygroundItem } from "@/lib/playground";
+import { getT } from "@/lib/i18n/server";
 import { VizBlock } from "@/components/viz/VizBlock";
 import { CodeEditorBlock } from "@/components/blocks/CodeEditorBlock";
 import { PlaygroundFrame } from "@/components/playground/PlaygroundFrame";
@@ -9,7 +10,7 @@ for n in range(1, 6):
 `;
 
 /** The Python tool, or (tutors) a library visualization with its default settings. */
-export function PlaygroundItemView({
+export async function PlaygroundItemView({
   item,
   basePath,
   homeHref,
@@ -18,12 +19,13 @@ export function PlaygroundItemView({
   basePath: string;
   homeHref: string;
 }) {
+  const t = await getT();
   const section = item.kind === "python" ? "tools" : "library";
   return (
     <PlaygroundFrame
       crumbs={[
-        { label: "Home", href: homeHref },
-        { label: "Playground", href: basePath.startsWith("/tutor") ? `${basePath}?tab=${section}` : basePath },
+        { label: t("nav.home"), href: homeHref },
+        { label: t("playground.title"), href: basePath.startsWith("/tutor") ? `${basePath}?tab=${section}` : basePath },
         { label: item.title },
       ]}
       title={item.title}

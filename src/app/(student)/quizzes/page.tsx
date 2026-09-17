@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { isGradedStyle } from "@/lib/quiz/styles";
 import { requireStudent } from "@/lib/auth";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getT } from "@/lib/i18n/server";
@@ -22,6 +23,7 @@ export default async function StudentQuizzesPage() {
       questions: { select: { points: true } },
       submissions: { where: { studentId: student.id } },
       submissionAttempts: { where: { studentId: student.id }, select: { id: true } },
+      practiceProgress: { where: { studentId: student.id }, select: { completedAt: true } },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -40,6 +42,9 @@ export default async function StudentQuizzesPage() {
     return {
       id: quiz.id,
       title: quiz.title,
+      style: quiz.style,
+      graded: isGradedStyle(quiz.style),
+      practiceDone: quiz.practiceProgress[0]?.completedAt != null,
       lessonTitle: quiz.lesson?.title ?? null,
       trackTitle: quiz.chapter?.course.title ?? null,
       chapterTitle: quiz.chapter?.title ?? null,
@@ -53,14 +58,16 @@ export default async function StudentQuizzesPage() {
     };
   });
 
-  const done = rows.filter((r) => r.status !== null).length;
+  // Graded quizzes only — practice doesn't count, so it isn't in this tally.
+  const graded = rows.filter((r) => r.graded);
+  const done = graded.filter((r) => r.status !== null).length;
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <PageHeader
         crumbs={[{ label: t("nav.home"), href: "/dashboard" }, { label: t("quizzes.title") }]}
         title={t("quizzes.title")}
-        meta={t("quizzes.attemptedMeta", { done, total: rows.length })}
+        meta={t("quizzes.attemptedMeta", { done, total: graded.length })}
       />
 
       <QuizList quizzes={rows} />

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isGradedStyle } from "@/lib/quiz/styles";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { updateCourse, deleteCourse, setCourseStatus } from "@/lib/actions/courses";
@@ -29,7 +30,13 @@ const quizSelect = {
   status: true,
   style: true,
   timeLimitMinutes: true,
-  _count: { select: { questions: true, submissions: true } },
+  _count: {
+    select: {
+      questions: true,
+      submissions: true,
+      practiceProgress: { where: { completedAt: { not: null } } },
+    },
+  },
 } as const;
 
 type QuizSummary = {
@@ -38,7 +45,7 @@ type QuizSummary = {
   status: "DRAFT" | "PUBLISHED";
   style: QuizStyle;
   timeLimitMinutes: number | null;
-  _count: { questions: number; submissions: number };
+  _count: { questions: number; submissions: number; practiceProgress: number };
 };
 
 const STATUS_KEYS: Record<CourseStatus, MessageKey> = {
@@ -182,7 +189,11 @@ async function QuizRow({ quiz, indent }: { quiz: QuizSummary; indent?: boolean }
       {quiz.status === "DRAFT" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("status.draft")}</span>}
       {quiz.timeLimitMinutes && <span className="hidden whitespace-nowrap text-xs text-zinc-500 sm:inline">{t("count.minutes", { n: quiz.timeLimitMinutes })}</span>}
       <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums text-zinc-500 sm:inline">{count(t, quiz._count.questions, "count.question", "count.questions")}</span>
-      <span className="hidden w-20 shrink-0 text-right text-xs tabular-nums text-zinc-500 md:inline">{count(t, quiz._count.submissions, "count.result", "count.results")}</span>
+      <span className="hidden w-20 shrink-0 text-right text-xs tabular-nums text-zinc-500 md:inline">
+        {isGradedStyle(quiz.style)
+          ? count(t, quiz._count.submissions, "count.result", "count.results")
+          : t("quizTable.practiceDone", { n: quiz._count.practiceProgress })}
+      </span>
     </Link>
   );
 }

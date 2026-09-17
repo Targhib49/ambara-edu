@@ -11,7 +11,7 @@ import { parseWorkbook, validateRows, type ImportResult } from "@/lib/quiz/impor
 import { gradeQuestion, aggregateSubmission } from "@/lib/quiz/grading";
 import { submissionAnswersSchema, correctAnswerSchemas } from "@/lib/quiz/schema";
 import { countAttemptsUsed, shuffle } from "@/lib/quiz/attempts";
-import type { QuestionType, QuizStatus } from "@/generated/prisma/enums";
+import type { QuestionType, QuizStatus, QuizStyle } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 
 export async function previewImport(formData: FormData): Promise<ImportResult> {
@@ -63,7 +63,7 @@ function revalidateQuizLists() {
 }
 
 export type CommitImportTarget =
-  | { mode: "new"; title: string; chapterId: string; lessonId: string | null }
+  | { mode: "new"; title: string; chapterId: string; lessonId: string | null; style: QuizStyle }
   | { mode: "update"; quizId: string };
 
 export type DraftQuestionInput = {
@@ -102,6 +102,8 @@ export async function commitImport(
           lessonId: placement.lessonId,
           importBatchId: randomUUID(),
           status: "DRAFT",
+          style: parseQuizStyle(target.style),
+          ...(target.style === "TRYOUT" ? TRYOUT_DEFAULTS : {}),
         },
       });
       id = quiz.id;
@@ -226,20 +228,24 @@ async function nextQuestionOrder(quizId: string) {
  * placeholder) so a freshly-added question round-trips through
  * correctAnswerSchemas immediately — the editor never shows a broken state.
  */
-const DEFAULT_QUESTION_DATA: Record<
-  QuestionType,
-  { prompt: string; options: string[]; correctAnswer: unknown }
-> = {
-  MULTIPLE_CHOICE: { prompt: "New question", options: ["Option A", "Option B"], correctAnswer: { letter: "A" } },
-  MULTI_SELECT: { prompt: "New question", options: ["Option A", "Option B"], correctAnswer: { letters: ["A"] } },
-  NUMERIC: { prompt: "New question", options: [], correctAnswer: { value: 0, tolerance: 0 } },
-  SHORT_TEXT: { prompt: "New question", options: [], correctAnswer: { kind: "exact", value: "answer" } },
-  CODE: { prompt: "New question", options: [], correctAnswer: { testCases: [] } },
-};
+/** Placeholder content for a freshly added question, in the tutor's language. */
+function defaultQuestionData(
+  t: Awaited<ReturnType<typeof getT>>
+): Record<QuestionType, { prompt: string; options: string[]; correctAnswer: unknown }> {
+  const prompt = t("qEditor.newQuestion");
+  const options = [t("qEditor.optionA"), t("qEditor.optionB")];
+  return {
+    MULTIPLE_CHOICE: { prompt, options, correctAnswer: { letter: "A" } },
+    MULTI_SELECT: { prompt, options, correctAnswer: { letters: ["A"] } },
+    NUMERIC: { prompt, options: [], correctAnswer: { value: 0, tolerance: 0 } },
+    SHORT_TEXT: { prompt, options: [], correctAnswer: { kind: "exact", value: t("qEditor.sampleAnswer") } },
+    CODE: { prompt, options: [], correctAnswer: { testCases: [] } },
+  };
+}
 
 export async function addQuestion(quizId: string, type: QuestionType) {
   await requireTutor();
-  const defaults = DEFAULT_QUESTION_DATA[type];
+  const defaults = defaultQuestionData(await getT())[type];
   await db.question.create({
     data: {
       quizId,

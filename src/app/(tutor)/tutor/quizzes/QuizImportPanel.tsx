@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { previewImport, commitImport, type CommitImportTarget } from "@/lib/actions/quizzes";
 import type { ImportResult } from "@/lib/quiz/import";
 import { QuizPlacementFields, type Placement } from "@/components/quiz/QuizPlacementFields";
+import { QuizStyleField } from "@/components/quiz/QuizStyleField";
+import type { QuizStyle } from "@/generated/prisma/enums";
 import { Combobox, type ComboOption } from "@/components/ui/Combobox";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import { btnPrimary, btnSecondary, inputCls, labelCls } from "@/components/ui/styles";
@@ -30,6 +32,7 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
   const [result, setResult] = useState<ImportResult | null>(null);
   const [mode, setMode] = useState<"new" | "update">("new");
   const [title, setTitle] = useState("");
+  const [style, setStyle] = useState<QuizStyle>("CLASSIC");
   const [placement, setPlacement] = useState<Placement>({ chapterId: "", lessonId: "", complete: false });
   const [existingQuizId, setExistingQuizId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +47,7 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
     if (!result || result.drafts.length === 0) return;
     const target: CommitImportTarget =
       mode === "new"
-        ? { mode: "new", title, chapterId: placement.chapterId, lessonId: placement.lessonId || null }
+        ? { mode: "new", title, chapterId: placement.chapterId, lessonId: placement.lessonId || null, style }
         : { mode: "update", quizId: existingQuizId };
     startTransition(async () => {
       const outcome = await commitImport(target, result.drafts);
@@ -158,6 +161,7 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
                 <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
               </div>
               <QuizPlacementFields tree={tree} onChange={setPlacement} />
+              <QuizStyleField value={style} onChange={setStyle} />
             </div>
           ) : (
             <div>

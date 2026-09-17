@@ -4,6 +4,7 @@ import { requireStudent } from "@/lib/auth";
 import { SidebarNav, type SidebarSection } from "@/components/ui/SidebarNav";
 import { SidebarShell } from "@/components/ui/SidebarShell";
 import { isEnabled } from "@/lib/flags";
+import { getT } from "@/lib/i18n/server";
 
 export default async function StudentTrackLayout({
   children,
@@ -14,6 +15,7 @@ export default async function StudentTrackLayout({
 }) {
   const { courseId } = await params;
   const student = await requireStudent();
+  const t = await getT();
   const courseV2 = await isEnabled("course_v2");
 
   const course = await db.course.findFirst({
@@ -38,7 +40,7 @@ export default async function StudentTrackLayout({
   if (!course) notFound();
 
   const sections: SidebarSection[] = [
-    { items: [{ href: `/courses/${course.id}`, label: "Overview" }] },
+    { items: [{ href: `/courses/${course.id}`, label: t("outline.overview") }] },
     ...course.chapters
       .filter((c) => c.lessons.length > 0)
       .map((c) => {

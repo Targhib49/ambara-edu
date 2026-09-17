@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { createContext, useContext, useState, useTransition } from "react";
 import { updateQuestion, type UpdateQuestionInput } from "@/lib/actions/quizzes";
 import { useT } from "@/lib/i18n/client";
 import type { QuestionType } from "@/generated/prisma/enums";
@@ -12,6 +12,12 @@ const smallBtn =
   "rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-40";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
+
+/**
+ * True inside a practice-style quiz: points mean nothing there (practice is
+ * never scored), and the explanation is shown at different moments.
+ */
+export const PracticeQuizContext = createContext(false);
 
 export type QuestionForEdit = {
   id: string;
@@ -72,13 +78,14 @@ function MetaFields({
   setExplanation: (v: string) => void;
 }) {
   const t = useT();
+  const practice = useContext(PracticeQuizContext);
   return (
     <>
       <div>
         <label className={labelCls}>{t("qEditor.prompt")}</label>
         <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2} className={inputCls} />
       </div>
-      <div>
+      <div hidden={practice}>
         <label className={labelCls}>{t("qEditor.points")}</label>
         <input
           type="number"
@@ -90,7 +97,7 @@ function MetaFields({
         />
       </div>
       <div>
-        <label className={labelCls}>{t("qEditor.explanation")}</label>
+        <label className={labelCls}>{t(practice ? "qEditor.explanationPractice" : "qEditor.explanation")}</label>
         <textarea
           value={explanation}
           onChange={(e) => setExplanation(e.target.value)}

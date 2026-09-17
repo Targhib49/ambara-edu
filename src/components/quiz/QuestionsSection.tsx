@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { QuestionEditor, type QuestionForEdit } from "@/components/quiz/QuestionEditor";
+import { PracticeQuizContext, QuestionEditor, type QuestionForEdit } from "@/components/quiz/QuestionEditor";
+import { MESSAGES } from "@/lib/i18n/messages";
 import { deleteQuestion, moveQuestion } from "@/lib/actions/quizzes";
 import { formatCorrectAnswer } from "@/lib/quiz/format";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
@@ -27,14 +28,19 @@ const TYPE_KEYS: Record<QuestionType, MessageKey> = {
  * still carrying its placeholder prompt ("New question") starts expanded so
  * the tutor can fill it in immediately without an extra click.
  */
-export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }) {
+/** The placeholder a new question starts with, in either language. */
+const NEW_QUESTION_PROMPTS: string[] = [MESSAGES["qEditor.newQuestion"].ID, MESSAGES["qEditor.newQuestion"].EN];
+
+export function QuestionsSection({ questions, practice = false }: { questions: QuestionForEdit[]; practice?: boolean }) {
   const t = useT();
-  const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(questions.filter((q) => q.prompt === "New question").map((q) => q.id))
-  );
+  // Questions whose open/closed state the tutor flipped. A question still
+  // carrying its placeholder prompt starts open — including one added after the
+  // page loaded — so it can be filled in without an extra click.
+  const [toggled, setToggled] = useState<Set<string>>(() => new Set());
+  const isExpanded = (q: QuestionForEdit) => NEW_QUESTION_PROMPTS.includes(q.prompt) !== toggled.has(q.id);
 
   function toggle(id: string) {
-    setExpanded((prev) => {
+    setToggled((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -47,9 +53,10 @@ export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }
   }
 
   return (
+    <PracticeQuizContext.Provider value={practice}>
     <div className="space-y-3">
       {questions.map((q, i) => {
-        const isExpanded = expanded.has(q.id);
+        const expanded = isExpanded(q);
         return (
           <div key={q.id} className="rounded-xl border border-zinc-200 bg-white shadow-sm">
             <div className="flex items-center gap-3 px-4 py-3">
@@ -65,10 +72,12 @@ export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }
                   {t(TYPE_KEYS[q.type])}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm text-zinc-900">{q.prompt}</span>
-                <span className="shrink-0 text-xs text-zinc-400">
-                  {t(q.points === 1 ? "qSection.pt" : "quizTable.pts", { n: q.points })}
-                </span>
-                <span className="shrink-0 text-xs text-zinc-400">{isExpanded ? "▲" : "▼"}</span>
+                {!practice && (
+                  <span className="shrink-0 text-xs text-zinc-400">
+                    {t(q.points === 1 ? "qSection.pt" : "quizTable.pts", { n: q.points })}
+                  </span>
+                )}
+                <span className="shrink-0 text-xs text-zinc-400">{expanded ? "▲" : "▼"}</span>
               </button>
               <div className="flex shrink-0 gap-1.5">
                 <form action={moveQuestion.bind(null, q.id, "up")}>
@@ -84,7 +93,7 @@ export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }
                 </form>
               </div>
             </div>
-            {isExpanded ? (
+            {expanded ? (
               <div className="border-t border-zinc-100 p-4">
                 <QuestionEditor question={q} />
               </div>
@@ -97,5 +106,6 @@ export function QuestionsSection({ questions }: { questions: QuestionForEdit[] }
         );
       })}
     </div>
+    </PracticeQuizContext.Provider>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import type { SubmissionStatus } from "@/generated/prisma/enums";
+import type { QuizStyle, SubmissionStatus } from "@/generated/prisma/enums";
+import { QuizStyleChip } from "@/components/quiz/QuizStyleField";
 import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/format";
 import { ScoreRing } from "@/components/quiz/ScoreRing";
@@ -12,6 +13,10 @@ import type { Translate } from "@/lib/i18n/translate";
 export type StudentQuizRow = {
   id: string;
   title: string;
+  style: QuizStyle;
+  /** False for practice: no score, a completion mark instead. */
+  graded: boolean;
+  practiceDone: boolean;
   lessonTitle: string | null;
   trackTitle: string | null;
   /** Set for every quiz; a quiz with no lesson is the chapter's own test. */
@@ -26,14 +31,22 @@ export type StudentQuizRow = {
 
 const makeTabs = (t: Translate): Tab<StudentQuizRow>[] => [
   { key: "all", label: t("status.all"), match: () => true },
-  { key: "todo", label: t("status.notStarted"), match: (q) => q.status === null },
-  { key: "done", label: t("status.completed"), match: (q) => q.status !== null },
+  { key: "todo", label: t("status.notStarted"), match: (q) => !isDone(q) },
+  { key: "done", label: t("status.completed"), match: isDone },
   { key: "tryout", label: t("quizList.tab.chapterTests"), match: (q) => q.lessonTitle === null },
   { key: "lesson", label: t("quizList.tab.fromLessons"), match: (q) => q.lessonTitle !== null },
 ];
 
+const isDone = (q: StudentQuizRow) => (q.graded ? q.status !== null : q.practiceDone);
+
 const statusLabel = (q: StudentQuizRow, t: Translate) =>
-  q.status ? t(submissionStatusKey(q.status)) : t("status.notStarted");
+  !q.graded
+    ? q.practiceDone
+      ? t("outline.practiceDone")
+      : t("status.notStarted")
+    : q.status
+      ? t(submissionStatusKey(q.status))
+      : t("status.notStarted");
 
 const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
   {
@@ -48,7 +61,10 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
           {initialsFor(q.title) || "Q"}
         </span>
         <span className="min-w-0">
-          <span className="block truncate font-medium text-zinc-900">{q.title}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-medium text-zinc-900">{q.title}</span>
+            {q.style !== "CLASSIC" && <QuizStyleChip style={q.style} />}
+          </span>
           {/* The columns below are hidden on a phone — fold the essentials under the title. */}
           <span className="block truncate text-xs text-zinc-500 sm:hidden">
             {statusLabel(q, t)} · {q.lessonTitle ?? t("quizList.chapterTest")} ·{" "}
@@ -85,8 +101,8 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
     sort: (q) => q.questionCount,
     text: (q) =>
       [
-        t("quizList.questions", { n: q.questionCount }),
-        `${q.totalPoints} pts`,
+        q.graded ? t("quizList.questions", { n: q.questionCount }) : t("quizList.practiceDetails", { n: q.questionCount }),
+        q.graded ? t("quizTable.pts", { n: q.totalPoints }) : null,
         q.timeLimitMinutes ? t("quizList.minutes", { n: q.timeLimitMinutes }) : null,
         q.attemptsRemaining !== null ? t("quizList.attemptsLeft", { n: q.attemptsRemaining }) : null,
       ]
@@ -96,7 +112,11 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
     className: "whitespace-nowrap text-xs",
     cell: (q) => (
       <span className="text-zinc-500">
-        <span className="block">{t("quizList.questionsPoints", { n: q.questionCount, points: q.totalPoints })}</span>
+        <span className="block">
+          {q.graded
+            ? t("quizList.questionsPoints", { n: q.questionCount, points: q.totalPoints })
+            : t("quizList.practiceDetails", { n: q.questionCount })}
+        </span>
         {(q.timeLimitMinutes || q.attemptsRemaining !== null) && (
           <span className="block">
             {q.timeLimitMinutes && `⏱ ${t("quizList.minutes", { n: q.timeLimitMinutes })}`}
@@ -116,7 +136,13 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
     cell: (q) => (
       <span
         className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
-          q.status ? SUBMISSION_STATUS_BADGE_CLASS[q.status] : "bg-zinc-100 text-zinc-600"
+          !q.graded
+            ? q.practiceDone
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-zinc-100 text-zinc-600"
+            : q.status
+              ? SUBMISSION_STATUS_BADGE_CLASS[q.status]
+              : "bg-zinc-100 text-zinc-600"
         }`}
       >
         {statusLabel(q, t)}
@@ -133,6 +159,10 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
       <div className="flex justify-end">
         {q.scorePct !== null ? (
           <ScoreRing pct={q.scorePct} size={38} />
+        ) : !q.graded && q.practiceDone ? (
+          <span className="whitespace-nowrap rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-medium text-emerald-700">
+            ✓ {t("outline.practiceDone")}
+          </span>
         ) : (
           <Link
             href={`/quizzes/${q.id}`}

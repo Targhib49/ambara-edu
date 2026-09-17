@@ -82,6 +82,7 @@ enum QuizStatus {
 enum QuizStyle {
   CLASSIC // every question on one page, untimed, retake freely
   TRYOUT  // exam simulation: one question at a time against the clock
+  MASTERY // practice: one question at a time, checked instantly, until each is right once
 }
 
 enum SubmissionStatus {
@@ -110,6 +111,7 @@ model User {
   seriesAsStudent   SessionSeries[] @relation("SeriesStudent")
   calendarFeed      CalendarFeedToken?
   timedQuizSessions TimedQuizSession[]
+  practiceProgress  PracticeProgress[]
   verificationTokens EmailVerificationToken[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -343,6 +345,7 @@ model Quiz {
   submissions   Submission[]
   submissionAttempts SubmissionAttempt[]
   timedSessions TimedQuizSession[]
+  practiceProgress PracticeProgress[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -367,6 +370,28 @@ model TimedQuizSession {
   createdAt     DateTime @default(now())
 
   @@unique([studentId, quizId])
+}
+
+// A student's run through a practice-style quiz. Kept apart from Submission on
+// purpose: practice must never reach a score, an average or the review queue,
+// and a separate table makes that true by construction rather than by every
+// query remembering to filter.
+model PracticeProgress {
+  studentId   String    @db.Uuid
+  student     User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  quizId      String    @db.Uuid
+  quiz        Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  // Questions answered correctly in the current run. A restart empties it.
+  masteredIds String[]
+  // The first time every question was mastered — the completion mark, which a
+  // restart leaves alone.
+  completedAt DateTime?
+  runs        Int       @default(0) // completed runs
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@id([studentId, quizId])
+  @@index([quizId])
 }
 
 model Question {

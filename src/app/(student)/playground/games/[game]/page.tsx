@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getT } from "@/lib/i18n/server";
 import { requireStudent } from "@/lib/auth";
 import { isEnabled } from "@/lib/flags";
 import { findLiveGame } from "@/lib/games/registry";
@@ -7,6 +8,7 @@ import { PlaygroundFrame } from "@/components/playground/PlaygroundFrame";
 
 export default async function StudentGamePage({ params }: { params: Promise<{ game: string }> }) {
   await requireStudent();
+  const t = await getT();
   if (!(await isEnabled("playground"))) notFound();
   const { game: slug } = await params;
   const game = findLiveGame(slug);
@@ -14,7 +16,7 @@ export default async function StudentGamePage({ params }: { params: Promise<{ ga
 
   return (
     <PlaygroundFrame
-      crumbs={[{ label: "Home", href: "/dashboard" }, { label: "Playground", href: "/playground" }, { label: game.title }]}
+      crumbs={[{ label: t("nav.home"), href: "/dashboard" }, { label: t("playground.title"), href: "/playground" }, { label: game.title }]}
       title={game.title}
       meta={game.tags.join(" · ")}
     >

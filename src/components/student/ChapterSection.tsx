@@ -3,7 +3,7 @@ import { CompletionMark } from "@/components/ui/CompletionMark";
 import { ScoreRing } from "@/components/quiz/ScoreRing";
 import { submissionStatusKey } from "@/lib/quiz/format";
 import { getT } from "@/lib/i18n/server";
-import type { CourseItem } from "@/lib/courseItems";
+import type { ChapterStatus, CourseItem } from "@/lib/courseItems";
 
 /**
  * One chapter of the course outline: a collapsible section whose rows are the
@@ -12,7 +12,7 @@ import type { CourseItem } from "@/lib/courseItems";
  * Uses <details>/<summary> rather than React state so collapsing needs no
  * client JavaScript and keeps working before hydration.
  */
-export function ChapterSection({
+export async function ChapterSection({
   title,
   items,
   status,
@@ -20,9 +20,15 @@ export function ChapterSection({
 }: {
   title: string;
   items: CourseItem[];
-  status: { complete: boolean; label: string };
+  status: ChapterStatus;
   nextItemKey: string | null;
 }) {
+  const t = await getT();
+  const statusLabel = status.complete
+    ? t("outline.complete")
+    : status.quizzesLeft === status.itemsLeft
+      ? t(status.quizzesLeft === 1 ? "outline.quizLeft" : "outline.quizzesLeft", { n: status.quizzesLeft })
+      : t(status.itemsLeft === 1 ? "outline.itemLeft" : "outline.itemsLeft", { n: status.itemsLeft });
   return (
     <details open className="group border-b border-zinc-200 last:border-b-0">
       <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 hover:bg-zinc-50 [&::-webkit-details-marker]:hidden">
@@ -32,7 +38,7 @@ export function ChapterSection({
             status.complete ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-600"
           }`}
         >
-          {status.label}
+          {statusLabel}
         </span>
         <svg
           viewBox="0 0 20 20"
@@ -70,7 +76,8 @@ async function ItemRow({ item, isNext }: { item: CourseItem; isNext: boolean }) 
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium text-zinc-900">{item.title}</span>
           <span className="block truncate text-xs text-zinc-500">
-            {item.label}
+            {t(item.labelKey)}
+            {item.optional && item.complete && ` · ${t("outline.practiceDone")}`}
             {item.status && ` · ${t(submissionStatusKey(item.status))}`}
             {item.scorePct !== null &&
               ` · ${t("outline.grade")}: ${item.scorePct.toFixed(item.scorePct % 1 === 0 ? 0 : 2)}%`}

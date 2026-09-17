@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { requireTutor } from "@/lib/auth";
 import { isEnabled } from "@/lib/flags";
@@ -9,6 +10,7 @@ import { btnSecondary } from "@/components/ui/styles";
 
 export default async function TutorCourseVizPage({ params }: { params: Promise<{ blockId: string }> }) {
   await requireTutor();
+  const t = await getT();
   if (!(await isEnabled("playground"))) notFound();
   const { blockId } = await params;
   const viz = await findCourseVisualization(blockId);
@@ -17,8 +19,8 @@ export default async function TutorCourseVizPage({ params }: { params: Promise<{
   return (
     <PlaygroundFrame
       crumbs={[
-        { label: "Home", href: "/tutor" },
-        { label: "Playground", href: "/tutor/playground?tab=courses" },
+        { label: t("nav.home"), href: "/tutor" },
+        { label: t("playground.title"), href: "/tutor/playground?tab=courses" },
         { label: viz.title },
       ]}
       title={viz.title}

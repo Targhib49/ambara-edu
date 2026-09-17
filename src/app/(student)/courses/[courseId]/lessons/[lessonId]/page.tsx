@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { QuizStyleChip } from "@/components/quiz/QuizStyleField";
+import { isGradedStyle } from "@/lib/quiz/styles";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
@@ -33,7 +35,12 @@ export default async function StudentLessonPage({
       blocks: { orderBy: { order: "asc" } },
       quizzes: {
         where: { status: "PUBLISHED" },
-        select: { id: true, title: true },
+        select: {
+          id: true,
+          title: true,
+          style: true,
+          practiceProgress: { where: { studentId: student.id }, select: { completedAt: true } },
+        },
         orderBy: { createdAt: "asc" },
       },
       progress: { where: { studentId: student.id }, select: { completedAt: true } },
@@ -62,7 +69,7 @@ export default async function StudentLessonPage({
     <div className="mx-auto max-w-3xl space-y-4">
       <Breadcrumbs
         items={[
-          { label: "Home", href: "/dashboard" },
+          { label: t("nav.home"), href: "/dashboard" },
           { label: t("nav.myCourses"), href: "/courses" },
           { label: lesson.chapter.course.title, href: `/courses/${courseId}` },
           { label: lesson.title },
@@ -102,8 +109,17 @@ export default async function StudentLessonPage({
                   href={`/quizzes/${quiz.id}`}
                   className="flex items-center justify-between rounded-md border border-zinc-200 px-4 py-2.5 text-sm hover:border-blue-300 hover:bg-zinc-50"
                 >
-                  <span className="font-medium text-zinc-900">{quiz.title}</span>
-                  <span className="text-blue-700">{t("studentLesson.takeQuiz")}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium text-zinc-900">{quiz.title}</span>
+                    {quiz.style !== "CLASSIC" && <QuizStyleChip style={quiz.style} />}
+                  </span>
+                  {isGradedStyle(quiz.style) ? (
+                    <span className="shrink-0 text-blue-700">{t("studentLesson.takeQuiz")}</span>
+                  ) : quiz.practiceProgress[0]?.completedAt ? (
+                    <span className="shrink-0 font-medium text-emerald-700">✓ {t("outline.practiceDone")}</span>
+                  ) : (
+                    <span className="shrink-0 text-emerald-700">{t("practice.startCta")}</span>
+                  )}
                 </Link>
               </li>
             ))}

@@ -49,11 +49,13 @@ export default async function StudentTrackPage({
                 select: {
                   id: true,
                   title: true,
+                  style: true,
                   questions: { select: { points: true } },
                   submissions: {
                     where: { studentId: student.id },
                     select: { status: true, autoScore: true, manualScore: true },
                   },
+                  practiceProgress: { where: { studentId: student.id }, select: { completedAt: true } },
                 },
               },
             },
@@ -73,8 +75,10 @@ export default async function StudentTrackPage({
       id: true,
       title: true,
       chapterId: true,
+      style: true,
       questions: { select: { points: true } },
       submissions: { where: { studentId: student.id }, select: { status: true, autoScore: true, manualScore: true } },
+      practiceProgress: { where: { studentId: student.id }, select: { completedAt: true } },
     },
   });
   const testsByChapter = new Map<string, typeof chapterTests>();
@@ -110,14 +114,15 @@ export default async function StudentTrackPage({
       return { id: chapter.id, title: chapter.title, items, status: chapterStatus(items) };
     });
   const nextItemKey =
-    chapterViews.flatMap((c) => c.items).find((i) => !i.complete)?.key ?? null;
+    // Practice is optional, so it's never the suggested next step.
+    chapterViews.flatMap((c) => c.items).find((i) => !i.complete && !i.optional)?.key ?? null;
 
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_280px]">
       <div className="min-w-0 space-y-6">
         <Breadcrumbs
           items={[
-            { label: "Home", href: "/dashboard" },
+            { label: t("nav.home"), href: "/dashboard" },
             { label: t("nav.myCourses"), href: "/courses" },
             { label: course.title },
           ]}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GRADED_STYLES } from "@/lib/quiz/styles";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireTutor } from "@/lib/auth";
@@ -89,7 +90,8 @@ export default async function StudentDetailPage({
       },
     }),
     db.submission.findMany({
-      where: { studentId },
+      // Graded styles only: results left on a quiz since switched to practice don't count.
+      where: { studentId, quiz: { style: { in: GRADED_STYLES } } },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,

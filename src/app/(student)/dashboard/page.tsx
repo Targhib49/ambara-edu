@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GRADED_STYLES } from "@/lib/quiz/styles";
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { DashboardHero } from "@/components/student/DashboardHero";
@@ -29,7 +30,12 @@ export default async function StudentDashboardPage() {
                   where: { status: "PUBLISHED" },
                   orderBy: { order: "asc" },
                   include: {
-                    quizzes: { where: { status: "PUBLISHED" }, select: { id: true, title: true } },
+                    // Graded quizzes only: practice is never "due", and never
+                    // counts towards the old quiz-based progress.
+                    quizzes: {
+                      where: { status: "PUBLISHED", style: { in: GRADED_STYLES } },
+                      select: { id: true, title: true },
+                    },
                     progress: {
                       where: { studentId: student.id },
                       select: { completedAt: true, lastViewedAt: true },
@@ -43,7 +49,9 @@ export default async function StudentDashboardPage() {
       },
     }),
     db.submission.findMany({
-      where: { studentId: student.id },
+      // A quiz switched to a practice style keeps its old results, but they no
+      // longer count — practice never reaches a score or an average.
+      where: { studentId: student.id, quiz: { style: { in: GRADED_STYLES } } },
       include: { quiz: { select: { id: true, title: true, questions: { select: { points: true } } } } },
       orderBy: { updatedAt: "asc" },
     }),
@@ -57,6 +65,7 @@ export default async function StudentDashboardPage() {
       where: {
         lessonId: null,
         status: "PUBLISHED",
+        style: { in: GRADED_STYLES },
         chapter: { course: { status: "PUBLISHED", enrollments: { some: { studentId: student.id } } } },
       },
       select: { id: true, title: true, chapter: { select: { title: true, course: { select: { title: true } } } } },
