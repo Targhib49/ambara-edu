@@ -43,6 +43,8 @@ export default async function StudentQuizzesPage() {
       id: quiz.id,
       title: quiz.title,
       style: quiz.style,
+      drillSeconds: quiz.drillSeconds,
+      drillTarget: quiz.drillTarget,
       graded: isGradedStyle(quiz.style),
       practiceDone: quiz.practiceProgress[0]?.completedAt != null,
       lessonTitle: quiz.lesson?.title ?? null,

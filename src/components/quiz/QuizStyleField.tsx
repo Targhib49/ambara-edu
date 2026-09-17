@@ -14,18 +14,21 @@ export function QuizStyleField({
   defaultStyle = "CLASSIC",
   value,
   onChange,
+  exclude = [],
 }: {
   defaultStyle?: QuizStyle;
   /** Pass both to control it — for panels that submit through an action call, not a form. */
   value?: QuizStyle;
   onChange?: (style: QuizStyle) => void;
+  /** Styles that make no sense here — a drill has no questions to import into. */
+  exclude?: readonly QuizStyle[];
 }) {
   const t = useT();
   return (
     <fieldset>
       <legend className={labelCls}>{t("quizStyle.label")}</legend>
       <div className="grid gap-2 sm:grid-cols-2">
-        {QUIZ_STYLES.map((style) => (
+        {QUIZ_STYLES.filter((style) => !exclude.includes(style)).map((style) => (
           <label
             key={style}
             className="cursor-pointer rounded-lg border border-zinc-200 px-3 py-2.5 hover:border-zinc-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/60 has-[:checked]:ring-1 has-[:checked]:ring-blue-500 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500"

@@ -7,6 +7,7 @@ import { getT } from "@/lib/i18n/server";
 import { formatCorrectAnswer } from "@/lib/quiz/format";
 import { isPracticable, isPracticeCorrect } from "@/lib/quiz/practice";
 import { PRACTICE_STYLES } from "@/lib/quiz/styles";
+import { DRILL_DEFAULTS } from "@/lib/drills/registry";
 
 /**
  * The practice quiz this student may use, with its questions — the same
@@ -120,4 +121,46 @@ export async function restartPractice(quizId: string): Promise<{ error?: string 
   });
   revalidatePath(`/quizzes/${quizId}`);
   return {};
+}
+
+export type DrillRoundResult =
+  | { error: string }
+  | { best: number; newBest: boolean; reached: boolean; complete: boolean };
+
+/**
+ * Records a finished drill round. Rounds are played and marked in the browser —
+ * instant feedback is the point of a drill, and it's practice, so nothing here
+ * can reach a grade. The score is still clamped to what a round could honestly
+ * hold, so the best score shown to the tutor stays believable.
+ */
+export async function recordDrillRound(quizId: string, rawScore: number): Promise<DrillRoundResult> {
+  const t = await getT();
+  const student = await requireStudent();
+  const quiz = await practiceQuizFor(student.id, quizId);
+  if (!quiz || quiz.style !== "DRILL") return { error: t("practice.unavailable") };
+
+  const seconds = quiz.drillSeconds ?? DRILL_DEFAULTS.drillSeconds;
+  const target = quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget;
+  const score = Math.max(0, Math.min(Math.floor(Number(rawScore) || 0), seconds * 3));
+
+  const existing = await db.practiceProgress.findUnique({
+    where: { studentId_quizId: { studentId: student.id, quizId } },
+  });
+  const previousBest = existing?.bestScore ?? 0;
+  const reached = score >= target;
+  const now = new Date();
+  const completedAt = existing?.completedAt ?? (reached ? now : null);
+
+  await db.practiceProgress.upsert({
+    where: { studentId_quizId: { studentId: student.id, quizId } },
+    create: { studentId: student.id, quizId, masteredIds: [], bestScore: score, runs: 1, completedAt },
+    update: { bestScore: Math.max(previousBest, score), runs: { increment: 1 }, completedAt },
+  });
+
+  if (reached && !existing?.completedAt) {
+    revalidatePath("/quizzes");
+    revalidatePath("/courses", "layout");
+    revalidatePath("/dashboard");
+  }
+  return { best: Math.max(previousBest, score), newBest: score > previousBest, reached, complete: completedAt !== null };
 }

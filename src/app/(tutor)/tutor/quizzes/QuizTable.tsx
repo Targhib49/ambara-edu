@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { DRILL_DEFAULTS, DRILL_SKILLS, parseDrillSkill } from "@/lib/drills/registry";
 import Link from "next/link";
 import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { Combobox } from "@/components/ui/Combobox";
@@ -16,6 +17,8 @@ export type TutorQuizRow = {
   title: string;
   isDraft: boolean;
   style: QuizStyle;
+  drillSkill: string | null;
+  drillSeconds: number | null;
   courseId: string | null;
   courseTitle: string | null;
   chapterId: string | null;
@@ -87,7 +90,16 @@ const makeColumns = (t: Translate): Column<TutorQuizRow>[] => [
     sort: (q) => q.questionCount,
     text: (q) => q.questionCount,
     className: "whitespace-nowrap tabular-nums",
-    cell: (q) => (
+    cell: (q) =>
+      q.style === "DRILL" ? (
+        // A drill generates its questions, so show what it drills instead of a count.
+        <span className="block">
+          <span className="block">{t(DRILL_SKILLS[parseDrillSkill(q.drillSkill)].labelKey)}</span>
+          <span className="block text-xs text-zinc-500">
+            {t("drill.secondsLeft", { s: q.drillSeconds ?? DRILL_DEFAULTS.drillSeconds })}
+          </span>
+        </span>
+      ) : (
       <span className="block">
         <span className="block">
           {q.questionCount}
@@ -102,7 +114,7 @@ const makeColumns = (t: Translate): Column<TutorQuizRow>[] => [
             .join(" · ") || t("quizTable.untimed")}
         </span>
       </span>
-    ),
+      ),
   },
   {
     key: "format",

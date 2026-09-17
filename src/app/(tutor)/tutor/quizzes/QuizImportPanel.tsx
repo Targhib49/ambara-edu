@@ -161,7 +161,7 @@ export function QuizImportPanel({ tree, quizOptions }: { tree: PlacementCourse[]
                 <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
               </div>
               <QuizPlacementFields tree={tree} onChange={setPlacement} />
-              <QuizStyleField value={style} onChange={setStyle} />
+              <QuizStyleField value={style} onChange={setStyle} exclude={["DRILL"]} />
             </div>
           ) : (
             <div>

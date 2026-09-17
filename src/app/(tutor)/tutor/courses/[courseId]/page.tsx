@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DRILL_SKILLS, parseDrillSkill } from "@/lib/drills/registry";
 import { isGradedStyle } from "@/lib/quiz/styles";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -29,6 +30,7 @@ const quizSelect = {
   title: true,
   status: true,
   style: true,
+  drillSkill: true,
   timeLimitMinutes: true,
   _count: {
     select: {
@@ -44,6 +46,7 @@ type QuizSummary = {
   title: string;
   status: "DRAFT" | "PUBLISHED";
   style: QuizStyle;
+  drillSkill: string | null;
   timeLimitMinutes: number | null;
   _count: { questions: number; submissions: number; practiceProgress: number };
 };
@@ -188,7 +191,11 @@ async function QuizRow({ quiz, indent }: { quiz: QuizSummary; indent?: boolean }
       <QuizStyleChip style={quiz.style} />
       {quiz.status === "DRAFT" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("status.draft")}</span>}
       {quiz.timeLimitMinutes && <span className="hidden whitespace-nowrap text-xs text-zinc-500 sm:inline">{t("count.minutes", { n: quiz.timeLimitMinutes })}</span>}
-      <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums text-zinc-500 sm:inline">{count(t, quiz._count.questions, "count.question", "count.questions")}</span>
+      <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums text-zinc-500 sm:inline">
+        {quiz.style === "DRILL"
+          ? t(DRILL_SKILLS[parseDrillSkill(quiz.drillSkill)].labelKey)
+          : count(t, quiz._count.questions, "count.question", "count.questions")}
+      </span>
       <span className="hidden w-20 shrink-0 text-right text-xs tabular-nums text-zinc-500 md:inline">
         {isGradedStyle(quiz.style)
           ? count(t, quiz._count.submissions, "count.result", "count.results")

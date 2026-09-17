@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { getT } from "@/lib/i18n/server";
 import { TRYOUT_DEFAULTS, parseQuizStyle } from "@/lib/quiz/styles";
+import { DRILL_DEFAULTS, DRILL_SECONDS_MAX, DRILL_SECONDS_MIN, parseDrillSkill } from "@/lib/drills/registry";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -53,6 +54,12 @@ async function resolvePlacement(
     if (!lesson) return { error: t("action.lessonNotInChapter") };
   }
   return { chapterId, lessonId };
+}
+
+/** A whole number from a form field, kept within bounds, or the fallback when blank or not a number. */
+function clampInt(raw: FormDataEntryValue | null, min: number, max: number, fallback: number) {
+  const n = Math.round(Number(String(raw ?? "").trim()));
+  return Number.isFinite(n) && String(raw ?? "").trim() !== "" ? Math.min(max, Math.max(min, n)) : fallback;
 }
 
 function revalidateQuizLists() {
@@ -185,9 +192,17 @@ export async function duplicateQuiz(
           }
         : TRYOUT_DEFAULTS;
 
+  // Likewise a drill copied as a drill keeps its skill, clock and target.
+  const drill =
+    style !== "DRILL"
+      ? {}
+      : source.style === "DRILL"
+        ? { drillSkill: source.drillSkill, drillSeconds: source.drillSeconds, drillTarget: source.drillTarget }
+        : DRILL_DEFAULTS;
+
   const copy = await db.$transaction(async (tx) => {
     const quiz = await tx.quiz.create({
-      data: { title, ...placement, status: "DRAFT", style, ...tryout },
+      data: { title, ...placement, status: "DRAFT", style, ...tryout, ...drill },
     });
     await tx.question.createMany({
       data: source.questions.map((q) => ({
@@ -223,8 +238,9 @@ export async function createQuiz(_prev: CreateQuizState, formData: FormData): Pr
       ...placement,
       status: "DRAFT",
       style,
-      // A new try-out starts with the settings every existing one uses.
+      // New try-outs and drills start on their defaults.
       ...(style === "TRYOUT" ? TRYOUT_DEFAULTS : {}),
+      ...(style === "DRILL" ? DRILL_DEFAULTS : {}),
     },
   });
   revalidateQuizLists();
@@ -259,12 +275,23 @@ export async function updateQuizMeta(quizId: string, formData: FormData) {
     };
   }
 
+  // Same for the drill fields: read only for a drill, cleared otherwise.
+  const drill =
+    style === "DRILL"
+      ? {
+          drillSkill: parseDrillSkill(formData.get("drillSkill")),
+          drillSeconds: clampInt(formData.get("drillSeconds"), DRILL_SECONDS_MIN, DRILL_SECONDS_MAX, DRILL_DEFAULTS.drillSeconds),
+          drillTarget: clampInt(formData.get("drillTarget"), 1, 999, DRILL_DEFAULTS.drillTarget),
+        }
+      : { drillSkill: null, drillSeconds: null, drillTarget: null };
+
   await db.quiz.update({
     where: { id: quizId },
     data: {
       title,
       style,
       ...tryout,
+      ...drill,
       ...("error" in placement ? {} : placement),
     },
   });

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { DRILL_DEFAULTS } from "@/lib/drills/registry";
 import type { QuizStyle, SubmissionStatus } from "@/generated/prisma/enums";
 import { QuizStyleChip } from "@/components/quiz/QuizStyleField";
 import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
@@ -17,6 +18,8 @@ export type StudentQuizRow = {
   /** False for practice: no score, a completion mark instead. */
   graded: boolean;
   practiceDone: boolean;
+  drillSeconds: number | null;
+  drillTarget: number | null;
   lessonTitle: string | null;
   trackTitle: string | null;
   /** Set for every quiz; a quiz with no lesson is the chapter's own test. */
@@ -68,7 +71,9 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
           {/* The columns below are hidden on a phone — fold the essentials under the title. */}
           <span className="block truncate text-xs text-zinc-500 sm:hidden">
             {statusLabel(q, t)} · {q.lessonTitle ?? t("quizList.chapterTest")} ·{" "}
-            {t("quizList.questions", { n: q.questionCount })}
+            {q.style === "DRILL"
+              ? t("drill.listDetails", { seconds: q.drillSeconds ?? DRILL_DEFAULTS.drillSeconds, target: q.drillTarget ?? DRILL_DEFAULTS.drillTarget })
+              : t("quizList.questions", { n: q.questionCount })}
             {q.scorePct !== null && ` · ${Math.round(q.scorePct)}%`}
           </span>
         </span>
@@ -101,7 +106,11 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
     sort: (q) => q.questionCount,
     text: (q) =>
       [
-        q.graded ? t("quizList.questions", { n: q.questionCount }) : t("quizList.practiceDetails", { n: q.questionCount }),
+        q.style === "DRILL"
+          ? t("drill.listDetails", { seconds: q.drillSeconds ?? DRILL_DEFAULTS.drillSeconds, target: q.drillTarget ?? DRILL_DEFAULTS.drillTarget })
+          : q.graded
+            ? t("quizList.questions", { n: q.questionCount })
+            : t("quizList.practiceDetails", { n: q.questionCount }),
         q.graded ? t("quizTable.pts", { n: q.totalPoints }) : null,
         q.timeLimitMinutes ? t("quizList.minutes", { n: q.timeLimitMinutes }) : null,
         q.attemptsRemaining !== null ? t("quizList.attemptsLeft", { n: q.attemptsRemaining }) : null,
@@ -113,9 +122,14 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
     cell: (q) => (
       <span className="text-zinc-500">
         <span className="block">
-          {q.graded
-            ? t("quizList.questionsPoints", { n: q.questionCount, points: q.totalPoints })
-            : t("quizList.practiceDetails", { n: q.questionCount })}
+          {q.style === "DRILL"
+            ? t("drill.listDetails", {
+                seconds: q.drillSeconds ?? DRILL_DEFAULTS.drillSeconds,
+                target: q.drillTarget ?? DRILL_DEFAULTS.drillTarget,
+              })
+            : q.graded
+              ? t("quizList.questionsPoints", { n: q.questionCount, points: q.totalPoints })
+              : t("quizList.practiceDetails", { n: q.questionCount })}
         </span>
         {(q.timeLimitMinutes || q.attemptsRemaining !== null) && (
           <span className="block">

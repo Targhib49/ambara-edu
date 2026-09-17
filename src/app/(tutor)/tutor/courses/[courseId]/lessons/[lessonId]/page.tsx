@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DRILL_SKILLS, parseDrillSkill } from "@/lib/drills/registry";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { renameLesson, setLessonStatus } from "@/lib/actions/lessons";
@@ -42,7 +43,7 @@ export default async function LessonEditorPage({
     include: {
       chapter: { select: { title: true, courseId: true, course: { select: { title: true } } } },
       blocks: { orderBy: { order: "asc" } },
-      quizzes: { select: { id: true, title: true, status: true, style: true, _count: { select: { questions: true } } }, orderBy: { createdAt: "asc" } },
+      quizzes: { select: { id: true, title: true, status: true, style: true, drillSkill: true, _count: { select: { questions: true } } }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!lesson || lesson.chapter.courseId !== courseId) notFound();
@@ -162,9 +163,11 @@ export default async function LessonEditorPage({
                   <QuizStyleChip style={quiz.style} />
                   {quiz.status === "DRAFT" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("status.draft")}</span>}
                   <span className="text-xs tabular-nums text-zinc-500">
-                    {t(quiz._count.questions === 1 ? "lessonEditor.questionCount" : "lessonEditor.questionCountPlural", {
-                      n: quiz._count.questions,
-                    })}
+                    {quiz.style === "DRILL"
+                      ? t(DRILL_SKILLS[parseDrillSkill(quiz.drillSkill)].labelKey)
+                      : t(quiz._count.questions === 1 ? "lessonEditor.questionCount" : "lessonEditor.questionCountPlural", {
+                          n: quiz._count.questions,
+                        })}
                   </span>
                 </Link>
               </li>

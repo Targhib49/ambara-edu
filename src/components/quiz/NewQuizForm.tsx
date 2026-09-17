@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import type { QuizStyle } from "@/generated/prisma/enums";
 import { createQuiz, type CreateQuizState } from "@/lib/actions/quizzes";
 import { QuizPlacementFields } from "@/components/quiz/QuizPlacementFields";
 import { QuizStyleField } from "@/components/quiz/QuizStyleField";
@@ -27,6 +28,7 @@ export function NewQuizForm({
 }) {
   const t = useT();
   const panel = useSlideOver();
+  const [style, setStyle] = useState<QuizStyle>("CLASSIC");
   const [state, formAction, pending] = useActionState<CreateQuizState, FormData>(createQuiz, {});
 
   return (
@@ -40,7 +42,7 @@ export function NewQuizForm({
 
       <QuizPlacementFields tree={tree} defaultCourseId={defaultCourseId} defaultChapterId={defaultChapterId} defaultLessonId={defaultLessonId} />
 
-      <QuizStyleField />
+      <QuizStyleField value={style} onChange={setStyle} />
 
       <p className={hintCls}>{t("newQuiz.hint")}</p>
       {state.error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
@@ -52,7 +54,7 @@ export function NewQuizForm({
           </button>
         )}
         <button disabled={pending} className={btnPrimary}>
-          {pending ? t("action.creating") : t("newQuiz.create")}
+          {pending ? t("action.creating") : style === "DRILL" ? t("drill.createCta") : t("newQuiz.create")}
         </button>
       </div>
     </form>

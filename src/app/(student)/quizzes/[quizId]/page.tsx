@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { DrillPlayer } from "./DrillPlayer";
+import { DRILL_DEFAULTS, parseDrillSkill } from "@/lib/drills/registry";
+import { isGradedStyle } from "@/lib/quiz/styles";
 import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -50,7 +53,7 @@ export default async function StudentQuizPage({
   });
   if (!quiz) notFound();
 
-  const isPractice = quiz.style === "MASTERY";
+  const isPractice = !isGradedStyle(quiz.style);
   const [submission, attempts, timedSession, practice] = await Promise.all([
     db.submission.findUnique({
       where: { studentId_quizId: { studentId: student.id, quizId } },
@@ -112,9 +115,14 @@ export default async function StudentQuizPage({
         crumbs={crumbs}
         title={quiz.title}
         meta={
-          isPractice
-            ? t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })
-            : t("quizPage.metaCounts", { q: quiz.questions.length, p: totalPoints })
+          quiz.style === "DRILL"
+            ? t("drill.meta", {
+                seconds: quiz.drillSeconds ?? DRILL_DEFAULTS.drillSeconds,
+                target: quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget,
+              })
+            : isPractice
+              ? t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })
+              : t("quizPage.metaCounts", { q: quiz.questions.length, p: totalPoints })
         }
         actions={
           <Link href={backHref} className={`${btnSecondary} max-w-full`}>
@@ -123,7 +131,15 @@ export default async function StudentQuizPage({
         }
       />
 
-      {isPractice ? (
+      {quiz.style === "DRILL" ? (
+        <DrillPlayer
+          quizId={quiz.id}
+          skill={parseDrillSkill(quiz.drillSkill)}
+          seconds={quiz.drillSeconds ?? DRILL_DEFAULTS.drillSeconds}
+          target={quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget}
+          initialBest={practice?.bestScore ?? null}
+        />
+      ) : isPractice ? (
         <MasteryPractice
           quizId={quiz.id}
           // No correct answers leave the server: practice is checked there.

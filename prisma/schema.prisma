@@ -83,6 +83,7 @@ enum QuizStyle {
   CLASSIC // every question on one page, untimed, retake freely
   TRYOUT  // exam simulation: one question at a time against the clock
   MASTERY // practice: one question at a time, checked instantly, until each is right once
+  DRILL   // practice: timed rounds of generated questions, aiming for a target score
 }
 
 enum SubmissionStatus {
@@ -341,6 +342,12 @@ model Quiz {
   timeLimitMinutes       Int?     // null = untimed
   maxAttempts            Int?     // null = unlimited retakes
   randomizeQuestionOrder Boolean  @default(false)
+  // Drill settings, only read when style is DRILL. A drill has no authored
+  // questions — a generator makes fresh ones every round — so these say which
+  // skill, how long a round lasts, and the score that counts as done.
+  drillSkill             String?
+  drillSeconds           Int?
+  drillTarget            Int?
   questions     Question[]
   submissions   Submission[]
   submissionAttempts SubmissionAttempt[]
@@ -386,7 +393,8 @@ model PracticeProgress {
   // The first time every question was mastered — the completion mark, which a
   // restart leaves alone.
   completedAt DateTime?
-  runs        Int       @default(0) // completed runs
+  runs        Int       @default(0) // completed runs (drills: rounds played)
+  bestScore   Int?      // drills only: the best round
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

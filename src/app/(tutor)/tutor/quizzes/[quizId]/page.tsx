@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DRILL_DEFAULTS, DRILL_SECONDS_MAX, DRILL_SECONDS_MIN, DRILL_SKILLS, DRILL_SKILL_KEYS } from "@/lib/drills/registry";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { DuplicateQuizForm } from "@/components/quiz/DuplicateQuizForm";
 import { QUIZ_STYLES, isGradedStyle } from "@/lib/quiz/styles";
@@ -87,9 +88,14 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
                 }`
               : t("quizDetail.notPlaced")}
             {" · "}
-            {isGradedStyle(quiz.style)
-              ? t("quizDetail.metaCounts", { q: quiz.questions.length, p: totalPoints })
-              : t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })}
+            {quiz.style === "DRILL"
+              ? t("drill.meta", {
+                  seconds: quiz.drillSeconds ?? DRILL_DEFAULTS.drillSeconds,
+                  target: quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget,
+                })
+              : isGradedStyle(quiz.style)
+                ? t("quizDetail.metaCounts", { q: quiz.questions.length, p: totalPoints })
+                : t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })}
           </>
         }
       />
@@ -106,6 +112,43 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
             <QuizStyleField defaultStyle={quiz.style} />
             {/* Only while Try-out is picked. Done in CSS so the page stays a server
                 component; switching a classic quiz over shows the house defaults. */}
+            {/* Drill settings, revealed the same way while Drill is picked. */}
+            <div className="hidden space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3 group-has-[input[value=DRILL]:checked]:block">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">{t("drill.settings")}</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+                <div>
+                  <label className={labelCls}>{t("drill.skillLabel")}</label>
+                  <select name="drillSkill" defaultValue={quiz.drillSkill ?? DRILL_DEFAULTS.drillSkill} className={inputCls}>
+                    {DRILL_SKILL_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {t(DRILL_SKILLS[key].labelKey)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>{t("drill.secondsLabel")}</label>
+                  <input
+                    name="drillSeconds"
+                    type="number"
+                    min={DRILL_SECONDS_MIN}
+                    max={DRILL_SECONDS_MAX}
+                    defaultValue={quiz.drillSeconds ?? DRILL_DEFAULTS.drillSeconds}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>{t("drill.targetLabel")}</label>
+                  <input
+                    name="drillTarget"
+                    type="number"
+                    min={1}
+                    defaultValue={quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+            </div>
             <div className="hidden space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3 group-has-[input[value=TRYOUT]:checked]:block">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">{t("quizStyle.tryoutSettings")}</p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -194,6 +237,12 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
         </div>
       </section>
 
+      {quiz.style === "DRILL" ? (
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">{t("quizDetail.questions")}</h2>
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{t("drill.questionsUnused")}</p>
+        </section>
+      ) : (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t("quizDetail.questions")}</h2>
         <QuestionsSection questions={quiz.questions} practice={!isGradedStyle(quiz.style)} />
@@ -214,12 +263,13 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
           </div>
         </div>
       </section>
+      )}
 
       {!isGradedStyle(quiz.style) ? (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">{t("quizDetail.practiceProgress")}</h2>
           <p className="text-xs text-zinc-500">{t("quizDetail.practiceNotGraded")}</p>
-          {unpracticable > 0 && (
+          {quiz.style === "MASTERY" && unpracticable > 0 && (
             <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
               {t("quizDetail.unpracticable", { n: unpracticable })}
             </p>
@@ -238,13 +288,32 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
                       {initialsFor(p.student.name)}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">{p.student.name}</span>
-                    <span className="shrink-0 text-sm tabular-nums text-zinc-500">
-                      {t("quizDetail.practiceMastered", { n: mastered, total: practicableIds.size })}
-                    </span>
-                    {p.runs > 0 && (
-                      <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                        ✓ {p.runs === 1 ? t("quizDetail.practiceRunsOne") : t("quizDetail.practiceRuns", { n: p.runs })}
-                      </span>
+                    {quiz.style === "DRILL" ? (
+                      <>
+                        <span className="shrink-0 text-sm tabular-nums text-zinc-500">
+                          {t("drill.progress", {
+                            best: p.bestScore ?? 0,
+                            target: quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget,
+                          })}{" "}
+                          · {t(p.runs === 1 ? "drill.roundsOne" : "drill.rounds", { n: p.runs })}
+                        </span>
+                        {p.completedAt && (
+                          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                            ✓ {t("outline.practiceDone")}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span className="shrink-0 text-sm tabular-nums text-zinc-500">
+                          {t("quizDetail.practiceMastered", { n: mastered, total: practicableIds.size })}
+                        </span>
+                        {p.runs > 0 && (
+                          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                            ✓ {p.runs === 1 ? t("quizDetail.practiceRunsOne") : t("quizDetail.practiceRuns", { n: p.runs })}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 );
