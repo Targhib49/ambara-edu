@@ -36,11 +36,14 @@ export const correctAnswerSchemas = {
   }),
   // A worked solution with exactly one wrong line. An empty `correction` means
   // spotting the line is the whole task.
-  FIND_MISTAKE: z.object({
-    lines: z.array(z.string()).min(2).max(12),
-    wrongIndex: z.number().int().min(0),
-    correction: z.string().default(""),
-  }),
+  FIND_MISTAKE: z
+    .object({
+      lines: z.array(z.string()).min(2).max(12),
+      wrongIndex: z.number().int().min(0),
+      correction: z.string().default(""),
+    })
+    // A wrong line past the end would save fine and never be answerable.
+    .refine((a) => a.wrongIndex < a.lines.length, { message: "wrongIndex must point at one of the lines", path: ["wrongIndex"] }),
 } as const satisfies Record<QuestionType, z.ZodType>;
 
 export type CorrectAnswerMap = {

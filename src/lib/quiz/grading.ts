@@ -23,9 +23,17 @@ function safeRegexTest(pattern: string, flags: string, value: string) {
   }
 }
 
-/** Parses a plain decimal ("0.5") or simple fraction ("1/2") into a number. */
+/**
+ * Parses a plain decimal ("0.5"), a decimal written with a comma ("0,5" — how
+ * an Indonesian student writes it) or a simple fraction ("1/2") into a number.
+ *
+ * Only a lone comma between digits is read as a decimal point. A dot stays a
+ * decimal point, so "1.000" is still one, not a thousand — which is why plain
+ * numbers belong in NUMERIC questions, not written answers.
+ */
 function parseNumericAnswer(s: string): number | null {
-  const trimmed = s.trim();
+  const raw = s.trim();
+  const trimmed = /^-?\d+,\d+$/.test(raw) ? raw.replace(",", ".") : raw;
   const fractionMatch = /^(-?\d+)\s*\/\s*(-?\d+)$/.exec(trimmed);
   if (fractionMatch) {
     const num = Number(fractionMatch[1]);
