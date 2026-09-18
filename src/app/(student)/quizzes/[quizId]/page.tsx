@@ -130,7 +130,7 @@ export default async function StudentQuizPage({
                 target: quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget,
               })
             : quiz.style === "REVIEW"
-              ? t("review.meta", { n: quiz.reviewCount ?? REVIEW_COUNT_DEFAULT })
+              ? t("review.meta", { n: reviewSet.length })
               : isPractice
                 ? t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })
               : t("quizPage.metaCounts", { q: quiz.questions.length, p: totalPoints })
@@ -167,8 +167,10 @@ export default async function StudentQuizPage({
         />
       ) : isTimed ? (
         <>
-          {outOfAttempts && <NoAttemptsLeftCard maxAttempts={quiz.maxAttempts!} />}
-          {!outOfAttempts && submission && !timedSession && (
+          {outOfAttempts && <NoAttemptsLeftCard maxAttempts={quiz.maxAttempts!} isExam={quiz.style === "EXAM"} />}
+          {/* The marked paper is shown once the attempt is in, whether or not
+              another attempt is left — an exam only ever has the one. */}
+          {submission && !timedSession && (
             <QuizResults
               quiz={quiz}
               submission={submission}
@@ -184,6 +186,8 @@ export default async function StudentQuizPage({
               timeLimitMinutes={quiz.timeLimitMinutes!}
               attemptsRemaining={attemptsRemaining}
               isRetry={!!submission}
+              isExam={quiz.style === "EXAM"}
+              shuffled={quiz.randomizeQuestionOrder}
             />
           )}
           {timedSession && (
@@ -320,12 +324,22 @@ async function QuizResults({
             )}
             <div className="mt-2">
               {grade.status === "AUTO_GRADED" ? (
+                // A step, part or correction can be right on its own, so a wrong
+                // answer that still earned something says so rather than "wrong".
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    grade.correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    grade.correct
+                      ? "bg-green-100 text-green-700"
+                      : grade.earnedPoints > 0
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-red-100 text-red-700"
                   }`}
                 >
-                  {grade.correct ? t("quiz.correct") : t("quiz.incorrect")}
+                  {grade.correct
+                    ? t("quiz.correct")
+                    : grade.earnedPoints > 0
+                      ? t("quiz.partial", { earned: grade.earnedPoints, total: q.points })
+                      : t("quiz.incorrect")}
                 </span>
               ) : submission.status === "REVIEWED" ? (
                 <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
@@ -333,7 +347,7 @@ async function QuizResults({
                 </span>
               ) : (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                  Awaiting review
+                  {t("quizPage.awaitingReview")}
                 </span>
               )}
             </div>
@@ -349,22 +363,23 @@ async function QuizResults({
           href={`/quizzes/${quiz.id}?retake=1`}
           className="inline-block rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-100"
         >
-          Retake quiz
+          {t("quizPage.retakeQuiz")}
         </Link>
       )}
     </div>
   );
 }
 
-function NoAttemptsLeftCard({ maxAttempts }: { maxAttempts: number }) {
+async function NoAttemptsLeftCard({ maxAttempts, isExam }: { maxAttempts: number; isExam: boolean }) {
+  const t = await getT();
   return (
     <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 text-center">
       <p className="text-sm font-medium text-zinc-700">
-        You&rsquo;ve used all {maxAttempts} attempt{maxAttempts === 1 ? "" : "s"} for this try-out.
+        {isExam
+          ? t("quizPage.noAttemptsExam")
+          : t(maxAttempts === 1 ? "quizPage.noAttemptsLeftOne" : "quizPage.noAttemptsLeft", { n: maxAttempts })}
       </p>
-      <p className="mt-1 text-sm text-zinc-500">
-        Your best score is recorded below. Ask your tutor if you need another chance.
-      </p>
+      <p className="mt-1 text-sm text-zinc-500">{t("quizPage.noAttemptsHint")}</p>
     </div>
   );
 }
@@ -375,28 +390,37 @@ async function StartAttemptCard({
   timeLimitMinutes,
   attemptsRemaining,
   isRetry,
+  isExam,
+  shuffled,
 }: {
   quizId: string;
   questionCount: number;
   timeLimitMinutes: number;
   attemptsRemaining: number | null;
   isRetry: boolean;
+  isExam: boolean;
+  shuffled: boolean;
 }) {
   const t = await getT();
   return (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 text-center">
       <p className="text-lg font-semibold text-blue-900">
-        {isRetry ? t("quizPage.readyAnother") : t("quizPage.readyStart")}
+        {isRetry ? t("quizPage.readyAnother") : t(isExam ? "quizPage.readyStartExam" : "quizPage.readyStart")}
       </p>
       <p className="mx-auto mt-2 max-w-sm text-sm text-blue-800">
-        {t("quizPage.startBlurbBefore", { n: questionCount })}{" "}
+        {t(shuffled ? "quizPage.startBlurbBefore" : "quizPage.startBlurbBeforeFixed", { n: questionCount })}{" "}
         <strong>{t("schedule.minutesOption", { n: timeLimitMinutes })}</strong>{" "}
         {t("quizPage.startBlurbAfter")}
-        {attemptsRemaining !== null && (
-          <>
-            {" "}
-            {t(attemptsRemaining === 1 ? "quizPage.attemptRemaining" : "quizPage.attemptsRemaining", { n: attemptsRemaining })}
-          </>
+        {/* An exam says what it is rather than counting down from one. */}
+        {isExam ? (
+          <> {t("quizPage.examOneGo")}</>
+        ) : (
+          attemptsRemaining !== null && (
+            <>
+              {" "}
+              {t(attemptsRemaining === 1 ? "quizPage.attemptRemaining" : "quizPage.attemptsRemaining", { n: attemptsRemaining })}
+            </>
+          )
         )}
       </p>
       <form action={startTimedAttempt.bind(null, quizId)} className="mt-4">
@@ -404,7 +428,7 @@ async function StartAttemptCard({
           pendingLabel={t("quizPage.starting")}
           className="rounded-md bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
         >
-          {isRetry ? t("quizPage.startNext") : t("quizPage.startTryout")}
+          {isRetry ? t("quizPage.startNext") : t(isExam ? "quizPage.startExam" : "quizPage.startTryout")}
         </SubmitButton>
       </form>
     </div>

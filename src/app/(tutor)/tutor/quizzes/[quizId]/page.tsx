@@ -58,8 +58,10 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
   const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
   // Practice can only use questions it can check instantly.
   const practicableIds = new Set(quiz.questions.filter(isPracticable).map((q) => q.id));
-  // How much earlier material a review here could draw on.
-  const reviewPoolSize = quiz.style === "REVIEW" ? (await reviewPool(quiz.id)).length : 0;
+  // How much earlier material a review here could draw on. Counted whatever the
+  // style is: the settings panel is revealed in CSS, so the number has to be on
+  // the page already when the tutor picks Mixed review.
+  const reviewPoolSize = (await reviewPool(quiz.id)).length;
   const unpracticable = quiz.questions.length - practicableIds.size;
 
   return (
@@ -329,7 +331,11 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
                       <>
                         <span className="shrink-0 text-sm tabular-nums text-zinc-500">
                           {quiz.style === "REVIEW"
-                            ? t("review.bestScore", { n: p.bestScore ?? 0, total: quiz.reviewCount ?? REVIEW_COUNT_DEFAULT })
+                            ? t("review.bestScore", {
+                                n: p.bestScore ?? 0,
+                                // A thin pool means a shorter set than the setting asks for.
+                                total: Math.min(quiz.reviewCount ?? REVIEW_COUNT_DEFAULT, reviewPoolSize),
+                              })
                             : t("drill.progress", {
                                 best: p.bestScore ?? 0,
                                 target: quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget,

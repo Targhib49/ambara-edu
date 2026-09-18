@@ -40,13 +40,13 @@ export function ScoreHistory({
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-5">
-      <h2 className="text-sm font-medium text-zinc-700">Score history</h2>
+      <h2 className="text-sm font-medium text-zinc-700">{t("quizPage.scoreHistory")}</h2>
       <ul className="mt-3 divide-y divide-zinc-100">
         {rows.map((row, i) => (
           <li key={`${row.attemptNumber}-${row.submittedAt}`} className="flex flex-wrap items-center gap-3 py-2 text-sm">
             <span className="w-20 text-zinc-500">
-              Attempt {row.attemptNumber}
-              {i === 0 && <span className="ml-1 text-xs text-blue-600">(latest)</span>}
+              {t("quizPage.attemptNumber", { n: row.attemptNumber })}
+              {i === 0 && <span className="ml-1 text-xs text-blue-600">{t("quizPage.attemptLatest")}</span>}
             </span>
             <span className="font-mono font-medium text-zinc-800">{scoreLabel(row, totalPoints)}</span>
             <span

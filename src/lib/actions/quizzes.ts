@@ -5,6 +5,7 @@ import { getT } from "@/lib/i18n/server";
 import { EXAM_DEFAULTS, TRYOUT_DEFAULTS, isTimedStyle, parseQuizStyle } from "@/lib/quiz/styles";
 import { DRILL_DEFAULTS, DRILL_SECONDS_MAX, DRILL_SECONDS_MIN, parseDrillSkill } from "@/lib/drills/registry";
 import { REVIEW_COUNT_DEFAULT, REVIEW_COUNT_MAX } from "@/lib/quiz/review";
+import { PART_LETTERS } from "@/lib/quiz/format";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -362,7 +363,11 @@ function defaultQuestionData(
       prompt,
       options: [],
       correctAnswer: {
-        parts: [1, 2].map(() => ({ prompt, marks: 1, answer: t("qEditor.sampleAnswer") })),
+        parts: PART_LETTERS.slice(0, 2).map((letter) => ({
+          prompt: t("qEditor.partN", { letter }),
+          marks: 1,
+          answer: t("qEditor.sampleAnswer"),
+        })),
       },
     },
     FIND_MISTAKE: {
