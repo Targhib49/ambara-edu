@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
-import { isEnabled } from "@/lib/flags";
 import { summarizeCourseProgress } from "@/lib/progress";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getT } from "@/lib/i18n/server";
@@ -8,7 +7,6 @@ import { StudentCourseGrid, type StudentCourseCard } from "@/components/student/
 
 export default async function StudentCoursesPage() {
   const student = await requireStudent();
-  const courseV2 = await isEnabled("course_v2");
   const t = await getT();
 
   const courses = await db.course.findMany({
@@ -37,8 +35,8 @@ export default async function StudentCoursesPage() {
       coverSrc: course.coverImagePath ? `/api/courses/${course.id}/cover?v=${encodeURIComponent(course.coverImagePath)}` : null,
       lessonCount: lessons.length,
       // Without course_v2 there is no lesson completion to report.
-      completed: courseV2 ? progress.completed : null,
-      pct: courseV2 ? progress.pct : null,
+      completed: progress.completed,
+      pct: progress.pct,
     };
   });
   const inProgress = cards.filter((c) => (c.pct ?? 0) > 0 && (c.pct ?? 0) < 100).length;

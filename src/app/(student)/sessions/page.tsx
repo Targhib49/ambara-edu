@@ -8,13 +8,11 @@ import { nowMs } from "@/lib/sessions/format";
 import { BookingPanel } from "@/components/sessions/BookingPanel";
 import { CalendarFeedCard } from "@/components/sessions/CalendarFeedCard";
 import { ensureCalendarToken } from "@/lib/actions/booking";
-import { isEnabled } from "@/lib/flags";
 import { formatSlotDay, formatSlotTime, generateSlots } from "@/lib/scheduling";
 import { feedUrlFor } from "@/lib/sessions/feedUrl";
 
 export default async function StudentSessionsPage() {
   const student = await requireStudent();
-  const schedulingV2 = await isEnabled("scheduling_v2");
   const t = await getT();
   const language = await getLanguage();
 
@@ -26,46 +24,32 @@ export default async function StudentSessionsPage() {
 
   // Open slots across every tutor who has published availability. Booked time
   // is excluded per tutor, so one tutor's bookings never hide another's slots.
-  let openSlots: {
-    availabilityId: string;
-    startIso: string;
-    durationMinutes: number;
-    dayLabel: string;
-    timeLabel: string;
-    tutorId: string;
-  }[] = [];
-  let feedUrl: string | null = null;
-  // A tutor can ask for a new time whether or not self-booking is switched on,
-  // so the student always gets slots to pick from when one is waiting on them.
-  const awaitingNewTime = sessions.some((s) => s.status === "AWAITING_RESCHEDULE");
-  if (schedulingV2 || awaitingNewTime) {
-    const [windows, busy] = await Promise.all([
-      db.availability.findMany({ where: { active: true } }),
-      db.session.findMany({
-        where: { // A session waiting for a new time no longer holds its old slot.
-        status: { notIn: ["CANCELLED", "AWAITING_RESCHEDULE"] } },
-        select: { tutorId: true, startTime: true, durationMinutes: true },
-      }),
-    ]);
-    const now = new Date();
-    openSlots = windows
-      .flatMap((w) =>
-        generateSlots([w], busy.filter((b) => b.tutorId === w.tutorId), now).map((slot) => ({
-          ...slot,
-          tutorId: w.tutorId,
-        }))
-      )
-      .sort((a, b) => a.start.getTime() - b.start.getTime())
-      .map((slot) => ({
-        availabilityId: slot.availabilityId,
-        startIso: slot.start.toISOString(),
-        durationMinutes: slot.durationMinutes,
-        dayLabel: formatSlotDay(slot.start, language),
-        timeLabel: formatSlotTime(slot.start),
-        tutorId: slot.tutorId,
-      }));
-  }
-  if (schedulingV2) feedUrl = await feedUrlFor(await ensureCalendarToken());
+  const [windows, busy] = await Promise.all([
+    db.availability.findMany({ where: { active: true } }),
+    db.session.findMany({
+      where: { // A session waiting for a new time no longer holds its old slot.
+      status: { notIn: ["CANCELLED", "AWAITING_RESCHEDULE"] } },
+      select: { tutorId: true, startTime: true, durationMinutes: true },
+    }),
+  ]);
+  const openSlots = windows
+    .flatMap((w) =>
+      generateSlots([w], busy.filter((b) => b.tutorId === w.tutorId), new Date()).map((slot) => ({
+        ...slot,
+        tutorId: w.tutorId,
+      }))
+    )
+    .sort((a, b) => a.start.getTime() - b.start.getTime())
+    .map((slot) => ({
+      availabilityId: slot.availabilityId,
+      startIso: slot.start.toISOString(),
+      durationMinutes: slot.durationMinutes,
+      dayLabel: formatSlotDay(slot.start, language),
+      timeLabel: formatSlotTime(slot.start),
+      tutorId: slot.tutorId,
+    }));
+
+  const feedUrl = await feedUrlFor(await ensureCalendarToken());
 
   const now = nowMs();
   const upcomingCount = sessions.filter(
@@ -101,8 +85,7 @@ export default async function StudentSessionsPage() {
           </>
         }
         actions={
-          schedulingV2 ? (
-            <>
+          <>
               {feedUrl && (
                 <SlideOverButton
                   label={t("sessions.calendarFeed")}
@@ -118,10 +101,9 @@ export default async function StudentSessionsPage() {
                 title={t("sessions.book")}
                 description={t("sessions.bookDescription")}
               >
-                <BookingPanel slots={openSlots} />
-              </SlideOverButton>
-            </>
-          ) : null
+            <BookingPanel slots={openSlots} />
+          </SlideOverButton>
+          </>
         }
       />
 

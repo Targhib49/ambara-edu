@@ -145,15 +145,15 @@ export function SortingVisualizer({ algorithm, values }: Props) {
       : steps[stepIdx - 1];
   const atEnd = stepIdx >= steps.length;
 
+  // Playback is derived rather than corrected: reaching the end stops the timer
+  // and flips the label back to Play without an effect writing state.
+  const running = playing && !atEnd;
+
   useEffect(() => {
-    if (!playing) return;
-    if (atEnd) {
-      setPlaying(false);
-      return;
-    }
+    if (!running) return;
     const t = setInterval(() => setStepIdx((s) => Math.min(s + 1, steps.length)), 500);
     return () => clearInterval(t);
-  }, [playing, atEnd, steps.length]);
+  }, [running, steps.length]);
 
   const max = Math.max(...current.array);
   const barW = 100 / current.array.length;
@@ -219,7 +219,7 @@ export function SortingVisualizer({ algorithm, values }: Props) {
           ◀ Back
         </button>
         <button className={vizBtnPrimary} disabled={atEnd} onClick={() => setPlaying((p) => !p)}>
-          {playing ? "⏸ Pause" : "▶ Play"}
+          {running ? "⏸ Pause" : "▶ Play"}
         </button>
         <button
           className={vizBtn}

@@ -63,15 +63,15 @@ export function LoopStepper(props: Props) {
   const state = trace[idx];
   const atEnd = idx >= trace.length - 1;
 
+  // Playback is derived rather than corrected: reaching the end stops the timer
+  // and flips the label back to Play without an effect writing state.
+  const running = playing && !atEnd;
+
   useEffect(() => {
-    if (!playing) return;
-    if (atEnd) {
-      setPlaying(false);
-      return;
-    }
+    if (!running) return;
     const t = setInterval(() => setIdx((s) => Math.min(s + 1, trace.length - 1)), 800);
     return () => clearInterval(t);
-  }, [playing, atEnd, trace.length]);
+  }, [running, trace.length]);
 
   const codeLines = [
     `total = ${operation === "sum" ? 0 : 1}`,
@@ -126,7 +126,7 @@ export function LoopStepper(props: Props) {
           ◀ Back
         </button>
         <button className={vizBtnPrimary} disabled={atEnd} onClick={() => setPlaying((p) => !p)}>
-          {playing ? "⏸ Pause" : "▶ Play"}
+          {running ? "⏸ Pause" : "▶ Play"}
         </button>
         <button
           className={vizBtn}

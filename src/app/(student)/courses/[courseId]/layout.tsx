@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { SidebarNav, type SidebarSection } from "@/components/ui/SidebarNav";
 import { SidebarShell } from "@/components/ui/SidebarShell";
-import { isEnabled } from "@/lib/flags";
 import { getT } from "@/lib/i18n/server";
 
 export default async function StudentTrackLayout({
@@ -16,7 +15,6 @@ export default async function StudentTrackLayout({
   const { courseId } = await params;
   const student = await requireStudent();
   const t = await getT();
-  const courseV2 = await isEnabled("course_v2");
 
   const course = await db.course.findFirst({
     where: { id: courseId, enrollments: { some: { studentId: student.id } } },
@@ -47,11 +45,11 @@ export default async function StudentTrackLayout({
         const done = c.lessons.filter((l) => l.progress[0]?.completedAt != null).length;
         return {
           title: c.title,
-          meta: courseV2 ? `${done}/${c.lessons.length}` : undefined,
+          meta: `${done}/${c.lessons.length}`,
           items: c.lessons.map((l) => ({
             href: `/courses/${course.id}/lessons/${l.id}`,
             label: l.title,
-            done: courseV2 ? l.progress[0]?.completedAt != null : undefined,
+            done: l.progress[0]?.completedAt != null,
           })),
         };
       }),

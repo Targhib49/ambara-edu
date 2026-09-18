@@ -23,19 +23,16 @@ const PLAYGROUND_ITEM = { href: "/playground", label: "nav.playground" as Messag
 function NavLinks({
   pathname,
   showLabels,
-  showPlayground,
   onLinkClick,
 }: {
   pathname: string;
   showLabels: boolean;
-  showPlayground: boolean;
   onLinkClick?: () => void;
 }) {
   const t = useT();
-  const items = showPlayground ? [...NAV_ITEMS, PLAYGROUND_ITEM] : NAV_ITEMS;
   return (
     <nav className="flex-1 space-y-0.5 px-2 py-2">
-      {items.map(({ href, label, icon: Icon }) => {
+      {[...NAV_ITEMS, PLAYGROUND_ITEM].map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         const text = t(label);
         return (
@@ -62,7 +59,7 @@ function NavLinks({
 
 // Mirrors TutorSidebar's structure exactly, so both roles share one visual
 // shell language — same collapse behavior, same mobile drawer.
-export function StudentSidebar({ showPlayground = false }: { showPlayground?: boolean }) {
+export function StudentSidebar() {
   const t = useT();
   const pathname = usePathname();
   const open = useOpen();
@@ -79,7 +76,7 @@ export function StudentSidebar({ showPlayground = false }: { showPlayground?: bo
         <div className="flex h-14 items-center gap-2 px-4">
           <span className="text-lg font-bold text-white">{open ? "AmbaraEdu" : "AE"}</span>
         </div>
-        <NavLinks pathname={pathname} showLabels={open} showPlayground={showPlayground} />
+        <NavLinks pathname={pathname} showLabels={open} />
         <button
           onClick={() => setOpen(!open)}
           aria-label={t(open ? "nav.collapseSidebar" : "nav.expandSidebar")}
@@ -111,7 +108,6 @@ export function StudentSidebar({ showPlayground = false }: { showPlayground?: bo
             <NavLinks
               pathname={pathname}
               showLabels
-              showPlayground={showPlayground}
               onLinkClick={() => mobileNav.setOpen(false)}
             />
           </aside>

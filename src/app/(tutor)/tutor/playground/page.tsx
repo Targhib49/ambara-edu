@@ -1,6 +1,4 @@
-import { notFound } from "next/navigation";
 import { requireTutor } from "@/lib/auth";
-import { isEnabled } from "@/lib/flags";
 import { PageHeader, PageTabs } from "@/components/ui/PageHeader";
 import { CourseVizList, GamesGrid, ToolsGrid, VizLibraryGrid } from "@/components/playground/PlaygroundCards";
 import { courseVisualizations } from "@/lib/playground/courseVisualizations";
@@ -14,7 +12,6 @@ type TabKey = (typeof TABS)[number];
 export default async function TutorPlaygroundPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   await requireTutor();
   const t = await getT();
-  if (!(await isEnabled("playground"))) notFound();
   const { tab: requested } = await searchParams;
   const tab: TabKey = (TABS as readonly string[]).includes(requested ?? "") ? (requested as TabKey) : "games";
 

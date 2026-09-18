@@ -13,7 +13,6 @@ export function useCountdown(startedAt: string | undefined, timeLimitMinutes: nu
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deadlineMs]);
 
   return remainingMs; // null when untimed, else clamped to >= 0

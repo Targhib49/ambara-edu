@@ -1,6 +1,4 @@
-import { notFound } from "next/navigation";
 import { requireStudent } from "@/lib/auth";
-import { isEnabled } from "@/lib/flags";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CourseVizList, GamesGrid, ToolsGrid } from "@/components/playground/PlaygroundCards";
 import { courseVisualizations } from "@/lib/playground/courseVisualizations";
@@ -8,8 +6,6 @@ import { getT } from "@/lib/i18n/server";
 
 export default async function PlaygroundPage() {
   const student = await requireStudent();
-  // Off means the route doesn't exist, not that it renders empty.
-  if (!(await isEnabled("playground"))) notFound();
 
   const t = await getT();
   const courses = await courseVisualizations({ studentId: student.id });

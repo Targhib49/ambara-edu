@@ -24,19 +24,16 @@ const PLAYGROUND_ITEM = { href: "/tutor/playground", label: "nav.playground" as 
 function NavLinks({
   pathname,
   showLabels,
-  showPlayground,
   onLinkClick,
 }: {
   pathname: string;
   showLabels: boolean;
-  showPlayground: boolean;
   onLinkClick?: () => void;
 }) {
   const t = useT();
-  const items = showPlayground ? [...NAV_ITEMS, PLAYGROUND_ITEM] : NAV_ITEMS;
   return (
     <nav className="flex-1 space-y-0.5 px-2 py-2">
-      {items.map(({ href, label, icon: Icon, exact }) => {
+      {[...NAV_ITEMS, PLAYGROUND_ITEM].map(({ href, label, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
         const text = t(label);
         return (
@@ -61,7 +58,7 @@ function NavLinks({
   );
 }
 
-export function TutorSidebar({ showPlayground = false }: { showPlayground?: boolean }) {
+export function TutorSidebar() {
   const t = useT();
   const pathname = usePathname();
   const open = useOpen();
@@ -78,7 +75,7 @@ export function TutorSidebar({ showPlayground = false }: { showPlayground?: bool
         <div className="flex h-14 items-center gap-2 px-4">
           <span className="text-lg font-bold text-white">{open ? "AmbaraEdu" : "AE"}</span>
         </div>
-        <NavLinks pathname={pathname} showLabels={open} showPlayground={showPlayground} />
+        <NavLinks pathname={pathname} showLabels={open} />
         <button
           onClick={() => setOpen(!open)}
           aria-label={t(open ? "nav.collapseSidebar" : "nav.expandSidebar")}
@@ -110,7 +107,6 @@ export function TutorSidebar({ showPlayground = false }: { showPlayground?: bool
             <NavLinks
               pathname={pathname}
               showLabels
-              showPlayground={showPlayground}
               onLinkClick={() => mobileNav.setOpen(false)}
             />
           </aside>

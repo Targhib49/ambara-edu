@@ -7,7 +7,6 @@ import { ScheduleSessionForm } from "@/components/sessions/ScheduleSessionForm";
 import { AvailabilityEditor } from "@/components/sessions/AvailabilityEditor";
 import { CalendarFeedCard } from "@/components/sessions/CalendarFeedCard";
 import { ensureCalendarToken } from "@/lib/actions/booking";
-import { isEnabled } from "@/lib/flags";
 import { toLocalParts } from "@/lib/scheduling";
 import { feedUrlFor } from "@/lib/sessions/feedUrl";
 import { PageHeader, PageTabs } from "@/components/ui/PageHeader";
@@ -25,9 +24,8 @@ function localDate(instant: Date) {
 
 export default async function TutorSessionsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const tutor = await requireTutor();
-  const schedulingV2 = await isEnabled("scheduling_v2");
   const { tab: requestedTab } = await searchParams;
-  const tab = schedulingV2 && requestedTab === "availability" ? "availability" : "schedule";
+  const tab = requestedTab === "availability" ? "availability" : "schedule";
   const t = await getT();
   const language = await getLanguage();
 
@@ -38,7 +36,7 @@ export default async function TutorSessionsPage({ searchParams }: { searchParams
       orderBy: { startTime: "asc" },
     }),
     studentOptions(),
-    schedulingV2 ? db.availability.count({ where: { tutorId: tutor.id, active: true } }) : 0,
+    db.availability.count({ where: { tutorId: tutor.id, active: true } }),
   ]);
 
   const now = nowMs();
@@ -85,13 +83,13 @@ export default async function TutorSessionsPage({ searchParams }: { searchParams
               title={t("tutorSessions.scheduleTitle")}
               description={t("tutorSessions.allTimesWib")}
             >
-              <ScheduleSessionForm students={students} allowWeekly={schedulingV2} today={localDate(new Date(now))} />
+              <ScheduleSessionForm students={students} today={localDate(new Date(now))} />
             </SlideOverButton>
           ) : null
         }
       />
 
-      {schedulingV2 && (
+      {(
         <PageTabs
           active={tab}
           tabs={[

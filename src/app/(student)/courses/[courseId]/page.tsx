@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { nowMs, formatSessionTime } from "@/lib/sessions/format";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { isEnabled } from "@/lib/flags";
 import { summarizeCourseProgress } from "@/lib/progress";
 import { buildChapterItems, chapterStatus } from "@/lib/courseItems";
 import { ChapterSection } from "@/components/student/ChapterSection";
@@ -22,7 +21,6 @@ export default async function StudentTrackPage({
   const student = await requireStudent();
   const t = await getT();
   const language = await getLanguage();
-  const courseV2 = await isEnabled("course_v2");
 
   const course = await db.course.findFirst({
     where: { id: courseId, status: "PUBLISHED", enrollments: { some: { studentId: student.id } } },
@@ -99,7 +97,6 @@ export default async function StudentTrackPage({
   });
 
   const orderedLessons = course.chapters.flatMap((m) => m.lessons);
-  const firstLesson = orderedLessons[0];
   const progress = summarizeCourseProgress(orderedLessons);
   const resumeLesson = progress.resumeLessonId
     ? orderedLessons.find((l) => l.id === progress.resumeLessonId)
@@ -139,12 +136,10 @@ export default async function StudentTrackPage({
           )}
           <h1 className="text-2xl font-semibold">{course.title}</h1>
           {course.description && <p className="mt-2 text-sm text-zinc-600">{course.description}</p>}
-          {courseV2 && progress.total > 0 && (
+          {progress.total > 0 && (
             <div className="mt-5 space-y-1.5">
               <div className="flex items-baseline justify-between gap-3 text-xs text-zinc-500">
-                <span>
-                  {progress.completed} of {progress.total} lessons complete
-                </span>
+                <span>{t("studentCourse.lessonsComplete", { done: progress.completed, total: progress.total })}</span>
                 <span className="font-medium text-zinc-700">{progress.pct}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
@@ -155,7 +150,7 @@ export default async function StudentTrackPage({
               </div>
             </div>
           )}
-          {courseV2 && resumeLesson ? (
+          {resumeLesson ? (
             <Link
               href={`/courses/${course.id}/lessons/${resumeLesson.id}`}
               className={`${btnPrimary} mt-5 max-w-full`}
@@ -164,54 +159,23 @@ export default async function StudentTrackPage({
                 {progress.started ? t("studentCourse.continue") : t("studentCourse.startLearning")}: {resumeLesson.title} →
               </span>
             </Link>
-          ) : courseV2 && progress.total > 0 ? (
+          ) : progress.total > 0 ? (
             <p className="mt-5 inline-block rounded-md bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
-              All lessons complete — nice work.
+              {t("studentCourse.allComplete")}
             </p>
-          ) : (
-            firstLesson && (
-              <Link
-                href={`/courses/${course.id}/lessons/${firstLesson.id}`}
-                className={`${btnPrimary} mt-5`}
-              >
-                Start learning →
-              </Link>
-            )
-          )}
+          ) : null}
         </div>
 
         <div className={`${cardCls} overflow-hidden`}>
-          {courseV2
-            ? chapterViews.map((chapter) => (
-                <ChapterSection
-                  key={chapter.id}
-                  title={chapter.title}
-                  items={chapter.items}
-                  status={chapter.status}
-                  nextItemKey={nextItemKey}
-                />
-              ))
-            : course.chapters
-                .filter((m) => m.lessons.length > 0)
-                .map((chapter, i) => (
-                  <div key={chapter.id} className={i > 0 ? "border-t border-zinc-200" : ""}>
-                    <p className="px-6 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                      {chapter.title}
-                    </p>
-                    <ul className="px-3 pb-3 pt-1">
-                      {chapter.lessons.map((lesson) => (
-                        <li key={lesson.id}>
-                          <Link
-                            href={`/courses/${course.id}/lessons/${lesson.id}`}
-                            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-blue-700"
-                          >
-                            <span className="min-w-0 flex-1">{lesson.title}</span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+          {chapterViews.map((chapter) => (
+            <ChapterSection
+              key={chapter.id}
+              title={chapter.title}
+              items={chapter.items}
+              status={chapter.status}
+              nextItemKey={nextItemKey}
+            />
+          ))}
           {course.chapters.every((m) => m.lessons.length === 0) && (
             <p className="px-6 py-5 text-sm text-zinc-500">{t("studentCourse.noPublishedLessons")}</p>
           )}

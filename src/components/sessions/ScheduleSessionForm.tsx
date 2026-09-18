@@ -18,12 +18,10 @@ const DURATIONS = [30, 45, 60, 90, 120];
  */
 export function ScheduleSessionForm({
   students,
-  allowWeekly,
   today,
   defaultStudentId,
 }: {
   students: ComboOption[];
-  allowWeekly: boolean;
   /** YYYY-MM-DD in app time, for the date fields' defaults. */
   today: string;
   defaultStudentId?: string;
@@ -66,7 +64,7 @@ export function ScheduleSessionForm({
         />
       </div>
 
-      {allowWeekly && (
+      {(
         <div>
           <span className={labelCls}>{t("schedule.howOften")}</span>
           <div className="grid grid-cols-2 gap-1 rounded-lg bg-zinc-100 p-1">

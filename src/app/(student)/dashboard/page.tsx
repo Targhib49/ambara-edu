@@ -7,14 +7,12 @@ import { StudentSessionRow } from "@/components/sessions/StudentSessionRow";
 import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/format";
 import { badgeColorForKey } from "@/lib/ui/palette";
 import { cardCls } from "@/components/ui/styles";
-import { isEnabled } from "@/lib/flags";
 import { summarizeCourseProgress } from "@/lib/progress";
 import { nowMs } from "@/lib/sessions/format";
 import { getT } from "@/lib/i18n/server";
 
 export default async function StudentDashboardPage() {
   const student = await requireStudent();
-  const courseV2 = await isEnabled("course_v2");
   const tr = await getT();
 
   const [enrollments, submissions, sessions, standaloneQuizzes] = await Promise.all([
@@ -82,33 +80,16 @@ export default async function StudentDashboardPage() {
   const courses = enrollments.map(({ course }) => {
     const lessons = course.chapters.flatMap((m) => m.lessons);
 
-    if (courseV2) {
-      const summary = summarizeCourseProgress(lessons);
-      const resume = summary.resumeLessonId
-        ? lessons.find((l) => l.id === summary.resumeLessonId)
-        : undefined;
-      return {
-        id: course.id,
-        title: course.title,
-        lessonCount: lessons.length,
-        total: summary.total,
-        done: summary.completed,
-        pct: summary.pct,
-        nextUp: resume ? { id: resume.id, title: resume.title } : null,
-      };
-    }
-
-    const withQuiz = lessons.filter((l) => l.quizzes.length > 0);
-    const done = withQuiz.filter((l) => l.quizzes.every((q) => submittedQuizIds.has(q.id)));
-    const nextUp = withQuiz.find((l) => !l.quizzes.every((q) => submittedQuizIds.has(q.id)));
+    const summary = summarizeCourseProgress(lessons);
+    const resume = summary.resumeLessonId ? lessons.find((l) => l.id === summary.resumeLessonId) : undefined;
     return {
       id: course.id,
       title: course.title,
       lessonCount: lessons.length,
-      total: withQuiz.length,
-      done: done.length,
-      pct: withQuiz.length === 0 ? 0 : Math.round((done.length / withQuiz.length) * 100),
-      nextUp: nextUp ? { id: nextUp.id, title: nextUp.title } : null,
+      total: summary.total,
+      done: summary.completed,
+      pct: summary.pct,
+      nextUp: resume ? { id: resume.id, title: resume.title } : null,
     };
   });
 
@@ -193,7 +174,7 @@ export default async function StudentDashboardPage() {
         <MetricTile
           label={tr("dash.tile.progress")}
           value={progressSummary(courses)}
-          sub={courseV2 ? tr("dash.tile.progressSub") : tr("dash.tile.progressSubLegacy")}
+          sub={tr("dash.tile.progressSub")}
         />
         <MetricTile
           label={tr("dash.tile.sessionsThisMonth")}

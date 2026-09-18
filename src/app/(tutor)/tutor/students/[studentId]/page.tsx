@@ -9,7 +9,6 @@ import { ScheduleSessionForm } from "@/components/sessions/ScheduleSessionForm";
 import { StatusBadge } from "@/components/sessions/StatusBadge";
 import { formatSessionShort, nowMs } from "@/lib/sessions/format";
 import { summarizeCourseProgress } from "@/lib/progress";
-import { isEnabled } from "@/lib/flags";
 import { toLocalParts } from "@/lib/scheduling";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import { cardCls } from "@/components/ui/styles";
@@ -65,7 +64,7 @@ export default async function StudentDetailPage({
   });
   if (!student) notFound();
 
-  const [enrollments, submissions, sessions, students, courses, schedulingV2] = await Promise.all([
+  const [enrollments, submissions, sessions, students, courses] = await Promise.all([
     db.enrollment.findMany({
       where: { studentId },
       orderBy: { createdAt: "asc" },
@@ -117,7 +116,6 @@ export default async function StudentDetailPage({
     }),
     studentOptions(),
     courseOptions(),
-    isEnabled("scheduling_v2"),
   ]);
   // Sessions reference the student with no cascade, so the database refuses to
   // delete a student who has any. Checked here so the button never offers it.
@@ -219,7 +217,7 @@ export default async function StudentDetailPage({
               title={t("studentPage.scheduleSessionTitle", { name: student.name })}
               description={t("studentPage.wibNote")}
             >
-              <ScheduleSessionForm students={students} allowWeekly={schedulingV2} today={localDate(new Date(now))} defaultStudentId={student.id} />
+              <ScheduleSessionForm students={students} today={localDate(new Date(now))} defaultStudentId={student.id} />
             </SlideOverButton>
           </>
         }

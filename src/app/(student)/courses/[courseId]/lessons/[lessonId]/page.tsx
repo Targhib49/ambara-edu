@@ -8,7 +8,6 @@ import { BlockRenderer } from "@/components/blocks/renderers";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { LessonCompletion } from "@/components/student/LessonCompletion";
 import { cardCls } from "@/components/ui/styles";
-import { isEnabled } from "@/lib/flags";
 import { getT } from "@/lib/i18n/server";
 
 export default async function StudentLessonPage({
@@ -19,7 +18,6 @@ export default async function StudentLessonPage({
   const { courseId, lessonId } = await params;
   const student = await requireStudent();
   const t = await getT();
-  const courseV2 = await isEnabled("course_v2");
 
   const lesson = await db.lesson.findFirst({
     where: {
@@ -92,12 +90,7 @@ export default async function StudentLessonPage({
         </div>
       </article>
 
-      {courseV2 && (
-        <LessonCompletion
-          lessonId={lesson.id}
-          initialComplete={lesson.progress[0]?.completedAt != null}
-        />
-      )}
+      <LessonCompletion lessonId={lesson.id} initialComplete={lesson.progress[0]?.completedAt != null} />
 
       {lesson.quizzes.length > 0 && (
         <section className={`${cardCls} p-5`}>
