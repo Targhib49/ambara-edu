@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useTransition } from "react";
 import { updateQuestion, type UpdateQuestionInput } from "@/lib/actions/quizzes";
 import { useT } from "@/lib/i18n/client";
+import { PART_LETTERS } from "@/lib/quiz/format";
 import type { QuestionType } from "@/generated/prisma/enums";
 
 const inputCls =
@@ -438,6 +439,249 @@ function CodeQuestionEditor({ question }: { question: QuestionForEdit }) {
   );
 }
 
+
+type Step = { prompt: string; answer: string };
+
+/** A problem worked through in order: each step asks something and expects one answer. */
+function StepsEditor({ question }: { question: QuestionForEdit }) {
+  const t = useT();
+  const stored = (question.correctAnswer as { steps?: Step[] })?.steps;
+  const [prompt, setPrompt] = useState(question.prompt);
+  const [points, setPoints] = useState(question.points);
+  const [explanation, setExplanation] = useState(question.explanation);
+  const [steps, setSteps] = useState<Step[]>(stored?.length ? stored : [{ prompt: "", answer: "" }]);
+  const { pending, saved, error, save } = useSave(question.id);
+
+  const update = (i: number, patch: Partial<Step>) =>
+    setSteps((prev) => prev.map((step, j) => (j === i ? { ...step, ...patch } : step)));
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save({ prompt, points, explanation, options: [], correctAnswer: { steps } });
+      }}
+      className="space-y-3"
+    >
+      <MetaFields
+        prompt={prompt}
+        setPrompt={setPrompt}
+        points={points}
+        setPoints={setPoints}
+        explanation={explanation}
+        setExplanation={setExplanation}
+      />
+      <div>
+        <label className={labelCls}>{t("qEditor.steps")}</label>
+        <div className="space-y-2">
+          {steps.map((step, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="w-5 shrink-0 text-xs text-zinc-400">{i + 1}.</span>
+              <input
+                value={step.prompt}
+                onChange={(e) => update(i, { prompt: e.target.value })}
+                placeholder={t("qEditor.stepPrompt")}
+                className={`${inputCls} flex-1`}
+              />
+              <input
+                value={step.answer}
+                onChange={(e) => update(i, { answer: e.target.value })}
+                placeholder={t("qEditor.stepAnswer")}
+                className={`${inputCls} w-32`}
+              />
+              <button
+                type="button"
+                onClick={() => setSteps((prev) => prev.filter((_, j) => j !== i))}
+                disabled={steps.length <= 1}
+                aria-label={t("qEditor.removeStep")}
+                className="text-xs text-red-500 disabled:opacity-30"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        {steps.length < 10 && (
+          <button type="button" onClick={() => setSteps((prev) => [...prev, { prompt: "", answer: "" }])} className={`${smallBtn} mt-1.5`}>
+            {t("qEditor.addStep")}
+          </button>
+        )}
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <SaveButton pending={pending} saved={saved} />
+    </form>
+  );
+}
+
+type Part = { prompt: string; marks: number; answer: string };
+
+/** One stem with parts (a), (b), (c), each carrying its own marks. */
+function MultiPartEditor({ question }: { question: QuestionForEdit }) {
+  const t = useT();
+  const stored = (question.correctAnswer as { parts?: Part[] })?.parts;
+  const [prompt, setPrompt] = useState(question.prompt);
+  const [points, setPoints] = useState(question.points);
+  const [explanation, setExplanation] = useState(question.explanation);
+  const [parts, setParts] = useState<Part[]>(stored?.length ? stored : [{ prompt: "", marks: 1, answer: "" }]);
+  const { pending, saved, error, save } = useSave(question.id);
+
+  const update = (i: number, patch: Partial<Part>) =>
+    setParts((prev) => prev.map((part, j) => (j === i ? { ...part, ...patch } : part)));
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save({ prompt, points, explanation, options: [], correctAnswer: { parts } });
+      }}
+      className="space-y-3"
+    >
+      <MetaFields
+        prompt={prompt}
+        setPrompt={setPrompt}
+        points={points}
+        setPoints={setPoints}
+        explanation={explanation}
+        setExplanation={setExplanation}
+      />
+      <div>
+        <label className={labelCls}>{t("qEditor.parts")}</label>
+        <div className="space-y-2">
+          {parts.map((part, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="w-5 shrink-0 text-xs text-zinc-400">({PART_LETTERS[i] ?? i + 1})</span>
+              <input
+                value={part.prompt}
+                onChange={(e) => update(i, { prompt: e.target.value })}
+                placeholder={t("qEditor.partPrompt")}
+                className={`${inputCls} flex-1`}
+              />
+              <input
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={part.marks}
+                onChange={(e) => update(i, { marks: Math.max(0.5, Number(e.target.value)) })}
+                aria-label={t("qEditor.partMarks")}
+                className={`${inputCls} w-20`}
+              />
+              <input
+                value={part.answer}
+                onChange={(e) => update(i, { answer: e.target.value })}
+                placeholder={t("qEditor.stepAnswer")}
+                className={`${inputCls} w-32`}
+              />
+              <button
+                type="button"
+                onClick={() => setParts((prev) => prev.filter((_, j) => j !== i))}
+                disabled={parts.length <= 1}
+                aria-label={t("qEditor.removePart")}
+                className="text-xs text-red-500 disabled:opacity-30"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        {parts.length < 8 && (
+          <button
+            type="button"
+            onClick={() => setParts((prev) => [...prev, { prompt: "", marks: 1, answer: "" }])}
+            className={`${smallBtn} mt-1.5`}
+          >
+            {t("qEditor.addPart")}
+          </button>
+        )}
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <SaveButton pending={pending} saved={saved} />
+    </form>
+  );
+}
+
+/** A worked solution with one wrong line for the student to spot, and optionally fix. */
+function FindMistakeEditor({ question }: { question: QuestionForEdit }) {
+  const t = useT();
+  const stored = question.correctAnswer as { lines?: string[]; wrongIndex?: number; correction?: string };
+  const [prompt, setPrompt] = useState(question.prompt);
+  const [points, setPoints] = useState(question.points);
+  const [explanation, setExplanation] = useState(question.explanation);
+  const [lines, setLines] = useState<string[]>(stored?.lines?.length ? stored.lines : ["", ""]);
+  const [wrongIndex, setWrongIndex] = useState(stored?.wrongIndex ?? 0);
+  const [correction, setCorrection] = useState(stored?.correction ?? "");
+  const { pending, saved, error, save } = useSave(question.id);
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save({
+          prompt,
+          points,
+          explanation,
+          options: [],
+          correctAnswer: { lines, wrongIndex: Math.min(wrongIndex, lines.length - 1), correction },
+        });
+      }}
+      className="space-y-3"
+    >
+      <MetaFields
+        prompt={prompt}
+        setPrompt={setPrompt}
+        points={points}
+        setPoints={setPoints}
+        explanation={explanation}
+        setExplanation={setExplanation}
+      />
+      <div>
+        <label className={labelCls}>{t("qEditor.lines")}</label>
+        <div className="space-y-1.5">
+          {lines.map((line, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="radio"
+                checked={wrongIndex === i}
+                onChange={() => setWrongIndex(i)}
+                aria-label={t("qEditor.lineN", { n: i + 1 })}
+              />
+              <span className="w-5 shrink-0 text-xs text-zinc-400">#{i + 1}</span>
+              <input
+                value={line}
+                onChange={(e) => setLines((prev) => prev.map((l, j) => (j === i ? e.target.value : l)))}
+                className={`${inputCls} flex-1 font-mono`}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setLines((prev) => prev.filter((_, j) => j !== i));
+                  setWrongIndex((prev) => (prev >= i && prev > 0 ? prev - 1 : prev));
+                }}
+                disabled={lines.length <= 2}
+                aria-label={t("qEditor.removeLine")}
+                className="text-xs text-red-500 disabled:opacity-30"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        {lines.length < 12 && (
+          <button type="button" onClick={() => setLines((prev) => [...prev, ""])} className={`${smallBtn} mt-1.5`}>
+            {t("qEditor.addLine")}
+          </button>
+        )}
+      </div>
+      <div>
+        <label className={labelCls}>{t("qEditor.correction")}</label>
+        <input value={correction} onChange={(e) => setCorrection(e.target.value)} className={`${inputCls} max-w-sm`} />
+        <p className="mt-1 text-xs text-zinc-400">{t("qEditor.correctionHint")}</p>
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <SaveButton pending={pending} saved={saved} />
+    </form>
+  );
+}
+
 /** Client component: dispatches to the type-specific structured editor. */
 export function QuestionEditor({ question }: { question: QuestionForEdit }) {
   switch (question.type) {
@@ -451,6 +695,12 @@ export function QuestionEditor({ question }: { question: QuestionForEdit }) {
       return <ShortTextEditor question={question} />;
     case "CODE":
       return <CodeQuestionEditor question={question} />;
+    case "STEPS":
+      return <StepsEditor question={question} />;
+    case "MULTI_PART":
+      return <MultiPartEditor question={question} />;
+    case "FIND_MISTAKE":
+      return <FindMistakeEditor question={question} />;
     default: {
       const _exhaustive: never = question.type;
       return _exhaustive;

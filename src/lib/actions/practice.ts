@@ -8,6 +8,7 @@ import { formatCorrectAnswer } from "@/lib/quiz/format";
 import { isPracticable, isPracticeCorrect } from "@/lib/quiz/practice";
 import { PRACTICE_STYLES } from "@/lib/quiz/styles";
 import { DRILL_DEFAULTS } from "@/lib/drills/registry";
+import { REVIEW_COUNT_MAX, reviewPool } from "@/lib/quiz/review";
 
 /**
  * The practice quiz this student may use, with its questions — the same
@@ -163,4 +164,58 @@ export async function recordDrillRound(quizId: string, rawScore: number): Promis
     revalidatePath("/dashboard");
   }
   return { best: Math.max(previousBest, score), newBest: score > previousBest, reached, complete: completedAt !== null };
+}
+
+export type ReviewCheckResult = { error: string } | { correct: boolean; explanation: string };
+
+/**
+ * Checks one answer in a review set. The questions belong to other quizzes, so
+ * this re-derives the pool and refuses anything outside it rather than trusting
+ * the id it was handed.
+ */
+export async function checkReviewAnswer(
+  quizId: string,
+  questionId: string,
+  response: unknown
+): Promise<ReviewCheckResult> {
+  const t = await getT();
+  const student = await requireStudent();
+  const quiz = await practiceQuizFor(student.id, quizId);
+  if (!quiz || quiz.style !== "REVIEW") return { error: t("practice.unavailable") };
+
+  const question = (await reviewPool(quizId)).find((q) => q.id === questionId);
+  if (!question) return { error: t("practice.unavailable") };
+
+  return { correct: isPracticeCorrect(question, response), explanation: question.explanation };
+}
+
+export type ReviewRunResult = { error: string } | { best: number; newBest: boolean; complete: boolean };
+
+/** Records a finished review set. Finishing one is what marks the review done. */
+export async function recordReviewRun(quizId: string, rawScore: number, rawTotal: number): Promise<ReviewRunResult> {
+  const t = await getT();
+  const student = await requireStudent();
+  const quiz = await practiceQuizFor(student.id, quizId);
+  if (!quiz || quiz.style !== "REVIEW") return { error: t("practice.unavailable") };
+
+  const total = Math.max(0, Math.min(Math.floor(Number(rawTotal) || 0), REVIEW_COUNT_MAX));
+  const score = Math.max(0, Math.min(Math.floor(Number(rawScore) || 0), total));
+  const existing = await db.practiceProgress.findUnique({
+    where: { studentId_quizId: { studentId: student.id, quizId } },
+  });
+  const previousBest = existing?.bestScore ?? 0;
+  const completedAt = existing?.completedAt ?? new Date();
+
+  await db.practiceProgress.upsert({
+    where: { studentId_quizId: { studentId: student.id, quizId } },
+    create: { studentId: student.id, quizId, masteredIds: [], bestScore: score, runs: 1, completedAt },
+    update: { bestScore: Math.max(previousBest, score), runs: { increment: 1 }, completedAt },
+  });
+
+  if (!existing?.completedAt) {
+    revalidatePath("/quizzes");
+    revalidatePath("/courses", "layout");
+    revalidatePath("/dashboard");
+  }
+  return { best: Math.max(previousBest, score), newBest: score > previousBest, complete: true };
 }

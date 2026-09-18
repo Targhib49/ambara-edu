@@ -70,6 +70,11 @@ enum QuestionType {
   NUMERIC
   SHORT_TEXT
   CODE
+  // Structured formats. Their shape lives in Question.correctAnswer, like
+  // every other type, so they need no columns of their own.
+  STEPS        // a problem worked through in ordered steps, each checked
+  MULTI_PART   // one stem with parts (a)(b)(c), each carrying its own marks
+  FIND_MISTAKE // a worked solution with one wrong step, for the student to spot
 }
 
 enum QuizStatus {
@@ -84,6 +89,8 @@ enum QuizStyle {
   TRYOUT  // exam simulation: one question at a time against the clock
   MASTERY // practice: one question at a time, checked instantly, until each is right once
   DRILL   // practice: timed rounds of generated questions, aiming for a target score
+  REVIEW  // practice: a mixed set drawn from earlier chapters, for spaced revision
+  EXAM    // graded: a try-out you only get one go at
 }
 
 enum SubmissionStatus {
@@ -348,6 +355,9 @@ model Quiz {
   drillSkill             String?
   drillSeconds           Int?
   drillTarget            Int?
+  // How many questions a review set draws from earlier chapters. Only read
+  // when style is REVIEW; the questions themselves belong to other quizzes.
+  reviewCount            Int?
   questions     Question[]
   submissions   Submission[]
   submissionAttempts SubmissionAttempt[]

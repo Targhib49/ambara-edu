@@ -2,8 +2,9 @@
 
 import { randomUUID } from "crypto";
 import { getT } from "@/lib/i18n/server";
-import { TRYOUT_DEFAULTS, parseQuizStyle } from "@/lib/quiz/styles";
+import { EXAM_DEFAULTS, TRYOUT_DEFAULTS, isTimedStyle, parseQuizStyle } from "@/lib/quiz/styles";
 import { DRILL_DEFAULTS, DRILL_SECONDS_MAX, DRILL_SECONDS_MIN, parseDrillSkill } from "@/lib/drills/registry";
+import { REVIEW_COUNT_DEFAULT, REVIEW_COUNT_MAX } from "@/lib/quiz/review";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -111,6 +112,7 @@ export async function commitImport(
           status: "DRAFT",
           style: parseQuizStyle(target.style),
           ...(target.style === "TRYOUT" ? TRYOUT_DEFAULTS : {}),
+          ...(target.style === "EXAM" ? EXAM_DEFAULTS : {}),
         },
       });
       id = quiz.id;
@@ -182,15 +184,18 @@ export async function duplicateQuiz(
   // A try-out copied as a try-out keeps its clock and attempts; any other
   // quiz becoming a try-out starts on the house defaults.
   const tryout =
-    style !== "TRYOUT"
+    !isTimedStyle(style)
       ? {}
-      : source.style === "TRYOUT"
+      : isTimedStyle(source.style)
         ? {
             timeLimitMinutes: source.timeLimitMinutes ?? TRYOUT_DEFAULTS.timeLimitMinutes,
-            maxAttempts: source.maxAttempts,
+            // An exam is one go at it, however many attempts the source allowed.
+            maxAttempts: style === "EXAM" ? 1 : source.maxAttempts,
             randomizeQuestionOrder: source.randomizeQuestionOrder,
           }
-        : TRYOUT_DEFAULTS;
+        : style === "EXAM"
+          ? EXAM_DEFAULTS
+          : TRYOUT_DEFAULTS;
 
   // Likewise a drill copied as a drill keeps its skill, clock and target.
   const drill =
@@ -200,9 +205,13 @@ export async function duplicateQuiz(
         ? { drillSkill: source.drillSkill, drillSeconds: source.drillSeconds, drillTarget: source.drillTarget }
         : DRILL_DEFAULTS;
 
+  // A review copies its set size; it has no questions of its own to copy.
+  const review =
+    style !== "REVIEW" ? {} : { reviewCount: source.reviewCount ?? REVIEW_COUNT_DEFAULT };
+
   const copy = await db.$transaction(async (tx) => {
     const quiz = await tx.quiz.create({
-      data: { title, ...placement, status: "DRAFT", style, ...tryout, ...drill },
+      data: { title, ...placement, status: "DRAFT", style, ...tryout, ...drill, ...review },
     });
     await tx.question.createMany({
       data: source.questions.map((q) => ({
@@ -240,7 +249,9 @@ export async function createQuiz(_prev: CreateQuizState, formData: FormData): Pr
       style,
       // New try-outs and drills start on their defaults.
       ...(style === "TRYOUT" ? TRYOUT_DEFAULTS : {}),
+      ...(style === "EXAM" ? EXAM_DEFAULTS : {}),
       ...(style === "DRILL" ? DRILL_DEFAULTS : {}),
+      ...(style === "REVIEW" ? { reviewCount: REVIEW_COUNT_DEFAULT } : {}),
     },
   });
   revalidateQuizLists();
@@ -264,13 +275,14 @@ export async function updateQuizMeta(quizId: string, formData: FormData) {
     maxAttempts: null,
     randomizeQuestionOrder: false,
   };
-  if (style === "TRYOUT") {
+  if (isTimedStyle(style)) {
     const timeLimitRaw = String(formData.get("timeLimitMinutes") ?? "").trim();
     const maxAttemptsRaw = String(formData.get("maxAttempts") ?? "").trim();
     tryout = {
-      // A try-out is defined by its clock, so a blank limit takes the default.
+      // A timed quiz is defined by its clock, so a blank limit takes the default.
       timeLimitMinutes: timeLimitRaw ? Math.max(1, Math.round(Number(timeLimitRaw))) : TRYOUT_DEFAULTS.timeLimitMinutes,
-      maxAttempts: maxAttemptsRaw ? Math.max(1, Math.round(Number(maxAttemptsRaw))) : null,
+      // An exam is one go at it, whatever the form says.
+      maxAttempts: style === "EXAM" ? 1 : maxAttemptsRaw ? Math.max(1, Math.round(Number(maxAttemptsRaw))) : null,
       randomizeQuestionOrder: formData.get("randomizeQuestionOrder") === "on",
     };
   }
@@ -285,6 +297,11 @@ export async function updateQuizMeta(quizId: string, formData: FormData) {
         }
       : { drillSkill: null, drillSeconds: null, drillTarget: null };
 
+  const review =
+    style === "REVIEW"
+      ? { reviewCount: clampInt(formData.get("reviewCount"), 1, REVIEW_COUNT_MAX, REVIEW_COUNT_DEFAULT) }
+      : { reviewCount: null };
+
   await db.quiz.update({
     where: { id: quizId },
     data: {
@@ -292,6 +309,7 @@ export async function updateQuizMeta(quizId: string, formData: FormData) {
       style,
       ...tryout,
       ...drill,
+      ...review,
       ...("error" in placement ? {} : placement),
     },
   });
@@ -333,6 +351,25 @@ function defaultQuestionData(
     NUMERIC: { prompt, options: [], correctAnswer: { value: 0, tolerance: 0 } },
     SHORT_TEXT: { prompt, options: [], correctAnswer: { kind: "exact", value: t("qEditor.sampleAnswer") } },
     CODE: { prompt, options: [], correctAnswer: { testCases: [] } },
+    STEPS: {
+      prompt,
+      options: [],
+      correctAnswer: {
+        steps: [1, 2].map((n) => ({ prompt: t("qEditor.stepN", { n }), answer: t("qEditor.sampleAnswer") })),
+      },
+    },
+    MULTI_PART: {
+      prompt,
+      options: [],
+      correctAnswer: {
+        parts: [1, 2].map(() => ({ prompt, marks: 1, answer: t("qEditor.sampleAnswer") })),
+      },
+    },
+    FIND_MISTAKE: {
+      prompt,
+      options: [],
+      correctAnswer: { lines: [1, 2].map((n) => t("qEditor.lineN", { n })), wrongIndex: 1, correction: "" },
+    },
   };
 }
 
@@ -428,7 +465,7 @@ export async function startTimedAttempt(quizId: string) {
     where: { id: quizId },
     include: { questions: { select: { id: true }, orderBy: { order: "asc" } } },
   });
-  if (quiz.style !== "TRYOUT" || !quiz.timeLimitMinutes) return;
+  if (!isTimedStyle(quiz.style) || !quiz.timeLimitMinutes) return;
 
   const existing = await db.timedQuizSession.findUnique({
     where: { studentId_quizId: { studentId: student.id, quizId } },

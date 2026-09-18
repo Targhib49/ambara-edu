@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { DrillPlayer } from "./DrillPlayer";
 import { DRILL_DEFAULTS, parseDrillSkill } from "@/lib/drills/registry";
-import { isGradedStyle } from "@/lib/quiz/styles";
+import { isGradedStyle, isTimedStyle } from "@/lib/quiz/styles";
+import { toQuestionForForm } from "@/lib/quiz/forms";
+import { ReviewPlayer } from "./ReviewPlayer";
+import { REVIEW_COUNT_DEFAULT, drawReviewSet } from "@/lib/quiz/review";
+import { nowMs } from "@/lib/sessions/format";
 import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -9,7 +13,7 @@ import { requireStudent } from "@/lib/auth";
 import { gradeQuestion } from "@/lib/quiz/grading";
 import { formatResponse } from "@/lib/quiz/format";
 import { seededPermutation } from "@/lib/quiz/shuffle";
-import { parseCorrectAnswer, submissionAnswersSchema } from "@/lib/quiz/schema";
+import { submissionAnswersSchema } from "@/lib/quiz/schema";
 import { startTimedAttempt } from "@/lib/actions/quizzes";
 import { CodeSubmissionView } from "@/components/quiz/CodeSubmissionView";
 import { ScoreHistory } from "@/components/quiz/ScoreHistory";
@@ -54,6 +58,11 @@ export default async function StudentQuizPage({
   if (!quiz) notFound();
 
   const isPractice = !isGradedStyle(quiz.style);
+  // A review draws a fresh set each visit, from chapters before this one.
+  const reviewSet =
+    quiz.style === "REVIEW"
+      ? await drawReviewSet(quiz.id, quiz.reviewCount ?? REVIEW_COUNT_DEFAULT, `${student.id}:${quizId}:${nowMs()}`)
+      : [];
   const [submission, attempts, timedSession, practice] = await Promise.all([
     db.submission.findUnique({
       where: { studentId_quizId: { studentId: student.id, quizId } },
@@ -62,7 +71,7 @@ export default async function StudentQuizPage({
       where: { studentId: student.id, quizId },
       orderBy: { attemptNumber: "desc" },
     }),
-    quiz.style === "TRYOUT"
+    isTimedStyle(quiz.style)
       ? db.timedQuizSession.findUnique({ where: { studentId_quizId: { studentId: student.id, quizId } } })
       : null,
     isPractice
@@ -71,7 +80,7 @@ export default async function StudentQuizPage({
   ]);
 
   const totalPoints = quiz.questions.reduce((n, q) => n + q.points, 0);
-  const isTimed = quiz.style === "TRYOUT";
+  const isTimed = isTimedStyle(quiz.style);
   // A try-out that shuffles also shuffles each question's options — which is
   // why its results can't show letters: the student saw different ones.
   const shuffleOptions = isTimed && quiz.randomizeQuestionOrder;
@@ -120,8 +129,10 @@ export default async function StudentQuizPage({
                 seconds: quiz.drillSeconds ?? DRILL_DEFAULTS.drillSeconds,
                 target: quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget,
               })
-            : isPractice
-              ? t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })
+            : quiz.style === "REVIEW"
+              ? t("review.meta", { n: quiz.reviewCount ?? REVIEW_COUNT_DEFAULT })
+              : isPractice
+                ? t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })
               : t("quizPage.metaCounts", { q: quiz.questions.length, p: totalPoints })
         }
         actions={
@@ -131,7 +142,14 @@ export default async function StudentQuizPage({
         }
       />
 
-      {quiz.style === "DRILL" ? (
+      {quiz.style === "REVIEW" ? (
+        <ReviewPlayer
+          quizId={quiz.id}
+          questions={reviewSet.map(toQuestionForForm)}
+          sourceTitles={reviewSet.map((q) => q.quiz.title)}
+          initialBest={practice?.bestScore ?? null}
+        />
+      ) : quiz.style === "DRILL" ? (
         <DrillPlayer
           quizId={quiz.id}
           skill={parseDrillSkill(quiz.drillSkill)}
@@ -143,14 +161,7 @@ export default async function StudentQuizPage({
         <MasteryPractice
           quizId={quiz.id}
           // No correct answers leave the server: practice is checked there.
-          questions={quiz.questions.filter(isPracticable).map((q) => ({
-            id: q.id,
-            type: q.type,
-            prompt: q.prompt,
-            points: q.points,
-            options: q.options,
-            testCases: q.type === "CODE" ? parseCorrectAnswer("CODE", q.correctAnswer).testCases : [],
-          }))}
+          questions={quiz.questions.filter(isPracticable).map(toQuestionForForm)}
           initialMasteredIds={practice?.masteredIds ?? []}
           runs={practice?.runs ?? 0}
         />
@@ -181,12 +192,7 @@ export default async function StudentQuizPage({
               startedAt={timedSession.startedAt.toISOString()}
               timeLimitMinutes={quiz.timeLimitMinutes!}
               questions={orderedQuestions.map((q) => ({
-                id: q.id,
-                type: q.type,
-                prompt: q.prompt,
-                points: q.points,
-                options: q.options,
-                testCases: q.type === "CODE" ? parseCorrectAnswer("CODE", q.correctAnswer).testCases : [],
+                ...toQuestionForForm(q),
                 // Seeded by the attempt, so a reload keeps the order and a retake reshuffles.
                 optionOrder:
                   shuffleOptions && q.options.length > 1
@@ -199,16 +205,7 @@ export default async function StudentQuizPage({
       ) : showForm ? (
         <QuizTakeForm
           quizId={quiz.id}
-          questions={quiz.questions.map((q) => ({
-            id: q.id,
-            type: q.type,
-            prompt: q.prompt,
-            points: q.points,
-            options: q.options,
-            // Test cases are deliberately visible to the student (input +
-            // expected output) — only CODE questions have any.
-            testCases: q.type === "CODE" ? parseCorrectAnswer("CODE", q.correctAnswer).testCases : [],
-          }))}
+          questions={quiz.questions.map(toQuestionForForm)}
         />
       ) : submission ? (
         <QuizResults quiz={quiz} submission={submission} totalPoints={totalPoints} showOptionLetters />

@@ -20,6 +20,9 @@ const TYPE_KEYS: Record<QuestionType, MessageKey> = {
   NUMERIC: "questionType.NUMERIC",
   SHORT_TEXT: "questionType.SHORT_TEXT",
   CODE: "questionType.CODE",
+  STEPS: "questionType.STEPS",
+  MULTI_PART: "questionType.MULTI_PART",
+  FIND_MISTAKE: "questionType.FIND_MISTAKE",
 };
 
 /**

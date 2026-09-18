@@ -17,6 +17,9 @@ export const SUBMISSION_STATUS_BADGE_CLASS: Record<SubmissionStatus, string> = {
   REVIEWED: "bg-blue-100 text-blue-700",
 };
 
+/** Parts read as (a), (b), (c) — the exam-paper convention. */
+export const PART_LETTERS = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
+
 function optionText(letter: string, options: string[], withLetter = true) {
   const idx = "ABCD".indexOf(letter);
   if (!options[idx]) return letter;
@@ -52,6 +55,19 @@ export function formatCorrectAnswer(type: QuestionType, correctAnswer: unknown, 
       const a = parseCorrectAnswer(type, correctAnswer);
       return a.kind === "exact" ? a.value : `/${a.pattern}/${a.flags}`;
     }
+    case "STEPS": {
+      const a = parseCorrectAnswer(type, correctAnswer);
+      return a.steps.map((step, i) => `${i + 1}. ${step.answer}`).join(" · ");
+    }
+    case "MULTI_PART": {
+      const a = parseCorrectAnswer(type, correctAnswer);
+      return a.parts.map((part, i) => `(${PART_LETTERS[i] ?? i + 1}) ${part.answer}`).join(" · ");
+    }
+    case "FIND_MISTAKE": {
+      const a = parseCorrectAnswer(type, correctAnswer);
+      const line = `#${a.wrongIndex + 1}`;
+      return a.correction.trim() ? `${line} → ${a.correction}` : line;
+    }
     case "CODE": {
       const a = parseCorrectAnswer(type, correctAnswer);
       return a.testCases.length > 0
@@ -83,6 +99,21 @@ export function formatResponse(
     case "SHORT_TEXT": {
       const r = safeParse(type, response);
       return r && r.value ? r.value : noAnswer;
+    }
+    case "STEPS": {
+      const r = safeParse(type, response);
+      const filled = r?.steps.filter((step) => step.trim() !== "") ?? [];
+      return filled.length > 0 ? r!.steps.map((step, i) => `${i + 1}. ${step || "—"}`).join(" · ") : noAnswer;
+    }
+    case "MULTI_PART": {
+      const r = safeParse(type, response);
+      const filled = r?.parts.filter((part) => part.trim() !== "") ?? [];
+      return filled.length > 0 ? r!.parts.map((part, i) => `(${PART_LETTERS[i] ?? i + 1}) ${part || "—"}`).join(" · ") : noAnswer;
+    }
+    case "FIND_MISTAKE": {
+      const r = safeParse(type, response);
+      if (!r || r.lineIndex === null) return noAnswer;
+      return r.correction.trim() ? `#${r.lineIndex + 1} → ${r.correction}` : `#${r.lineIndex + 1}`;
     }
     case "CODE": {
       const r = safeParse(type, response);

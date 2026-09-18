@@ -24,6 +24,23 @@ export const correctAnswerSchemas = {
     z.object({ kind: z.literal("regex"), pattern: z.string().min(1), flags: z.string().default("i") }),
   ]),
   CODE: z.object({ testCases: z.array(testCaseSchema).max(20).default([]) }),
+  // A problem worked through in order: each step asks something and expects
+  // one short answer, checked the same way a short text answer is.
+  STEPS: z.object({
+    steps: z.array(z.object({ prompt: z.string(), answer: z.string() })).min(1).max(10),
+  }),
+  // One stem with parts (a), (b), (c) — the Cambridge shape. `marks` weighs a
+  // part against the others; the question's own points are split by them.
+  MULTI_PART: z.object({
+    parts: z.array(z.object({ prompt: z.string(), marks: z.number().positive(), answer: z.string() })).min(1).max(8),
+  }),
+  // A worked solution with exactly one wrong line. An empty `correction` means
+  // spotting the line is the whole task.
+  FIND_MISTAKE: z.object({
+    lines: z.array(z.string()).min(2).max(12),
+    wrongIndex: z.number().int().min(0),
+    correction: z.string().default(""),
+  }),
 } as const satisfies Record<QuestionType, z.ZodType>;
 
 export type CorrectAnswerMap = {
@@ -52,6 +69,12 @@ export const responseSchemas = {
   NUMERIC: z.object({ value: z.number() }),
   SHORT_TEXT: z.object({ value: z.string() }),
   CODE: z.object({ code: z.string(), testResults: z.array(testResultSchema).default([]) }),
+  STEPS: z.object({ steps: z.array(z.string()).default([]) }),
+  MULTI_PART: z.object({ parts: z.array(z.string()).default([]) }),
+  FIND_MISTAKE: z.object({
+    lineIndex: z.number().int().min(0).nullable().default(null),
+    correction: z.string().default(""),
+  }),
 } as const satisfies Record<QuestionType, z.ZodType>;
 
 export type ResponseMap = {

@@ -118,8 +118,70 @@ export function gradeQuestion(
       // rather than being marked wrong outright (spec §4).
       return { status: "PENDING_REVIEW", correct: null, earnedPoints: 0 };
     }
+
+    case "STEPS": {
+      const correctAnswer = parseCorrectAnswer(type, question.correctAnswer);
+      const parsed = tryParseResponse(type, response);
+      const given = parsed?.steps ?? [];
+      // Every step carries the same weight, so a half-finished problem scores half.
+      const right = correctAnswer.steps.filter((step, i) => matchesWrittenAnswer(step.answer, given[i] ?? "")).length;
+      const correct = right === correctAnswer.steps.length;
+      return {
+        status: "AUTO_GRADED",
+        correct,
+        earnedPoints: round2((points * right) / correctAnswer.steps.length),
+      };
+    }
+
+    case "MULTI_PART": {
+      const correctAnswer = parseCorrectAnswer(type, question.correctAnswer);
+      const parsed = tryParseResponse(type, response);
+      const given = parsed?.parts ?? [];
+      // Parts are weighted by their own marks — the exam-paper convention.
+      const totalMarks = correctAnswer.parts.reduce((sum, part) => sum + part.marks, 0);
+      const earnedMarks = correctAnswer.parts.reduce(
+        (sum, part, i) => sum + (matchesWrittenAnswer(part.answer, given[i] ?? "") ? part.marks : 0),
+        0
+      );
+      return {
+        status: "AUTO_GRADED",
+        correct: earnedMarks === totalMarks,
+        earnedPoints: totalMarks === 0 ? 0 : round2((points * earnedMarks) / totalMarks),
+      };
+    }
+
+    case "FIND_MISTAKE": {
+      const correctAnswer = parseCorrectAnswer(type, question.correctAnswer);
+      const parsed = tryParseResponse(type, response);
+      const foundLine = parsed?.lineIndex === correctAnswer.wrongIndex;
+      const wantsCorrection = correctAnswer.correction.trim() !== "";
+      if (!wantsCorrection) {
+        return { status: "AUTO_GRADED", correct: foundLine, earnedPoints: foundLine ? points : 0 };
+      }
+      // Spotting the line and fixing it are worth half each.
+      const fixed = matchesWrittenAnswer(correctAnswer.correction, parsed?.correction ?? "");
+      const share = (foundLine ? 0.5 : 0) + (fixed ? 0.5 : 0);
+      return { status: "AUTO_GRADED", correct: foundLine && fixed, earnedPoints: round2(points * share) };
+    }
   }
 }
+
+/**
+ * Compares one short written answer with the expected one, the way SHORT_TEXT
+ * does: trimmed and case-insensitive, and numerically when both sides are
+ * numbers, so "0.5", "1/2" and "2/4" agree.
+ */
+export function matchesWrittenAnswer(expected: string, given: string): boolean {
+  const left = expected.trim();
+  const right = given.trim();
+  if (right === "") return false;
+  const expectedNum = parseNumericAnswer(left);
+  const givenNum = parseNumericAnswer(right);
+  if (expectedNum !== null && givenNum !== null) return Math.abs(expectedNum - givenNum) <= 1e-6;
+  return left.toLowerCase() === right.toLowerCase();
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Aggregates per-question grades into the Submission-level fields. */
 export function aggregateSubmission(grades: QuestionGrade[]): {
