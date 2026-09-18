@@ -49,6 +49,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
         questions: { orderBy: { order: "asc" } },
         submissions: { include: { student: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
         practiceProgress: { include: { student: { select: { name: true } } }, orderBy: { updatedAt: "desc" } },
+        projectProgress: { include: { student: { select: { name: true } } }, orderBy: { updatedAt: "desc" } },
       },
     }),
     placementTree(),
@@ -247,6 +248,14 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
               {quiz.status === "PUBLISHED" ? t("lessonEditor.unpublish") : t("lessonEditor.publish")}
             </SubmitButton>
           </form>
+          {quiz.style === "PROJECT" && (
+            <Link
+              href={`/tutor/quizzes/${quiz.id}/preview`}
+              className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              {t("quizDetail.previewProject")}
+            </Link>
+          )}
           {quiz.style !== "PROJECT" && (
           <SlideOverButton
             label={t("quizDuplicate.button")}
@@ -384,6 +393,49 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
           )}
         </section>
       ) : (
+      <>
+      {quiz.style === "PROJECT" && (
+        // Where each student is, before they finish. A finished project also
+        // turns up under the results below, for review.
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">{t("projectProgress.title")}</h2>
+          {quiz.projectProgress.length === 0 ? (
+            <p className="text-sm text-zinc-500">{t("projectProgress.none")}</p>
+          ) : (
+            <div className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white">
+              {quiz.projectProgress.map((p) => {
+                const stepIds = new Set(quiz.questions.filter((q) => q.type === "PROJECT_STEP").map((q) => q.id));
+                const passed = p.passedIds.filter((id) => stepIds.has(id)).length;
+                const failed = Object.values((p.failedChecks ?? {}) as Record<string, number>).reduce(
+                  (n, v) => n + (typeof v === "number" ? v : 0),
+                  0
+                );
+                return (
+                  <div key={p.studentId} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${badgeColorForKey(p.student.name)}`}
+                    >
+                      {initialsFor(p.student.name)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">{p.student.name}</span>
+                    <span className="shrink-0 text-sm tabular-nums text-zinc-500">
+                      {t("projectProgress.steps", { n: passed, total: stepIds.size })} ·{" "}
+                      {t("projectProgress.failed", { n: failed })}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        p.completedAt ? "bg-emerald-100 text-emerald-700" : "bg-blue-50 text-blue-700"
+                      }`}
+                    >
+                      {p.completedAt ? t("projectProgress.finished") : t("projectProgress.inProgress")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t("quizDetail.submissions")}</h2>
         {quiz.submissions.length === 0 ? (
@@ -419,6 +471,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
           </div>
         )}
       </section>
+      </>
       )}
     </div>
   );

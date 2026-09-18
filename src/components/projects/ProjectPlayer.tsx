@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 import { ProjectEditor } from "./ProjectEditor";
 import { runProject } from "@/lib/pyodideWorker";
 import { checkRuns, type CheckResult } from "@/lib/projects/check";
-import { ENTRY_FILE } from "@/lib/projects/schema";
+import { ENTRY_FILE, type ProjectRun } from "@/lib/projects/schema";
 import { getStepChecks, recordProjectCheck, saveProjectFiles } from "@/lib/actions/projects";
 import { useT } from "@/lib/i18n/client";
 
@@ -21,6 +21,15 @@ export type PlayerStep = {
 };
 
 type RunOutput = { output: string; error: string | null } | null;
+
+/**
+ * The tutor's preview: every step's runs and files are on the page, checks
+ * run and advance locally, and nothing is saved or recorded.
+ */
+export type PreviewData = {
+  runs: Record<string, ProjectRun[]>;
+  addFiles: Record<string, Record<string, string>>;
+};
 
 const SAVE_LABEL = {
   saved: "project.save.saved",
@@ -44,12 +53,14 @@ export function ProjectPlayer({
   initialFiles,
   initialPassedIds,
   initialComplete,
+  preview,
 }: {
   quizId: string;
   steps: PlayerStep[];
   initialFiles: Record<string, string>;
   initialPassedIds: string[];
   initialComplete: boolean;
+  preview?: PreviewData;
 }) {
   const t = useT();
   const [files, setFiles] = useState(initialFiles);
@@ -75,7 +86,7 @@ export function ProjectPlayer({
   const dirtyRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flush = useCallback(() => {
-    if (!dirtyRef.current || complete) return;
+    if (!dirtyRef.current || complete || preview) return;
     dirtyRef.current = false;
     setSaveState("saving");
     const snapshot = filesRef.current;
@@ -83,7 +94,7 @@ export function ProjectPlayer({
       const result = await saveProjectFiles(quizId, snapshot);
       setSaveState("error" in result ? "error" : dirtyRef.current ? "dirty" : "saved");
     });
-  }, [complete, quizId]);
+  }, [complete, quizId, preview]);
 
   const updateFiles = useCallback(
     (next: Record<string, string>) => {
@@ -164,6 +175,7 @@ export function ProjectPlayer({
     setChecking(true);
     setNotice(null);
     try {
+      if (preview) return await checkPreview(current);
       const checks = await getStepChecks(quizId, current.id);
       if ("error" in checks) return setNotice({ tone: "error", text: checks.error });
       const snapshot = filesRef.current;
@@ -197,6 +209,35 @@ export function ProjectPlayer({
     } finally {
       setChecking(false);
     }
+  };
+
+  // The preview's check: the same runs and the same rules, kept in the page.
+  const checkPreview = async (step: PlayerStep) => {
+    const result = await checkRuns(filesRef.current, preview?.runs[step.id] ?? []);
+    setCheckResult(result);
+    if (!result.passed) return;
+    const nextPassed = [...passedIds, step.id];
+    const next = steps.find((s) => !nextPassed.includes(s.id)) ?? null;
+    const added = next ? preview?.addFiles[next.id] ?? {} : {};
+    const newNames = Object.keys(added).filter((name) => !(name in filesRef.current));
+    if (newNames.length) {
+      const merged = { ...filesRef.current };
+      for (const name of newNames) merged[name] = added[name];
+      filesRef.current = merged;
+      setFiles(merged);
+      openFile(newNames[0]);
+    }
+    setPassedIds(nextPassed);
+    setCheckResult(null);
+    setShowHint(false);
+    setNotice({
+      tone: "ok",
+      text: !next
+        ? t("project.previewFinished")
+        : newNames.length
+          ? t("project.passedWithFiles", { files: newNames.join(", ") })
+          : t("project.passed"),
+    });
   };
 
   // Steps grouped by stage, in order — a stage is a run of steps sharing one.
@@ -304,7 +345,7 @@ export function ProjectPlayer({
                   ))}
               </div>
               <span className="shrink-0 px-3 text-[11px] text-zinc-400" aria-live="polite">
-                {complete ? t("project.readOnly") : t(SAVE_LABEL[saveState])}
+                {preview ? t("project.previewNotSaved") : complete ? t("project.readOnly") : t(SAVE_LABEL[saveState])}
               </span>
             </div>
             <div className="min-h-[260px] flex-1 lg:min-h-0">
@@ -356,7 +397,10 @@ export function ProjectPlayer({
       {/* Instructions first on a phone, where the two stack; beside the editor from lg up. */}
       <aside className="order-first flex min-h-0 max-h-[70dvh] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white lg:order-none lg:max-h-none">
         <div className="border-b border-zinc-100 px-4 py-3">
-          <p className="text-sm font-semibold text-zinc-900">{t("project.guide")}</p>
+          <p className="text-sm font-semibold text-zinc-900">
+            {t("project.guide")}
+            {preview && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("project.previewBadge")}</span>}
+          </p>
           <div className="mt-2 flex items-center gap-2">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100">
               <div className="h-full rounded-full bg-blue-600 transition-[width]" style={{ width: `${steps.length ? (doneCount / steps.length) * 100 : 0}%` }} />

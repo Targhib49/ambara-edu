@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireStudent } from "@/lib/auth";
+import { requireStudent, requireTutor } from "@/lib/auth";
 import { getT } from "@/lib/i18n/server";
 import { aggregateSubmission, gradeQuestion } from "@/lib/quiz/grading";
 import { projectFilesSchema, type ProjectFiles, type ProjectRun } from "@/lib/projects/schema";
@@ -156,4 +156,38 @@ async function finishProject(studentId: string, quizId: string, steps: LoadedSte
     create: { studentId, quizId, answers, autoScore, status },
     update: {},
   });
+}
+
+export type ProjectReviewResult = { ok: true; finalScore: number } | { error: string };
+
+/**
+ * The tutor's review of a finished project. The tutor sets the final score
+ * directly — up or down from the automatic one — rather than adding points,
+ * since reading the code can lower a grade as easily as raise it. It is
+ * stored the way every review is, as the difference from the automatic score,
+ * so every screen that adds the two keeps working.
+ */
+export async function reviewProject(submissionId: string, rawFinal: number, feedback: string): Promise<ProjectReviewResult> {
+  const t = await getT();
+  await requireTutor();
+  const submission = await db.submission.findUnique({
+    where: { id: submissionId },
+    include: { quiz: { select: { id: true, style: true, questions: { select: { points: true } } } } },
+  });
+  if (!submission || submission.quiz.style !== "PROJECT") return { error: t("project.unavailable") };
+  const total = submission.quiz.questions.reduce((n, q) => n + q.points, 0);
+  const finalScore = Number(rawFinal);
+  if (!Number.isFinite(finalScore) || finalScore < 0 || finalScore > total) {
+    return { error: t("projectReview.scoreRange", { total }) };
+  }
+  const rounded = Math.round(finalScore * 100) / 100;
+  const manualScore = Math.round((rounded - (submission.autoScore ?? 0)) * 100) / 100;
+  await db.submission.update({
+    where: { id: submissionId },
+    data: { manualScore, feedback: feedback.slice(0, 5000), status: "REVIEWED" },
+  });
+  revalidatePath(`/tutor/quizzes/${submission.quizId}`);
+  revalidatePath(`/tutor/quizzes/${submission.quizId}/submissions/${submissionId}`);
+  revalidatePath(`/quizzes/${submission.quizId}`);
+  return { ok: true, finalScore: rounded };
 }

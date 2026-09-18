@@ -7,6 +7,10 @@ import { submissionAnswersSchema } from "@/lib/quiz/schema";
 import { CodeSubmissionView } from "@/components/quiz/CodeSubmissionView";
 import { ReviewForm } from "./ReviewForm";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { ProjectFilesViewer } from "@/components/projects/ProjectFilesViewer";
+import { ProjectReviewForm } from "./ProjectReviewForm";
+import { loadSteps } from "@/lib/projects/progress";
+import { projectStepResponseSchema } from "@/lib/projects/schema";
 
 export default async function SubmissionReviewPage({
   params,
@@ -30,6 +34,89 @@ export default async function SubmissionReviewPage({
   const answers = parsedAnswers.success ? parsedAnswers.data : [];
   const totalPoints = submission.quiz.questions.reduce((n, q) => n + q.points, 0);
 
+  const crumbs = [
+    { label: t("nav.home"), href: "/tutor" },
+    { label: t("nav.quizzes"), href: "/tutor/quizzes" },
+    { label: submission.quiz.title, href: `/tutor/quizzes/${quizId}` },
+    { label: t("submissionPage.title", { name: submission.student.name }) },
+  ];
+
+  if (submission.quiz.style === "PROJECT") {
+    // A project is reviewed by its code and by how each step went, not by
+    // question answers; its files live on the student's progress.
+    const progress = await db.projectProgress.findUnique({
+      where: { studentId_quizId: { studentId: submission.studentId, quizId } },
+    });
+    const files = (progress?.files ?? {}) as Record<string, string>;
+    const steps = loadSteps(submission.quiz.questions).map((s) => {
+      const answer = answers.find((a) => a.questionId === s.id);
+      const response = projectStepResponseSchema.safeParse(answer?.response);
+      const grade = gradeQuestion({ type: "PROJECT_STEP", points: s.points, correctAnswer: s.step }, answer?.response ?? null);
+      return { ...s, failedChecks: response.success ? response.data.failedChecks : 0, earned: grade.earnedPoints };
+    });
+    const autoScore = submission.autoScore ?? 0;
+    const currentScore =
+      submission.status === "REVIEWED" ? Math.round((autoScore + (submission.manualScore ?? 0)) * 100) / 100 : autoScore;
+
+    return (
+      <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">
+        <div>
+          <Breadcrumbs items={crumbs} />
+          <h1 className="mt-2 text-2xl font-semibold">{t("submissionPage.title", { name: submission.student.name })}</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            {t("projectReview.meta", { steps: steps.length, total: totalPoints })}
+          </p>
+        </div>
+
+        <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50 text-left text-xs text-zinc-500">
+              <tr>
+                <th className="px-4 py-2 font-medium">{t("projectReview.step")}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("projectReview.failedChecks")}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("projectReview.earned")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {steps.map((s) => (
+                <tr key={s.id}>
+                  <td className="px-4 py-2.5">
+                    <span className="block text-xs text-zinc-400">{s.step.stage}</span>
+                    <span className="text-zinc-900">{s.step.title}</span>
+                  </td>
+                  <td className={`px-4 py-2.5 text-right tabular-nums ${s.failedChecks > 0 ? "text-amber-700" : "text-zinc-500"}`}>
+                    {s.failedChecks}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-zinc-900">
+                    {s.earned} / {s.points}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="font-medium">{t("projectReview.files")}</h2>
+          {Object.keys(files).length > 0 ? (
+            <ProjectFilesViewer files={files} />
+          ) : (
+            <p className="text-sm text-zinc-500">{t("projectReview.noFiles")}</p>
+          )}
+        </section>
+
+        <ProjectReviewForm
+          submissionId={submission.id}
+          autoScore={autoScore}
+          currentScore={currentScore}
+          totalPoints={totalPoints}
+          feedback={submission.feedback}
+          reviewed={submission.status === "REVIEWED"}
+        />
+      </div>
+    );
+  }
+
   const rows = submission.quiz.questions.map((q) => {
     const answer = answers.find((a) => a.questionId === q.id);
     const grade = gradeQuestion(q, answer?.response ?? null);
@@ -43,22 +130,15 @@ export default async function SubmissionReviewPage({
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
       <div>
-        <Breadcrumbs
-          items={[
-            { label: t("nav.home"), href: "/tutor" },
-            { label: "Quizzes", href: "/tutor/quizzes" },
-            { label: submission.quiz.title, href: `/tutor/quizzes/${quizId}` },
-            { label: `${submission.student.name}'s submission` },
-          ]}
-        />
-        <h1 className="mt-2 text-2xl font-semibold">{submission.student.name}&rsquo;s submission</h1>
+        <Breadcrumbs items={crumbs} />
+        <h1 className="mt-2 text-2xl font-semibold">{t("submissionPage.title", { name: submission.student.name })}</h1>
       </div>
 
       <div className="space-y-4">
         {rows.map(({ question, response, grade }, i) => (
           <div key={question.id} className="rounded-xl border border-zinc-200 bg-white p-5">
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Q{i + 1} · {question.points} pt{question.points === 1 ? "" : "s"}
+              {t(question.points === 1 ? "quizPage.questionLabel" : "quizPage.questionLabelPlural", { i: i + 1, p: question.points })}
             </p>
             <p className="mt-1 text-sm text-zinc-900">{question.prompt}</p>
 
@@ -67,8 +147,7 @@ export default async function SubmissionReviewPage({
                 <CodeSubmissionView correctAnswer={question.correctAnswer} response={response} />
                 {grade.earnedPoints > 0 && (
                   <p className="mt-1.5 text-xs text-zinc-500">
-                    Auto-score from tests: {grade.earnedPoints} / {question.points} pts (already counted
-                    in the auto-graded score below)
+                    {t("submissionPage.codeAutoScore", { earned: grade.earnedPoints, points: question.points })}
                   </p>
                 )}
               </div>
@@ -106,7 +185,7 @@ export default async function SubmissionReviewPage({
             </div>
 
             {question.explanation && (
-              <p className="mt-2 text-xs text-zinc-500">Explanation: {question.explanation}</p>
+              <p className="mt-2 text-xs text-zinc-500">{t("submissionPage.explanation", { text: question.explanation })}</p>
             )}
           </div>
         ))}
