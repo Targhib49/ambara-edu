@@ -176,6 +176,8 @@ export async function duplicateQuiz(
     include: { questions: { orderBy: { order: "asc" } } },
   });
   if (!source) return { error: t("action.quizGone") };
+  // Project steps only work inside a project's player.
+  if (source.style === "PROJECT") return { error: t("action.projectNoDuplicate") };
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: t("action.quizTitleRequired") };
@@ -268,7 +270,11 @@ export async function updateQuizMeta(quizId: string, formData: FormData) {
   // meanwhile) keeps the quiz where it was rather than failing the whole save.
   const placement = await resolvePlacement(formData.get("chapterId"), formData.get("lessonId"));
 
-  const style = parseQuizStyle(formData.get("style"));
+  // A guided project stays one: its steps only work in the project player, and
+  // the settings form doesn't offer the style, so what it posts can't be trusted
+  // to keep it.
+  const existing = await db.quiz.findUnique({ where: { id: quizId }, select: { style: true } });
+  const style = existing?.style === "PROJECT" ? "PROJECT" : parseQuizStyle(formData.get("style"));
   // The try-out fields stay in the form (hidden) whatever the style, so they
   // are only read for a try-out. A classic quiz is untimed with unlimited
   // retakes — before styles existed those settings did nothing for it anyway.

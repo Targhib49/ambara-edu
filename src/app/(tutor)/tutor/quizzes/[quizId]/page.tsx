@@ -101,7 +101,9 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
                   seconds: quiz.drillSeconds ?? DRILL_DEFAULTS.drillSeconds,
                   target: quiz.drillTarget ?? DRILL_DEFAULTS.drillTarget,
                 })
-              : isGradedStyle(quiz.style)
+              : quiz.style === "PROJECT"
+                ? t("project.meta", { n: quiz.questions.length, p: totalPoints })
+                : isGradedStyle(quiz.style)
                 ? t("quizDetail.metaCounts", { q: quiz.questions.length, p: totalPoints })
                 : t(quiz.questions.length === 1 ? "practice.metaOne" : "practice.meta", { n: quiz.questions.length })}
           </>
@@ -117,7 +119,15 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
           </div>
           <QuizPlacementFields tree={tree} defaultChapterId={quiz.chapterId} defaultLessonId={quiz.lessonId} />
           <div className="group space-y-3">
-            <QuizStyleField defaultStyle={quiz.style} />
+            {quiz.style === "PROJECT" ? (
+              // A project's style is fixed: its steps only work in the project player.
+              <div>
+                <p className="mb-1 block text-xs font-medium text-zinc-500">{t("quizStyle.label")}</p>
+                <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">{t("quizDetail.projectStyleFixed")}</p>
+              </div>
+            ) : (
+              <QuizStyleField defaultStyle={quiz.style} />
+            )}
             {/* Review settings, revealed while Mixed review is picked. */}
             <div className="hidden space-y-3 rounded-lg border border-teal-200 bg-teal-50/40 p-3 group-has-[input[value=REVIEW]:checked]:block">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-teal-800">{t("review.settings")}</p>
@@ -237,6 +247,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
               {quiz.status === "PUBLISHED" ? t("lessonEditor.unpublish") : t("lessonEditor.publish")}
             </SubmitButton>
           </form>
+          {quiz.style !== "PROJECT" && (
           <SlideOverButton
             label={t("quizDuplicate.button")}
             title={t("quizDuplicate.title")}
@@ -258,6 +269,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
               lessonId={quiz.lessonId}
             />
           </SlideOverButton>
+          )}
           <form action={deleteQuiz.bind(null, quiz.id)}>
             <ConfirmButton
               message={t("quizDetail.deleteConfirm", { title: quiz.title })}
@@ -286,6 +298,10 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
         <h2 className="text-lg font-semibold">{t("quizDetail.questions")}</h2>
         <QuestionsSection questions={quiz.questions} practice={!isGradedStyle(quiz.style)} />
 
+        {/* A project's steps are written with the project, not added one type at a time. */}
+        {quiz.style === "PROJECT" ? (
+          <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">{t("quizDetail.projectStepsByFile")}</p>
+        ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 p-4">
           <p className="mb-3 text-sm font-medium text-zinc-600">{t("quizDetail.addQuestion")}</p>
           <div className="flex flex-wrap gap-2">
@@ -301,6 +317,7 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
             ))}
           </div>
         </div>
+        )}
       </section>
       )}
 

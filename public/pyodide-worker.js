@@ -30,16 +30,18 @@ async function runOnce(pyodide, code, stdinText, extraGlobals) {
   pyodide.setStdout({ batched: (text) => lines.push({ stream: "stdout", text }) });
   pyodide.setStderr({ batched: (text) => lines.push({ stream: "stderr", text }) });
 
-  // Whole input handed to the first read; afterwards EOF — matches real
-  // Python behavior when input() runs past the provided lines.
-  let remaining = stdinText;
-  pyodide.setStdin({
-    stdin: () => {
-      const chunk = remaining;
-      remaining = null;
-      return chunk;
-    },
-  });
+  // Each run gets its own fresh stdin. Handing the text to Pyodide's stdin
+  // device isn't enough: Python buffers what it reads, so lines one run left
+  // unread (a program that stopped early, or crashed) leaked into the next —
+  // a test case would read the previous case's input and fail. A StringIO per
+  // run holds exactly this run's input, and input() past its end raises
+  // EOFError, as real Python does.
+  pyodide.setStdin({ stdin: () => null });
+  const sys = pyodide.pyimport("sys");
+  const io = pyodide.pyimport("io");
+  sys.stdin = io.StringIO(stdinText || "");
+  sys.destroy();
+  io.destroy();
 
   const globals = pyodide.runPython("dict()"); // fresh namespace per run
   if (extraGlobals) for (const [key, value] of Object.entries(extraGlobals)) globals.set(key, value);

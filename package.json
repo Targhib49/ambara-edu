@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/state": "^6.7.5",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@supabase/ssr": "^0.12.0",

@@ -4,6 +4,7 @@ import { DRILL_DEFAULTS, parseDrillSkill } from "@/lib/drills/registry";
 import { isGradedStyle, isTimedStyle } from "@/lib/quiz/styles";
 import { toQuestionForForm } from "@/lib/quiz/forms";
 import { ReviewPlayer } from "./ReviewPlayer";
+import { ProjectView } from "./ProjectView";
 import { REVIEW_COUNT_DEFAULT, drawReviewSet } from "@/lib/quiz/review";
 import { nowMs } from "@/lib/sessions/format";
 import { getT } from "@/lib/i18n/server";
@@ -117,6 +118,20 @@ export default async function StudentQuizPage({
   const backLabel = quiz.lesson
     ? t("quizPage.backToLesson", { title: quiz.lesson.title })
     : t("quizPage.backToCourse", { title: quiz.chapter?.course.title ?? t("quizPage.courseFallback") });
+
+  // A guided project has its own, wider page around the editor.
+  if (quiz.style === "PROJECT") {
+    return (
+      <ProjectView
+        studentId={student.id}
+        quiz={quiz}
+        submission={submission}
+        crumbs={crumbs}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
