@@ -6,8 +6,9 @@
 // Protocol (client -> worker):
 //   { id, kind: "run",  code }                    -> scratchpad run, no stdin
 //   { id, kind: "test", code, testCases: [{input}] } -> one run per case
-//   { id, kind: "project", files, entry, inputs }  -> a multi-file project,
-//                                                      run once per input
+//   { id, kind: "project", files, entry, runs }    -> a multi-file project, once per
+//                                                      run: { input, script? } — a
+//                                                      script runs in place of entry
 // Worker -> client:
 //   { kind: "ready" }                once Pyodide is booted
 //   { id, ok: true, run }            run:   { lines, resultRepr, error }
@@ -63,6 +64,8 @@ async function runOnce(pyodide, code, stdinText, extraGlobals) {
 // A project's files live here while it runs. Rebuilt from scratch every run,
 // so a file the student deleted or renamed can't linger and still import.
 const PROJECT_DIR = "/home/pyodide/project";
+// Where a step's check script runs from; the app keeps students from using the name.
+const CHECK_FILE = "_cek_langkah.py";
 
 // Only plain relative names: never absolute, never "..", so a file can't be
 // written outside the project folder. The app validates the same rule.
@@ -96,21 +99,25 @@ os.chdir(d)
 }
 
 self.onmessage = async (event) => {
-  const { id, kind, code, testCases, files, entry, inputs } = event.data;
+  const { id, kind, code, testCases, files, entry, runs: projectRuns } = event.data;
   try {
     const pyodide = await pyodideReady;
     if (kind === "project") {
       // Every file's imports, not just the entry's, so data.py can use packages too.
-      await pyodide.loadPackagesFromImports(Object.values(files).join("\n"));
-      const entryCode = files[entry];
-      if (typeof entryCode !== "string") throw new Error("Missing " + entry);
+      await pyodide.loadPackagesFromImports(
+        Object.values(files).concat(projectRuns.map((r) => r.script || "")).join("\n")
+      );
+      if (typeof files[entry] !== "string") throw new Error("Missing " + entry);
       const runs = [];
-      for (const input of inputs) {
+      for (const run of projectRuns) {
+        // A check script runs beside the student's files, in place of the entry.
+        const name = run.script ? CHECK_FILE : entry;
+        const runFiles = run.script ? { ...files, [CHECK_FILE]: run.script } : files;
         // Rewritten per run: a previous run may have changed or created files.
-        writeProject(pyodide, files);
-        const { lines, error } = await runOnce(pyodide, entryCode, input, {
+        writeProject(pyodide, runFiles);
+        const { lines, error } = await runOnce(pyodide, runFiles[name], run.input || "", {
           __name__: "__main__",
-          __file__: PROJECT_DIR + "/" + entry,
+          __file__: PROJECT_DIR + "/" + name,
         });
         runs.push({ lines, error });
       }

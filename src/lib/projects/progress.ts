@@ -91,7 +91,7 @@ export async function ensureProgress(studentId: string, quiz: { id: string; proj
   return db.projectProgress.upsert({
     // Two tabs opening at once must not both create it.
     where: { studentId_quizId: { studentId, quizId: quiz.id } },
-    create: { studentId, quizId: quiz.id, files, passedIds: [], failedChecks: {} },
+    create: { studentId, quizId: quiz.id, files, stepStartFiles: files, passedIds: [], failedChecks: {} },
     update: {},
   });
 }

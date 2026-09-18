@@ -75,12 +75,17 @@ export default {
 ```ts
 {
   stage: "Tahap 2: Rata-Rata & Nilai Huruf",   // consecutive steps sharing one are grouped
-  title: "Rata-rata dan nilai huruf",           // unique within the project
+  lesson: "Tahap 2: Rata-Rata & Nilai Huruf",  // a lesson in the chapter, linked from the guide
+  title: "Nilai huruf dan predikat",            // unique within the project
   points: 3,
   instruction: `Markdown shown in the guide …`,
   example: { input: "Dewi", expectedOutput: `…` },   // shown to the student
-  tests: [{ input: "Andi", expectedOutput: `…` }],   // hidden; up to 20
-  hint: "one line, shown on request",
+  tests: [                                            // hidden; up to 30
+    { input: "Sari", expectedOutput: `…` },                         // main.py with other input
+    { label: "nilai_huruf(90)", script: `from nilai import nilai_huruf
+print(nilai_huruf(90))`, expectedOutput: "A", input: "" },          // a function check
+  ],
+  hints: ["a nudge", "nearly the answer"],   // shown one at a time
   addFiles: { "nilai.py": "…" },       // files that appear when this step opens
   solution: { "main.py": "…", "nilai.py": "…" },     // the reference answer
 }
@@ -93,11 +98,30 @@ export default {
   idea ("lihat pelajaran **Tahap 3**").
 - **`example`** is shown to the student, input and expected output both. The
   input is typed into the *Input* box, one line per `input()` call.
-- **`tests`** are hidden. A check passes only if the example **and** every test
-  print exactly what's expected, so write tests with **different input** — a
-  program that just prints the example's output then fails. When a test
-  fails, the student sees its input and what their program printed, never
-  the expected output.
+- **`tests`** are hidden, and come in two kinds. A check passes only if the
+  example **and** every test print exactly what's expected.
+  - **Input tests** run `main.py` with different input — so a program that
+    just prints the example's output fails. When one fails the student sees
+    its input and what their program printed, never the expected output.
+  - **Function checks** (`script` + `label`) run a small Python program
+    *instead of* `main.py`, beside the student's files. It imports their
+    modules and prints what their code gives — the old lessons' *alat cek*.
+    Use them for what output alone can't catch: **edge cases**
+    (`nilai_huruf(89.9)`, `rata_rata([])`), **new data** (does the function
+    work beyond our five students?), **side effects** (is the original
+    dictionary untouched?), and **how** it's written (the rapor project reads
+    `peringkat.py` with `tokenize` to refuse `sorted()` — code only, so a
+    comment mentioning it is fine). When one fails, the student sees the
+    `label`, what it printed and what was expected — "nilai_huruf(90): dapat
+    B, harusnya A" — so **always give a label** that names the case.
+    Print numbers with a fixed format (`f"{x:.2f}"`) so `0` and `0.0` agree.
+    The script runs as `_cek_langkah.py`; students can't use that name.
+- **`hints`** are shown one at a time, on request: start with a nudge, end
+  close to the answer. Two or three per step. (A single `hint` string still
+  works for older projects.)
+- **`lesson`** is the exact title of a lesson in the same chapter. The guide
+  links to it ("Baca pelajarannya ↗"), so the student can reread the idea
+  without losing their place.
 - **`addFiles`** appear when the step opens. A file the student already has is
   never overwritten — so to change a file's shape (say, the data gets a new
   level), add a **new** file and have the step switch to it, as Tahap 3 does
@@ -107,6 +131,19 @@ export default {
   adds, as they are once the step is done. It's merged onto the previous
   step's finished files, so list only what the step touches. It never reaches
   students; `validate` runs it.
+
+### What the student sees when a check fails
+
+- **The example**: expected and actual output side by side, line by line,
+  with the first differing line highlighted and its spaces drawn as `·` —
+  a missing space is the most common mistake and otherwise invisible.
+- **Function checks**: each failing one's label, what it gave and what it
+  should give, up to five.
+- **Input tests**: the input and what the program printed.
+
+A student who breaks a file can restore it to how it was when the current
+step opened; the rest of their work is untouched. Finished steps can be
+opened again to reread.
 
 ### How output is compared
 
@@ -132,8 +169,12 @@ for Cek, so students can try things freely.
 - **Keep one program all the way through.** The point of a project over a
   set of exercises is that the code carries over; each step should build on
   the last, not start something new.
-- **Small steps.** One idea per step; around 8–12 steps for a chapter.
-  A student who fails a step has to fix it before moving on.
+- **Small steps.** One idea per step, and one check to pass; around 12–16
+  steps for a chapter. A student who fails a step has to fix it before
+  moving on, so a step that asks for three functions and a new layout at
+  once is three steps. A step may leave the output unchanged (say,
+  refactoring into a function) as long as a function check proves the new
+  code exists.
 - **Make output depend on input.** Steps whose output never changes can only
   be checked against the example, which a student can copy.
 - **Keep the chapter's theme**: its data, names and examples. When converting

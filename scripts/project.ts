@@ -20,6 +20,7 @@ import { pathToFileURL } from "url";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
+  CHECK_FILE,
   ENTRY_FILE,
   projectDefinitionSchema,
   toStoredStep,
@@ -50,16 +51,20 @@ function normalize(text: string): string {
   return text.replace(/\r\n/g, "\n").split("\n").map((l) => l.replace(/\s+$/, "")).join("\n").replace(/\n+$/, "");
 }
 
-/** Runs a project the way the student's browser does: main.py with the input on stdin. */
-function runPython(files: Record<string, string>, input: string): { output: string; error: string | null } {
+/**
+ * Runs a project the way the student's browser does: main.py with the input on
+ * stdin — or, for a check with a script, that script beside the files instead.
+ */
+function runPython(files: Record<string, string>, input: string, script?: string): { output: string; error: string | null } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ambara-project-"));
   try {
-    for (const [name, text] of Object.entries(files)) {
+    const all = script ? { ...files, [CHECK_FILE]: script } : files;
+    for (const [name, text] of Object.entries(all)) {
       const full = path.join(dir, name);
       fs.mkdirSync(path.dirname(full), { recursive: true });
       fs.writeFileSync(full, text);
     }
-    const result = spawnSync("python3", [ENTRY_FILE], {
+    const result = spawnSync("python3", [script ? CHECK_FILE : ENTRY_FILE], {
       cwd: dir,
       input,
       encoding: "utf8",
@@ -79,11 +84,14 @@ function runPython(files: Record<string, string>, input: string): { output: stri
 
 type RunCheck = { label: string; input: string; expected: string; output: string; error: string | null; passed: boolean };
 
-function checkRuns(files: Record<string, string>, runs: { input: string; expectedOutput: string }[]): RunCheck[] {
+function checkRuns(
+  files: Record<string, string>,
+  runs: { input: string; expectedOutput: string; script?: string; label?: string }[]
+): RunCheck[] {
   return runs.map((run, i) => {
-    const { output, error } = runPython(files, run.input);
+    const { output, error } = runPython(files, run.input, run.script);
     return {
-      label: i === 0 ? "example" : `hidden test ${i}`,
+      label: i === 0 ? "example" : run.script ? `check "${run.label || `script ${i}`}"` : `hidden test ${i}`,
       input: run.input,
       expected: run.expectedOutput,
       output,
@@ -124,12 +132,22 @@ function validate(def: ProjectDefinition): boolean {
     const runs = [step.example, ...step.tests];
     const results = checkRuns(done, runs);
     const passed = results.every((r) => r.passed);
-    console.log(`  ${passed ? "✓" : "✗"} ${index + 1}. [${step.stage}] ${step.title} — ${step.points} pt, ${step.tests.length} hidden test(s)`);
+    const scripts = step.tests.filter((t) => t.script).length;
+    console.log(
+      `  ${passed ? "✓" : "✗"} ${index + 1}. [${step.stage}] ${step.title} — ${step.points} pt, ` +
+        `${step.tests.length - scripts} input test(s), ${scripts} function check(s)`
+    );
     if (!passed) {
       ok = false;
       results.filter((r) => !r.passed).forEach(showMismatch);
     }
 
+    for (const test of step.tests) {
+      if (test.script && !test.label) {
+        warnings++;
+        console.log("      ⚠ a function check has no label — the student would see only \"cek fungsi\" when it fails");
+      }
+    }
     if (step.tests.length === 0) {
       warnings++;
       console.log("      ⚠ no hidden tests — printing the example's output by hand would pass");
@@ -187,7 +205,14 @@ async function locate(db: Db, def: ProjectDefinition) {
     return { title, live, archived };
   });
   const existing = chapter.quizzes.find((q) => q.title === def.title) ?? null;
-  return { course: courses[0], chapter, lessonId, replaced, existing };
+  // Each step's lesson link, by title, within the chapter.
+  const stepLessonIds = def.steps.map((step) => {
+    if (!step.lesson) return undefined;
+    const lesson = chapter.lessons.find((l) => l.title === step.lesson);
+    if (!lesson) throw new Error(`step "${step.title}" links to "${step.lesson}", which isn't a lesson in the chapter`);
+    return lesson.id;
+  });
+  return { course: courses[0], chapter, lessonId, replaced, existing, stepLessonIds };
 }
 
 function backup(label: string, data: unknown) {
@@ -209,6 +234,7 @@ async function plan(def: ProjectDefinition) {
     console.log(`Project:  "${def.title}" — ${stages.length} stages, ${def.steps.length} steps, ${points} points`);
     console.log(`          placed ${def.afterLesson ? `after "${def.afterLesson}"` : "at the end of the chapter"}`);
     console.log(`          starts with: ${Object.keys(def.files).join(", ")}`);
+    console.log(`          lesson links: ${where.stepLessonIds.filter(Boolean).length} of ${def.steps.length} steps`);
     if (where.existing) {
       const c = where.existing._count;
       console.log(
@@ -266,7 +292,7 @@ async function apply(def: ProjectDefinition, replaceDraft: boolean) {
             points: step.points,
             explanation: "",
             options: [],
-            correctAnswer: toStoredStep(step),
+            correctAnswer: toStoredStep(step, where.stepLessonIds[order]),
           })),
         },
       },

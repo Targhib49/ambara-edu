@@ -25,6 +25,7 @@ export const projectFileNameSchema = z
 export const projectFilesSchema = z
   .record(projectFileNameSchema, z.string())
   .refine((files) => ENTRY_FILE in files, { message: `a project needs ${ENTRY_FILE}` })
+  .refine((files) => !("_cek_langkah.py" in files), { message: "_cek_langkah.py is reserved for checks" })
   .refine((files) => Object.keys(files).length <= MAX_FILES, { message: `at most ${MAX_FILES} files` })
   .refine((files) => Object.values(files).reduce((n, text) => n + text.length, 0) <= MAX_TOTAL_CHARS, {
     message: "the files are too large",
@@ -37,6 +38,27 @@ export const projectRunSchema = z.object({
   expectedOutput: z.string(),
 });
 export type ProjectRun = z.infer<typeof projectRunSchema>;
+
+/** The file a check script runs as, beside the student's files. Reserved: a student can't make it. */
+export const CHECK_FILE = "_cek_langkah.py";
+
+/**
+ * A hidden check. Either the student's program run with other input, or —
+ * with `script` — a small Python program run in place of main.py, beside the
+ * student's files, that imports their modules and prints what it finds: how
+ * the old lessons' "alat cek" tested functions on their edge cases.
+ *
+ * A failed input check shows its input and what the program printed, never
+ * the expected output. A failed script check shows its `label`, what it
+ * printed and what was expected ("nilai_huruf(89.9) -> dapat C, harusnya B"),
+ * since that names the one case to fix without giving the program away.
+ */
+export const projectCheckSchema = projectRunSchema.extend({
+  script: z.string().min(1).optional(),
+  /** What a script check tests, e.g. "nilai_huruf(89.9)". */
+  label: z.string().default(""),
+});
+export type ProjectCheck = z.infer<typeof projectCheckSchema>;
 
 /**
  * One step, stored as a PROJECT_STEP question's correctAnswer. The question's
@@ -53,8 +75,13 @@ export const projectStepSchema = z.object({
   /** Shown to the student: what to type in, and what the program should print. */
   example: projectRunSchema,
   /** Checked but not shown. */
-  tests: z.array(projectRunSchema).max(20).default([]),
+  tests: z.array(projectCheckSchema).max(30).default([]),
+  /** One-line hint — kept for projects written before `hints`. */
   hint: z.string().default(""),
+  /** Hints shown one at a time, from a nudge to nearly the answer. */
+  hints: z.array(z.string().min(1)).max(4).default([]),
+  /** The lesson that teaches this step's idea, linked from the guide. */
+  lessonId: z.string().uuid().optional(),
   /** Files that appear in the student's project when this step opens, e.g. a data.py to import. */
   addFiles: z.record(projectFileNameSchema, z.string()).default({}),
 });
@@ -76,4 +103,10 @@ export function projectStepShare(failedChecks: number): number {
   if (failedChecks <= 0) return 1;
   if (failedChecks === 1) return 0.75;
   return 0.5;
+}
+
+/** A step's hints in order: `hints` if written, otherwise the single `hint`. */
+export function stepHints(step: { hint: string; hints: string[] }): string[] {
+  if (step.hints.length) return step.hints;
+  return step.hint ? [step.hint] : [];
 }

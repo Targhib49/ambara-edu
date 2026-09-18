@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
 import { ProjectPlayer, type PlayerStep } from "@/components/projects/ProjectPlayer";
 import { ensureProgress, loadSteps } from "@/lib/projects/progress";
+import { stepHints } from "@/lib/projects/schema";
 import { type Crumb } from "@/components/ui/Breadcrumbs";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { btnSecondary } from "@/components/ui/styles";
@@ -14,6 +15,7 @@ import type { Question, Submission } from "@/generated/prisma/client";
  */
 export async function ProjectView({
   studentId,
+  courseId,
   quiz,
   submission,
   crumbs,
@@ -21,6 +23,7 @@ export async function ProjectView({
   backLabel,
 }: {
   studentId: string;
+  courseId: string;
   quiz: { id: string; title: string; projectFiles: unknown; questions: Question[] };
   submission: Submission | null;
   crumbs: Crumb[];
@@ -39,7 +42,8 @@ export async function ProjectView({
     title: s.step.title,
     instruction: s.instruction,
     example: s.step.example,
-    hint: s.step.hint,
+    hints: stepHints(s.step),
+    lessonHref: s.step.lessonId ? `/courses/${courseId}/lessons/${s.step.lessonId}` : null,
   }));
 
   const score =
@@ -81,6 +85,7 @@ export async function ProjectView({
           initialFiles={files}
           initialPassedIds={progress.passedIds}
           initialComplete={progress.completedAt !== null}
+          initialCheckpoint={(progress.stepStartFiles ?? progress.files ?? {}) as Record<string, string>}
         />
       )}
     </div>

@@ -412,6 +412,9 @@ model ProjectProgress {
   quiz         Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
   // The student's files as they are now, { "main.py": "…", … }.
   files        Json
+  // The files as they were when the current step opened — what "restore this
+  // file" goes back to, so a broken file never costs the student a step's work.
+  stepStartFiles Json?
   // Steps whose check has passed. The current step is the first one not here.
   passedIds    String[]
   // Checks that failed before each step passed, { "<questionId>": 2 } — the score.

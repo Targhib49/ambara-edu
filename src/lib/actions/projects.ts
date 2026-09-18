@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireStudent, requireTutor } from "@/lib/auth";
 import { getT } from "@/lib/i18n/server";
 import { aggregateSubmission, gradeQuestion } from "@/lib/quiz/grading";
-import { projectFilesSchema, type ProjectFiles, type ProjectRun } from "@/lib/projects/schema";
+import { projectFilesSchema, type ProjectCheck, type ProjectFiles } from "@/lib/projects/schema";
 import {
   currentStep,
   failedChecksOf,
@@ -56,7 +56,7 @@ export async function saveProjectFiles(quizId: string, rawFiles: unknown): Promi
   return { ok: true };
 }
 
-export type StepChecks = { runs: ProjectRun[] } | { error: string };
+export type StepChecks = { runs: ProjectCheck[] } | { error: string };
 
 /**
  * The runs that check a step — its example and its hidden tests. Only handed
@@ -68,7 +68,7 @@ export async function getStepChecks(quizId: string, stepId: string): Promise<Ste
   if (!loaded || loaded.progress.completedAt) return { error: t("project.unavailable") };
   const current = currentStep(loaded.steps, loaded.progress.passedIds);
   if (!current || current.id !== stepId) return { error: t("project.notCurrentStep") };
-  return { runs: [current.step.example, ...current.step.tests] };
+  return { runs: [{ ...current.step.example, label: "" }, ...current.step.tests] };
 }
 
 export type CheckRecord =
@@ -121,7 +121,8 @@ export async function recordProjectCheck(
   const addedFiles = Object.keys(nextFiles).filter((name) => !(name in files));
 
   if (next) {
-    await db.projectProgress.update({ where: key, data: { files: nextFiles, passedIds } });
+    // The next step starts from here: what "restore this file" goes back to.
+    await db.projectProgress.update({ where: key, data: { files: nextFiles, stepStartFiles: nextFiles, passedIds } });
     return { passed: true, passedIds, failedChecks, files: nextFiles, addedFiles, complete: false };
   }
 

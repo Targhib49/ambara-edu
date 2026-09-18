@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
+  CHECK_FILE,
   ENTRY_FILE,
+  projectCheckSchema,
   projectFileNameSchema,
   projectFilesSchema,
   projectRunSchema,
@@ -24,8 +26,13 @@ export const definitionStepSchema = z.object({
   /** Markdown, shown in the guide. */
   instruction: z.string().min(1),
   example: projectRunSchema,
-  tests: z.array(projectRunSchema).max(20).default([]),
+  /** Hidden checks: other input for main.py, or a `script` that tests the student's functions. */
+  tests: z.array(projectCheckSchema).max(30).default([]),
   hint: z.string().default(""),
+  /** Hints shown one at a time, from a nudge to nearly the answer. */
+  hints: z.array(z.string().min(1)).max(4).default([]),
+  /** Exact title of the lesson (in the same chapter) that teaches the step, linked from the guide. */
+  lesson: z.string().min(1).optional(),
   /** Files that appear in the student's project when this step opens. */
   addFiles: filesMapSchema.default({}),
   /**
@@ -94,15 +101,17 @@ export function walkSteps(def: ProjectDefinition): StepState[] {
 }
 
 /** The step as stored in the database: what the app needs, without the solution. */
-export function toStoredStep(step: DefinitionStep) {
+export function toStoredStep(step: DefinitionStep, lessonId?: string) {
   return projectStepSchema.parse({
     stage: step.stage,
     title: step.title,
     example: step.example,
     tests: step.tests,
     hint: step.hint,
+    hints: step.hints,
+    lessonId,
     addFiles: step.addFiles,
   });
 }
 
-export { ENTRY_FILE };
+export { CHECK_FILE, ENTRY_FILE };

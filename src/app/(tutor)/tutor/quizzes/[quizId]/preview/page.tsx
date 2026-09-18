@@ -5,6 +5,7 @@ import { getT } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ProjectPlayer, type PlayerStep, type PreviewData } from "@/components/projects/ProjectPlayer";
 import { currentStep, loadSteps, starterFiles, withStepFiles } from "@/lib/projects/progress";
+import { stepHints } from "@/lib/projects/schema";
 
 /**
  * The tutor trying a project as a student would, before publishing it. Runs
@@ -17,7 +18,7 @@ export default async function ProjectPreviewPage({ params }: { params: Promise<{
   const { quizId } = await params;
   const quiz = await db.quiz.findUnique({
     where: { id: quizId },
-    include: { questions: { orderBy: { order: "asc" } } },
+    include: { questions: { orderBy: { order: "asc" } }, chapter: { select: { courseId: true } } },
   });
   if (!quiz || quiz.style !== "PROJECT") notFound();
 
@@ -28,10 +29,13 @@ export default async function ProjectPreviewPage({ params }: { params: Promise<{
     title: s.step.title,
     instruction: s.instruction,
     example: s.step.example,
-    hint: s.step.hint,
+    hints: stepHints(s.step),
+    // The tutor's own view of the lesson.
+    lessonHref: s.step.lessonId && quiz.chapter ? `/tutor/courses/${quiz.chapter.courseId}/lessons/${s.step.lessonId}` : null,
   }));
+  const initialFiles = withStepFiles(starterFiles(quiz.projectFiles), currentStep(steps, []));
   const preview: PreviewData = {
-    runs: Object.fromEntries(steps.map((s) => [s.id, [s.step.example, ...s.step.tests]])),
+    runs: Object.fromEntries(steps.map((s) => [s.id, [{ ...s.step.example, label: "" }, ...s.step.tests]])),
     addFiles: Object.fromEntries(steps.map((s) => [s.id, s.step.addFiles])),
   };
 
@@ -53,7 +57,8 @@ export default async function ProjectPreviewPage({ params }: { params: Promise<{
         <ProjectPlayer
           quizId={quiz.id}
           steps={playerSteps}
-          initialFiles={withStepFiles(starterFiles(quiz.projectFiles), currentStep(steps, []))}
+          initialFiles={initialFiles}
+          initialCheckpoint={initialFiles}
           initialPassedIds={[]}
           initialComplete={false}
           preview={preview}

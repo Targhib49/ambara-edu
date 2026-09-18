@@ -124,6 +124,7 @@ export default async function StudentQuizPage({
     return (
       <ProjectView
         studentId={student.id}
+        courseId={quiz.chapter.courseId}
         quiz={quiz}
         submission={submission}
         crumbs={crumbs}

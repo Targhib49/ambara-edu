@@ -1,24 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { ProjectEditor } from "./ProjectEditor";
+import { ProjectGuide, type Notice, type PlayerStep } from "./ProjectGuide";
+import { lastLine } from "./CheckFeedback";
 import { runProject } from "@/lib/pyodideWorker";
 import { checkRuns, type CheckResult } from "@/lib/projects/check";
-import { ENTRY_FILE, type ProjectRun } from "@/lib/projects/schema";
+import { CHECK_FILE, ENTRY_FILE, type ProjectCheck } from "@/lib/projects/schema";
 import { getStepChecks, recordProjectCheck, saveProjectFiles } from "@/lib/actions/projects";
 import { useT } from "@/lib/i18n/client";
 
-/** A step as the student's page gets it — never with its hidden tests. */
-export type PlayerStep = {
-  id: string;
-  stage: string;
-  title: string;
-  instruction: string;
-  example: { input: string; expectedOutput: string };
-  hint: string;
-};
+export type { PlayerStep } from "./ProjectGuide";
 
 type RunOutput = { output: string; error: string | null } | null;
 
@@ -27,7 +19,7 @@ type RunOutput = { output: string; error: string | null } | null;
  * run and advance locally, and nothing is saved or recorded.
  */
 export type PreviewData = {
-  runs: Record<string, ProjectRun[]>;
+  runs: Record<string, ProjectCheck[]>;
   addFiles: Record<string, Record<string, string>>;
 };
 
@@ -53,6 +45,7 @@ export function ProjectPlayer({
   initialFiles,
   initialPassedIds,
   initialComplete,
+  initialCheckpoint,
   preview,
 }: {
   quizId: string;
@@ -60,6 +53,8 @@ export function ProjectPlayer({
   initialFiles: Record<string, string>;
   initialPassedIds: string[];
   initialComplete: boolean;
+  /** The files as they were when the current step opened — what "restore" goes back to. */
+  initialCheckpoint: Record<string, string>;
   preview?: PreviewData;
 }) {
   const t = useT();
@@ -73,8 +68,8 @@ export function ProjectPlayer({
   const [running, setRunning] = useState(false);
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<CheckResult | null>(null);
-  const [notice, setNotice] = useState<{ tone: "ok" | "info" | "error"; text: string } | null>(null);
-  const [showHint, setShowHint] = useState(false);
+  const [notice, setNotice] = useState<Notice>(null);
+  const [checkpoint, setCheckpoint] = useState(initialCheckpoint);
   const [saveState, setSaveState] = useState<"saved" | "dirty" | "saving" | "error">("saved");
   const [newFileName, setNewFileName] = useState<string | null>(null);
   const [, startSave] = useTransition();
@@ -143,6 +138,7 @@ export function ProjectPlayer({
     const name = (newFileName ?? "").trim();
     if (!FILE_NAME.test(name)) return setNotice({ tone: "error", text: t("project.fileNameRule") });
     if (name in files) return setNotice({ tone: "error", text: t("project.fileExists", { name }) });
+    if (name === CHECK_FILE) return setNotice({ tone: "error", text: t("project.fileReserved", { name }) });
     updateFiles({ ...filesRef.current, [name]: "" });
     setNewFileName(null);
     setNotice(null);
@@ -156,12 +152,21 @@ export function ProjectPlayer({
     closeTab(name);
   };
 
+  // A broken file goes back to how it was when this step opened; the rest of
+  // the student's work is untouched.
+  const restoreFile = (name: string) => {
+    if (!(name in checkpoint) || !confirm(t("project.restoreConfirm", { name }))) return;
+    updateFiles({ ...filesRef.current, [name]: checkpoint[name] });
+    setNotice({ tone: "info", text: t("project.restored", { name }) });
+  };
+  const canRestore = !complete && activeFile in checkpoint && checkpoint[activeFile] !== files[activeFile];
+
   // ---- run and check
   const run = async () => {
     if (running) return;
     setRunning(true);
     try {
-      const [result] = await runProject(filesRef.current, [stdin], ENTRY_FILE);
+      const [result] = await runProject(filesRef.current, [{ input: stdin }], ENTRY_FILE);
       setRunOutput(result);
     } catch (err) {
       setRunOutput({ output: "", error: err instanceof Error ? err.message : String(err) });
@@ -189,8 +194,8 @@ export function ProjectPlayer({
       if (!record.passed) return;
       filesRef.current = record.files;
       setFiles(record.files);
+      setCheckpoint(record.files);
       setPassedIds(record.passedIds);
-      setShowHint(false);
       setCheckResult(null);
       if (record.complete) {
         setComplete(true);
@@ -227,9 +232,9 @@ export function ProjectPlayer({
       setFiles(merged);
       openFile(newNames[0]);
     }
+    setCheckpoint({ ...filesRef.current });
     setPassedIds(nextPassed);
     setCheckResult(null);
-    setShowHint(false);
     setNotice({
       tone: "ok",
       text: !next
@@ -239,18 +244,6 @@ export function ProjectPlayer({
           : t("project.passed"),
     });
   };
-
-  // Steps grouped by stage, in order — a stage is a run of steps sharing one.
-  const stages = useMemo(() => {
-    const groups: { stage: string; steps: PlayerStep[] }[] = [];
-    for (const step of steps) {
-      const last = groups[groups.length - 1];
-      if (last && last.stage === step.stage) last.steps.push(step);
-      else groups.push({ stage: step.stage, steps: [step] });
-    }
-    return groups;
-  }, [steps]);
-  const doneCount = passedIds.filter((id) => steps.some((s) => s.id === id)).length;
 
   return (
     <div className="grid gap-3 lg:h-[calc(100dvh-9rem)] lg:min-h-[560px] lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -344,6 +337,16 @@ export function ProjectPlayer({
                     />
                   ))}
               </div>
+              {canRestore && (
+                <button
+                  type="button"
+                  onClick={() => restoreFile(activeFile)}
+                  title={t("project.restoreTitle")}
+                  className="shrink-0 px-2 text-[11px] font-medium text-blue-700 hover:underline"
+                >
+                  {t("project.restore")}
+                </button>
+              )}
               <span className="shrink-0 px-3 text-[11px] text-zinc-400" aria-live="polite">
                 {preview ? t("project.previewNotSaved") : complete ? t("project.readOnly") : t(SAVE_LABEL[saveState])}
               </span>
@@ -394,103 +397,17 @@ export function ProjectPlayer({
       </div>
 
       {/* ---------------- guide ---------------- */}
-      {/* Instructions first on a phone, where the two stack; beside the editor from lg up. */}
-      <aside className="order-first flex min-h-0 max-h-[70dvh] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white lg:order-none lg:max-h-none">
-        <div className="border-b border-zinc-100 px-4 py-3">
-          <p className="text-sm font-semibold text-zinc-900">
-            {t("project.guide")}
-            {preview && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("project.previewBadge")}</span>}
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100">
-              <div className="h-full rounded-full bg-blue-600 transition-[width]" style={{ width: `${steps.length ? (doneCount / steps.length) * 100 : 0}%` }} />
-            </div>
-            <span className="shrink-0 text-xs tabular-nums text-zinc-500">
-              {doneCount} / {steps.length}
-            </span>
-          </div>
-        </div>
-
-        {notice && (
-          <p
-            className={`mx-4 mt-3 rounded-md px-3 py-2 text-sm ${
-              notice.tone === "ok" ? "bg-green-50 text-green-800" : notice.tone === "error" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-800"
-            }`}
-          >
-            {notice.text}
-          </p>
-        )}
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-          {complete && <p className="mb-3 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">{t("project.completeBody")}</p>}
-          {stages.map((group) => (
-            <section key={group.stage} className="mb-4">
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{group.stage}</p>
-              <ol className="space-y-1.5">
-                {group.steps.map((step) => {
-                  const done = passedIds.includes(step.id);
-                  const isCurrent = current?.id === step.id;
-                  if (!isCurrent) {
-                    return (
-                      <li key={step.id} className={`flex items-center gap-2 text-sm ${done ? "text-zinc-600" : "text-zinc-400"}`}>
-                        <span aria-hidden className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] ${done ? "bg-green-100 text-green-700" : "bg-zinc-100"}`}>
-                          {done ? "✓" : "🔒"}
-                        </span>
-                        <span className="min-w-0 truncate">{step.title}</span>
-                        <span className="sr-only">{done ? t("project.stepDone") : t("project.stepLocked")}</span>
-                      </li>
-                    );
-                  }
-                  return (
-                    <li key={step.id} className="rounded-lg border border-blue-200 bg-blue-50/40 p-3">
-                      <p className="text-sm font-semibold text-zinc-900">{step.title}</p>
-                      <div className="prose prose-sm prose-zinc mt-1 max-w-none text-zinc-700 prose-code:rounded prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-code:font-normal prose-code:text-[0.8em] prose-code:before:content-none prose-code:after:content-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{step.instruction}</ReactMarkdown>
-                      </div>
-
-                      {step.example.input && (
-                        <div className="mt-3">
-                          <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{t("project.exampleInput")}</p>
-                            <button type="button" onClick={() => setStdin(step.example.input)} className="text-[11px] font-medium text-blue-700 hover:underline">
-                              {t("project.useInput")}
-                            </button>
-                          </div>
-                          <pre className="mt-1 whitespace-pre-wrap rounded bg-white px-2 py-1.5 font-mono text-xs text-zinc-800 ring-1 ring-zinc-200">{step.example.input}</pre>
-                        </div>
-                      )}
-                      <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{t("project.expectedOutput")}</p>
-                      <pre className="mt-1 whitespace-pre-wrap rounded bg-zinc-900 px-2 py-1.5 font-mono text-xs text-zinc-100">
-                        {step.example.expectedOutput || t("project.noOutput")}
-                      </pre>
-
-                      {step.hint && (
-                        <div className="mt-2">
-                          <button type="button" onClick={() => setShowHint((v) => !v)} className="text-xs font-medium text-blue-700 hover:underline">
-                            {showHint ? t("project.hideHint") : t("project.showHint")}
-                          </button>
-                          {showHint && <p className="mt-1 rounded bg-amber-50 px-2 py-1.5 text-xs text-amber-900">{step.hint}</p>}
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={check}
-                        disabled={checking}
-                        className="mt-3 w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
-                      >
-                        {checking ? t("project.checking") : t("project.check")}
-                      </button>
-
-                      {checkResult && !checkResult.passed && <CheckFeedback result={checkResult} />}
-                    </li>
-                  );
-                })}
-              </ol>
-            </section>
-          ))}
-        </div>
-      </aside>
+      <ProjectGuide
+        steps={steps}
+        passedIds={passedIds}
+        complete={complete}
+        preview={!!preview}
+        notice={notice}
+        checking={checking}
+        checkResult={checkResult}
+        onCheck={check}
+        onUseInput={setStdin}
+      />
     </div>
   );
 }
@@ -517,49 +434,6 @@ function Tab({
         <button type="button" onClick={() => onClose(name)} aria-label={closeLabel} className="pr-2 text-[11px] text-zinc-400 hover:text-zinc-700">
           ✕
         </button>
-      )}
-    </div>
-  );
-}
-
-/** Python's traceback ends with the line that matters, e.g. "NameError: name 'x' is not defined". */
-function lastLine(error: string): string {
-  const lines = error.trim().split("\n").filter(Boolean);
-  return lines[lines.length - 1] ?? error;
-}
-
-/**
- * Why a check failed. The example shows what was expected; a hidden test
- * shows its input and what the program printed, but not the answer — enough
- * to find the bug, not enough to copy.
- */
-function CheckFeedback({ result }: { result: CheckResult }) {
-  const t = useT();
-  const example = result.runs[0];
-  const hiddenFailed = result.runs.slice(1).filter((r) => !r.passed);
-  return (
-    <div className="mt-3 space-y-2 rounded-md bg-red-50 p-2.5 text-xs text-red-800">
-      <p className="font-semibold">{t("project.checkFailed")}</p>
-      {!example.passed && (
-        <div>
-          <p>{example.error ? t("project.exampleError") : t("project.exampleMismatch")}</p>
-          <pre className="mt-1 whitespace-pre-wrap rounded bg-white px-2 py-1 font-mono text-[11px] text-zinc-800 ring-1 ring-red-100">
-            {example.error ? lastLine(example.error) : example.output || t("project.noOutput")}
-          </pre>
-        </div>
-      )}
-      {example.passed && hiddenFailed.length > 0 && (
-        <div>
-          <p>{t("project.hiddenFailed", { n: hiddenFailed.length })}</p>
-          <p className="mt-1 text-red-700">{t("project.hiddenInput")}</p>
-          <pre className="mt-0.5 whitespace-pre-wrap rounded bg-white px-2 py-1 font-mono text-[11px] text-zinc-800 ring-1 ring-red-100">
-            {hiddenFailed[0].input || t("project.noInput")}
-          </pre>
-          <p className="mt-1 text-red-700">{t("project.hiddenGot")}</p>
-          <pre className="mt-0.5 whitespace-pre-wrap rounded bg-white px-2 py-1 font-mono text-[11px] text-zinc-800 ring-1 ring-red-100">
-            {hiddenFailed[0].error ? lastLine(hiddenFailed[0].error) : hiddenFailed[0].output || t("project.noOutput")}
-          </pre>
-        </div>
       )}
     </div>
   );

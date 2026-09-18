@@ -62,7 +62,7 @@ function ensureWorker(): Promise<void> {
 
 type WorkerRequest =
   | { kind: "run" | "test"; code: string; testCases?: { input: string }[] }
-  | { kind: "project"; files: Record<string, string>; entry: string; inputs: string[] };
+  | { kind: "project"; files: Record<string, string>; entry: string; runs: { input: string; script?: string }[] };
 
 function request(payload: WorkerRequest) {
   const result = queue.then(async () => {
@@ -147,17 +147,18 @@ export async function runTestCases(code: string, testCases: TestCaseInput[]): Pr
 export type ProjectRunResult = { output: string; error: string | null };
 
 /**
- * Runs a multi-file project once per input: the files are written into the
+ * Runs a multi-file project once per run: the files are written into the
  * worker's Python file system and `entry` runs as the main program, so
- * `import data` finds data.py. Each run starts from the files as given.
+ * `import data` finds data.py — or, for a run with a `script`, that script
+ * runs instead, beside the files. Each run starts from the files as given.
  */
 export async function runProject(
   files: Record<string, string>,
-  inputs: string[],
+  runs: { input: string; script?: string }[],
   entry: string
 ): Promise<ProjectRunResult[]> {
-  const reply = await request({ kind: "project", files, entry, inputs });
-  if (!reply.ok) return inputs.map(() => ({ output: "", error: reply.error }));
+  const reply = await request({ kind: "project", files, entry, runs });
+  if (!reply.ok) return runs.map(() => ({ output: "", error: reply.error }));
   return reply.runs!.map((run) => ({
     // Same newline reconstruction as the quiz runner above.
     output: run.lines.map((l) => l.text).join("\n").slice(0, 20000),
