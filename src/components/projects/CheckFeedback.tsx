@@ -27,7 +27,7 @@ export function CheckFeedback({ result }: { result: CheckResult }) {
   const inputFailure = result.runs.find((r) => r.kind === "input" && !r.passed);
 
   return (
-    <div className="mt-3 space-y-3 rounded-md bg-red-50 p-2.5 text-xs text-red-800">
+    <div className="space-y-3 rounded-md bg-red-50 p-2.5 text-xs text-red-800">
       <p className="font-semibold">{t("project.checkFailed")}</p>
 
       {!example.passed && <ExampleDiff run={example} />}

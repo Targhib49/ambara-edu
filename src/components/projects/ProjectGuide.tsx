@@ -1,10 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { CheckFeedback } from "./CheckFeedback";
-import type { CheckResult } from "@/lib/projects/check";
 import { useT } from "@/lib/i18n/client";
 
 /** A step as the student's page gets it — never with its hidden checks. */
@@ -26,35 +24,45 @@ const proseCls =
   "prose prose-sm prose-zinc max-w-none text-zinc-700 prose-code:rounded prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-code:font-normal prose-code:text-[0.8em] prose-code:before:content-none prose-code:after:content-none";
 
 /**
- * The guide beside the editor: the project's stages, the step in progress
- * with its example, hints and Cek button, and the steps already done — which
- * open again to be reread, since a later step often builds on an earlier one.
+ * The guide tab: the project's stages, the step in progress with its example
+ * and hints, and the steps already done — which open again to be reread,
+ * since a later step often builds on an earlier one. Checking happens from
+ * the toolbar, so the guide is only for reading.
  */
 export function ProjectGuide({
   steps,
   passedIds,
   complete,
-  preview,
-  notice,
-  checking,
-  checkResult,
-  onCheck,
+  visible,
   onUseInput,
+  onOpenCode,
 }: {
   steps: PlayerStep[];
   passedIds: string[];
   complete: boolean;
-  preview: boolean;
-  notice: Notice;
-  checking: boolean;
-  checkResult: CheckResult | null;
-  onCheck: () => void;
+  /** Whether the guide tab is showing — it can't scroll while hidden. */
+  visible: boolean;
   onUseInput: (input: string) => void;
+  onOpenCode: () => void;
 }) {
   const t = useT();
   const [openDoneId, setOpenDoneId] = useState<string | null>(null);
   const current = steps.find((s) => !passedIds.includes(s.id)) ?? null;
-  const doneCount = passedIds.filter((id) => steps.some((s) => s.id === id)).length;
+
+  // Bring a newly opened step into view the first time the guide shows it —
+  // on arrival, and after each pass — but not every time the tab is opened,
+  // which would pull a student away from a finished step they're rereading.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentRef = useRef<HTMLLIElement>(null);
+  const scrolledToRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!visible || !current || scrolledToRef.current === current.id) return;
+    scrolledToRef.current = current.id;
+    // Only the guide scrolls; scrollIntoView would move the page too.
+    const box = scrollRef.current;
+    const item = currentRef.current;
+    if (box && item) box.scrollTop += item.getBoundingClientRect().top - box.getBoundingClientRect().top - 16;
+  }, [visible, current]);
 
   // Steps grouped by stage, in order — a stage is a run of steps sharing one.
   const stages = useMemo(() => {
@@ -68,58 +76,20 @@ export function ProjectGuide({
   }, [steps]);
 
   return (
-    // Instructions first on a phone, where the two stack; beside the editor from lg up.
-    <aside className="order-first flex min-h-0 max-h-[70dvh] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white lg:order-none lg:max-h-none">
-      <div className="border-b border-zinc-100 px-4 py-3">
-        <p className="text-sm font-semibold text-zinc-900">
-          {t("project.guide")}
-          {preview && (
-            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("project.previewBadge")}</span>
-          )}
-        </p>
-        <div className="mt-2 flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100">
-            <div
-              className="h-full rounded-full bg-blue-600 transition-[width]"
-              style={{ width: `${steps.length ? (doneCount / steps.length) * 100 : 0}%` }}
-            />
-          </div>
-          <span className="shrink-0 text-xs tabular-nums text-zinc-500">
-            {doneCount} / {steps.length}
-          </span>
-        </div>
-      </div>
-
-      {notice && (
-        <p
-          className={`mx-4 mt-3 rounded-md px-3 py-2 text-sm ${
-            notice.tone === "ok" ? "bg-green-50 text-green-800" : notice.tone === "error" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-800"
-          }`}
-        >
-          {notice.text}
-        </p>
-      )}
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {complete && <p className="mb-3 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">{t("project.completeBody")}</p>}
+    <div ref={scrollRef} className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-2xl px-4 py-4">
+        {complete && <p className="mb-4 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">{t("project.completeBody")}</p>}
         {stages.map((group) => (
-          <section key={group.stage} className="mb-4">
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{group.stage}</p>
-            <ol className="space-y-1.5">
+          <section key={group.stage} className="mb-5">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{group.stage}</p>
+            <ol className="space-y-2">
               {group.steps.map((step) => {
                 const done = passedIds.includes(step.id);
                 if (current?.id === step.id) {
                   return (
-                    <li key={step.id} className="rounded-lg border border-blue-200 bg-blue-50/40 p-3">
-                      <CurrentStep
-                        // Hints start hidden again on every new step.
-                        key={step.id}
-                        step={step}
-                        checking={checking}
-                        checkResult={checkResult}
-                        onCheck={onCheck}
-                        onUseInput={onUseInput}
-                      />
+                    <li key={step.id} ref={currentRef} className="rounded-lg border border-blue-200 bg-blue-50/40 p-4">
+                      {/* Hints start hidden again on every new step. */}
+                      <CurrentStep key={step.id} step={step} onUseInput={onUseInput} onOpenCode={onOpenCode} />
                     </li>
                   );
                 }
@@ -141,7 +111,7 @@ export function ProjectGuide({
                         <span className="sr-only">{t("project.stepDone")}</span>
                       </button>
                       {open && (
-                        <div className="ml-7 mt-1.5 rounded-md bg-zinc-50 p-2.5">
+                        <div className="ml-7 mt-1.5 rounded-md bg-zinc-50 p-3">
                           <StepBody step={step} />
                         </div>
                       )}
@@ -162,7 +132,7 @@ export function ProjectGuide({
           </section>
         ))}
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -207,28 +177,24 @@ function StepBody({ step, onUseInput }: { step: PlayerStep; onUseInput?: (input:
 
 function CurrentStep({
   step,
-  checking,
-  checkResult,
-  onCheck,
   onUseInput,
+  onOpenCode,
 }: {
   step: PlayerStep;
-  checking: boolean;
-  checkResult: CheckResult | null;
-  onCheck: () => void;
   onUseInput: (input: string) => void;
+  onOpenCode: () => void;
 }) {
   const t = useT();
   const [hintsShown, setHintsShown] = useState(0);
   return (
     <>
-      <p className="text-sm font-semibold text-zinc-900">{step.title}</p>
+      <p className="text-base font-semibold text-zinc-900">{step.title}</p>
       <div className="mt-1">
         <StepBody step={step} onUseInput={onUseInput} />
       </div>
 
       {step.hints.length > 0 && (
-        <div className="mt-2 space-y-1">
+        <div className="mt-3 space-y-1">
           {step.hints.slice(0, hintsShown).map((hint, i) => (
             <p key={i} className="rounded bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
               <span className="font-semibold">{t("project.hintN", { n: i + 1 })}</span> {hint}
@@ -244,14 +210,11 @@ function CurrentStep({
 
       <button
         type="button"
-        onClick={onCheck}
-        disabled={checking}
-        className="mt-3 w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+        onClick={onOpenCode}
+        className="mt-4 w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500"
       >
-        {checking ? t("project.checking") : t("project.check")}
+        {t("project.openCode")}
       </button>
-
-      {checkResult && !checkResult.passed && <CheckFeedback result={checkResult} />}
     </>
   );
 }

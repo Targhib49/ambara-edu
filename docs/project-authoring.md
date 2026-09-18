@@ -1,11 +1,16 @@
 # Authoring guided projects
 
-A guided project is a program a student builds step by step in a small editor
-beside a guide: files and tabs on one side, and on the other the current step,
-what to type in, and what the program should print. **Cek** runs the program;
-if it passes, the next step opens and the files carry over, so the program
-grows as the student goes. It is graded, and replaces a chapter's stage
-quizzes.
+A guided project is a program a student builds step by step. The screen has
+two tabs — **Panduan** (the steps: what to do, what to type in, what the
+program should print) and **Kode** (files, tabs and the editor) — over a dock
+that stays below both: the input box, Run, the output, the current step's
+target output and, after a failed check, what went wrong. **Cek** in the
+toolbar runs the program against the step's checks; if it passes, the next
+step opens and the files carry over, so the program grows as the student
+goes. It is graded, and replaces a chapter's stage quizzes.
+
+Starter files and instructions shouldn't refer to where the guide sits on
+screen ("on the right"); say "the Panduan tab".
 
 Projects are written as **one TypeScript file each** in `content/projects/`,
 and put into the course with `scripts/project.ts`. The working example is

@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { ProjectEditor } from "./ProjectEditor";
 import { ProjectGuide, type Notice, type PlayerStep } from "./ProjectGuide";
-import { lastLine } from "./CheckFeedback";
+import { CheckFeedback, lastLine } from "./CheckFeedback";
 import { runProject } from "@/lib/pyodideWorker";
 import { checkRuns, type CheckResult } from "@/lib/projects/check";
 import { CHECK_FILE, ENTRY_FILE, type ProjectCheck } from "@/lib/projects/schema";
@@ -34,10 +34,12 @@ const FILE_NAME = /^(?!\/)(?!.*\.\.)[A-Za-z0-9_\-./]+\.(py|txt|csv|json|md)$/;
 const AUTOSAVE_MS = 1200;
 
 /**
- * The guided-project screen: a small IDE (files, tabs, an input box, Run and
- * an output panel) beside a guide that walks through the project's steps. A
- * step's Cek button runs the program against the step's checks; passing opens
- * the next step, and the files carry over, so the program grows as they go.
+ * The guided-project screen: two tabs — the guide that walks through the
+ * project's steps, and a small IDE (files, tabs, editor) — over a dock that
+ * stays put under both: the input box, Run, the output, the current step's
+ * target output and a failed check's feedback. Cek in the toolbar runs the
+ * program against the step's checks; passing opens the next step, and the
+ * files carry over, so the program grows as they go.
  */
 export function ProjectPlayer({
   quizId,
@@ -72,6 +74,10 @@ export function ProjectPlayer({
   const [checkpoint, setCheckpoint] = useState(initialCheckpoint);
   const [saveState, setSaveState] = useState<"saved" | "dirty" | "saving" | "error">("saved");
   const [newFileName, setNewFileName] = useState<string | null>(null);
+  // Reading the guide or writing code; the input and output stay docked below both.
+  const [view, setView] = useState<"guide" | "code">(initialComplete ? "code" : "guide");
+  const [dockTab, setDockTab] = useState<"output" | "target" | "result">("output");
+  const [dockOpen, setDockOpen] = useState(true);
   const [, startSave] = useTransition();
 
   const current = useMemo(() => steps.find((s) => !passedIds.includes(s.id)) ?? null, [steps, passedIds]);
@@ -97,7 +103,6 @@ export function ProjectPlayer({
       setFiles(next);
       dirtyRef.current = true;
       setSaveState("dirty");
-      setCheckResult(null);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(flush, AUTOSAVE_MS);
     },
@@ -165,6 +170,8 @@ export function ProjectPlayer({
   const run = async () => {
     if (running) return;
     setRunning(true);
+    setDockTab("output");
+    setDockOpen(true);
     try {
       const [result] = await runProject(filesRef.current, [{ input: stdin }], ENTRY_FILE);
       setRunOutput(result);
@@ -179,13 +186,14 @@ export function ProjectPlayer({
     if (!current || checking || complete) return;
     setChecking(true);
     setNotice(null);
+    setCheckResult(null);
     try {
       if (preview) return await checkPreview(current);
       const checks = await getStepChecks(quizId, current.id);
       if ("error" in checks) return setNotice({ tone: "error", text: checks.error });
       const snapshot = filesRef.current;
       const result = await checkRuns(snapshot, checks.runs);
-      setCheckResult(result);
+      showResult(result);
       const record = await recordProjectCheck(quizId, current.id, result.passed, snapshot);
       if ("error" in record) return setNotice({ tone: "error", text: record.error });
       // Saved along with the check, so nothing is left to autosave.
@@ -197,6 +205,9 @@ export function ProjectPlayer({
       setCheckpoint(record.files);
       setPassedIds(record.passedIds);
       setCheckResult(null);
+      setDockTab("output");
+      // Back to the guide, where the next step is waiting to be read.
+      if (!record.complete) setView("guide");
       if (record.complete) {
         setComplete(true);
         setNotice({ tone: "ok", text: t("project.finished") });
@@ -216,10 +227,19 @@ export function ProjectPlayer({
     }
   };
 
+  // A failed check's feedback opens in the dock, under the code being fixed.
+  const showResult = (result: CheckResult) => {
+    setCheckResult(result);
+    if (!result.passed) {
+      setDockTab("result");
+      setDockOpen(true);
+    }
+  };
+
   // The preview's check: the same runs and the same rules, kept in the page.
   const checkPreview = async (step: PlayerStep) => {
     const result = await checkRuns(filesRef.current, preview?.runs[step.id] ?? []);
-    setCheckResult(result);
+    showResult(result);
     if (!result.passed) return;
     const nextPassed = [...passedIds, step.id];
     const next = steps.find((s) => !nextPassed.includes(s.id)) ?? null;
@@ -235,6 +255,8 @@ export function ProjectPlayer({
     setCheckpoint({ ...filesRef.current });
     setPassedIds(nextPassed);
     setCheckResult(null);
+    setDockTab("output");
+    if (next) setView("guide");
     setNotice({
       tone: "ok",
       text: !next
@@ -245,11 +267,108 @@ export function ProjectPlayer({
     });
   };
 
+  const stepNumber = current ? steps.indexOf(current) + 1 : steps.length;
+  const doneCount = passedIds.filter((id) => steps.some((s) => s.id === id)).length;
+  // The result tab exists only while there's a failed check to show.
+  const shownDockTab = dockTab === "result" && !checkResult ? "output" : dockTab === "target" && !current ? "output" : dockTab;
+
   return (
-    <div className="grid gap-3 lg:h-[calc(100dvh-9rem)] lg:min-h-[560px] lg:grid-cols-[minmax(0,1fr)_340px]">
-      {/* ---------------- IDE ---------------- */}
-      <div className="flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-zinc-300 bg-white lg:min-h-0">
-        <div className="flex min-h-0 flex-1">
+    <div
+      // Ctrl/⌘+Enter runs the program from anywhere in the player — caught
+      // before the editor, which would otherwise insert a blank line.
+      onKeyDownCapture={(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          void run();
+        }
+      }}
+      className="flex h-[calc(100dvh-9rem)] min-h-[540px] flex-col overflow-hidden rounded-xl border border-zinc-300 bg-white"
+    >
+      {/* ---------------- toolbar ---------------- */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-zinc-200 bg-zinc-50 px-2 py-1.5">
+        <div role="tablist" aria-label={t("project.views")} className="flex rounded-lg bg-zinc-200/70 p-0.5">
+          <ViewTab active={view === "guide"} onSelect={() => setView("guide")}>
+            {t("project.guide")}
+            <span className="ml-1.5 text-[11px] tabular-nums text-zinc-500">
+              {doneCount}/{steps.length}
+            </span>
+          </ViewTab>
+          <ViewTab active={view === "code"} onSelect={() => setView("code")}>
+            {t("project.code")}
+          </ViewTab>
+        </div>
+        <p className="hidden min-w-0 flex-1 truncate text-sm text-zinc-800 md:block">
+          {complete ? (
+            t("project.allDone")
+          ) : current ? (
+            <>
+              <span className="text-zinc-500">{t("project.stepN", { n: stepNumber, total: steps.length })} · </span>
+              {current.title}
+            </>
+          ) : null}
+        </p>
+        <span className="ml-auto flex items-center gap-2 md:ml-0">
+          {preview && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t("project.previewBadge")}</span>
+          )}
+          <span
+            // Tucked away on a phone to keep the toolbar on one line — unless saving failed.
+            className={`text-[11px] ${saveState === "error" && !preview ? "text-red-600" : "hidden text-zinc-500 sm:inline"}`}
+            aria-live="polite"
+          >
+            {preview ? t("project.previewNotSaved") : complete ? t("project.readOnly") : t(SAVE_LABEL[saveState])}
+          </span>
+          {!complete && current && (
+            <button
+              type="button"
+              onClick={check}
+              disabled={checking}
+              title={t("project.checkTitle")}
+              className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+            >
+              {checking ? t("project.checking") : t("project.check")}
+            </button>
+          )}
+        </span>
+      </div>
+      <div className="h-1 shrink-0 bg-zinc-100" aria-hidden>
+        <div className="h-full bg-blue-600 transition-[width]" style={{ width: `${steps.length ? (doneCount / steps.length) * 100 : 0}%` }} />
+      </div>
+
+      {notice && (
+        <div
+          role="status"
+          className={`flex items-start gap-2 px-3 py-2 text-sm ${
+            notice.tone === "ok" ? "bg-green-50 text-green-800" : notice.tone === "error" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-800"
+          }`}
+        >
+          <p className="min-w-0 flex-1">{notice.text}</p>
+          <button type="button" onClick={() => setNotice(null)} aria-label={t("project.dismiss")} className="shrink-0 px-1 opacity-60 hover:opacity-100">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* ---------------- guide / code ----------------
+          Both stay mounted, so the editor keeps its undo history and the
+          guide its open hints while the other is showing. */}
+      <div className="relative min-h-0 flex-1">
+        <div role="tabpanel" className={view === "guide" ? "h-full" : "hidden"}>
+          <ProjectGuide
+            steps={steps}
+            passedIds={passedIds}
+            complete={complete}
+            visible={view === "guide"}
+            onUseInput={(input) => {
+              setStdin(input);
+              setDockOpen(true);
+            }}
+            onOpenCode={() => setView("code")}
+          />
+        </div>
+
+        <div role="tabpanel" className={view === "code" ? "flex h-full" : "hidden"}>
           {/* file list */}
           <aside className="hidden w-44 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 sm:flex">
             <div className="flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
@@ -342,73 +461,134 @@ export function ProjectPlayer({
                   type="button"
                   onClick={() => restoreFile(activeFile)}
                   title={t("project.restoreTitle")}
-                  className="shrink-0 px-2 text-[11px] font-medium text-blue-700 hover:underline"
+                  className="shrink-0 px-3 text-[11px] font-medium text-blue-700 hover:underline"
                 >
                   {t("project.restore")}
                 </button>
               )}
-              <span className="shrink-0 px-3 text-[11px] text-zinc-400" aria-live="polite">
-                {preview ? t("project.previewNotSaved") : complete ? t("project.readOnly") : t(SAVE_LABEL[saveState])}
-              </span>
             </div>
-            <div className="min-h-[260px] flex-1 lg:min-h-0">
+            <div className="min-h-0 flex-1">
               <ProjectEditor fileName={activeFile} text={files[activeFile] ?? ""} readOnly={complete} onChange={onEdit} />
             </div>
           </div>
         </div>
-
-        {/* input + run + output */}
-        <div className="grid border-t border-zinc-200 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-          <div className="flex flex-col gap-2 border-b border-zinc-200 bg-zinc-50 p-3 sm:border-b-0 sm:border-r">
-            <label htmlFor="project-stdin" className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              {t("project.input")}
-            </label>
-            <textarea
-              id="project-stdin"
-              value={stdin}
-              onChange={(e) => setStdin(e.target.value)}
-              rows={3}
-              placeholder={t("project.inputPlaceholder")}
-              className="w-full resize-none rounded border border-zinc-300 bg-white px-2 py-1.5 font-mono text-xs focus:border-blue-500 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={run}
-              disabled={running}
-              className="rounded-md bg-zinc-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
-            >
-              {running ? t("project.running") : t("project.run")}
-            </button>
-          </div>
-          <div className="flex min-h-[8rem] flex-col bg-zinc-900 lg:max-h-48">
-            <p className="px-3 pt-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{t("project.output")}</p>
-            <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap px-3 py-2 font-mono text-xs text-zinc-100">
-              {runOutput ? (
-                <>
-                  {runOutput.output}
-                  {runOutput.error && <span className="text-red-400">{(runOutput.output ? "\n" : "") + lastLine(runOutput.error)}</span>}
-                </>
-              ) : (
-                <span className="text-zinc-500">{t("project.outputEmpty")}</span>
-              )}
-            </pre>
-          </div>
-        </div>
       </div>
 
-      {/* ---------------- guide ---------------- */}
-      <ProjectGuide
-        steps={steps}
-        passedIds={passedIds}
-        complete={complete}
-        preview={!!preview}
-        notice={notice}
-        checking={checking}
-        checkResult={checkResult}
-        onCheck={check}
-        onUseInput={setStdin}
-      />
+      {/* ---------------- dock: input, run, output ---------------- */}
+      <div className={`flex shrink-0 flex-col border-t border-zinc-300 ${dockOpen ? "h-52 sm:h-48" : ""}`}>
+        <div className="flex items-center gap-1 border-b border-zinc-200 bg-zinc-50 px-1.5 py-1">
+          <div role="tablist" aria-label={t("project.dock")} className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto">
+            <DockTab active={dockOpen && shownDockTab === "output"} onSelect={() => { setDockTab("output"); setDockOpen(true); }}>
+              {t("project.output")}
+            </DockTab>
+            {current && (
+              <DockTab active={dockOpen && shownDockTab === "target"} onSelect={() => { setDockTab("target"); setDockOpen(true); }}>
+                {t("project.dockTarget")}
+              </DockTab>
+            )}
+            {checkResult && !checkResult.passed && (
+              <DockTab active={dockOpen && shownDockTab === "result"} onSelect={() => { setDockTab("result"); setDockOpen(true); }}>
+                <span aria-hidden className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500 align-middle" />
+                {t("project.dockResult")}
+              </DockTab>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={run}
+            disabled={running}
+            title={t("project.runShortcut")}
+            className="shrink-0 rounded-md bg-zinc-800 px-3 py-1 text-xs font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+          >
+            {running ? t("project.running") : t("project.run")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDockOpen((open) => !open)}
+            aria-expanded={dockOpen}
+            aria-label={dockOpen ? t("project.collapseDock") : t("project.expandDock")}
+            title={dockOpen ? t("project.collapseDock") : t("project.expandDock")}
+            className="shrink-0 rounded px-1.5 py-1 text-xs text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
+          >
+            {dockOpen ? "▾" : "▴"}
+          </button>
+        </div>
+
+        {dockOpen && (
+          <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] sm:grid-cols-[14rem_minmax(0,1fr)] sm:grid-rows-1">
+            <div className="flex min-h-0 flex-col gap-1 border-b border-zinc-200 bg-zinc-50 p-2 sm:border-b-0 sm:border-r">
+              <label htmlFor="project-stdin" className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                {t("project.input")}
+              </label>
+              <textarea
+                id="project-stdin"
+                value={stdin}
+                onChange={(e) => setStdin(e.target.value)}
+                rows={2}
+                placeholder={t("project.inputPlaceholder")}
+                className="w-full resize-none rounded border border-zinc-300 bg-white px-2 py-1.5 font-mono text-xs focus:border-blue-500 focus:outline-none sm:flex-1"
+              />
+            </div>
+
+            {shownDockTab === "result" && checkResult ? (
+              <div role="tabpanel" className="min-h-0 overflow-auto p-2">
+                <CheckFeedback result={checkResult} />
+              </div>
+            ) : shownDockTab === "target" && current ? (
+              <div role="tabpanel" className="min-h-0 overflow-auto bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-100">
+                {current.example.input && (
+                  <p className="mb-1.5 text-zinc-400">
+                    {t("project.targetWithInput", { input: current.example.input.split("\n").join(" ⏎ ") })}
+                  </p>
+                )}
+                <pre className="whitespace-pre">{current.example.expectedOutput || t("project.noOutput")}</pre>
+              </div>
+            ) : (
+              <pre role="tabpanel" className="min-h-0 overflow-auto whitespace-pre-wrap bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-100">
+                {runOutput ? (
+                  <>
+                    {runOutput.output}
+                    {runOutput.error && <span className="text-red-400">{(runOutput.output ? "\n" : "") + lastLine(runOutput.error)}</span>}
+                  </>
+                ) : (
+                  <span className="text-zinc-500">{t("project.outputEmpty")}</span>
+                )}
+              </pre>
+            )}
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
+
+function ViewTab({ active, onSelect, children }: { active: boolean; onSelect: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onSelect}
+      className={`rounded-md px-3 py-1 text-sm font-medium ${active ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-600 hover:text-zinc-900"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function DockTab({ active, onSelect, children }: { active: boolean; onSelect: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onSelect}
+      className={`shrink-0 rounded px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+        active ? "bg-white text-zinc-900 ring-1 ring-zinc-200" : "text-zinc-500 hover:text-zinc-800"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

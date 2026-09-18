@@ -365,7 +365,7 @@ print()
 const MAIN_START = py`
 # PROYEK AKHIR — SISTEM RAPOR SEKOLAH
 # Program ini kamu bangun sedikit demi sedikit, selama enam tahap.
-# Ikuti panduan di sebelah kanan.
+# Ikuti langkah-langkahnya di tab Panduan.
 
 from data import data_nilai
 `;
