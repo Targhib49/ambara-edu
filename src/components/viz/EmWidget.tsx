@@ -1,6 +1,7 @@
 "use client";
 
 import type { emWidgetProps } from "@/lib/viz/schemas";
+import { useT } from "@/lib/i18n/client";
 import type { z } from "zod";
 
 type Props = z.infer<typeof emWidgetProps>;
@@ -22,6 +23,7 @@ const TITLES: Record<Props["widget"], string> = {
  * which buys nothing here.
  */
 export function EmWidget({ widget, height, caption }: Props) {
+  const t = useT();
   const title = TITLES[widget];
   return (
     <figure
@@ -46,7 +48,7 @@ export function EmWidget({ widget, height, caption }: Props) {
           rel="noopener noreferrer"
           className="shrink-0 text-xs font-medium text-blue-700 hover:underline"
         >
-          Open full screen ↗
+          {t("viz.em.openFull")}
         </a>
       </figcaption>
     </figure>

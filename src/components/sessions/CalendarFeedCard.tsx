@@ -16,11 +16,7 @@ export function CalendarFeedCard({ url }: { url: string }) {
 
   return (
     <section>
-      <p className="text-sm text-zinc-500">
-        Add this to Google, Apple or Outlook Calendar and your sessions appear there, updating
-        themselves as things change. Treat it like a password — anyone with the link can read your
-        schedule.
-      </p>
+      <p className="text-sm text-zinc-500">{t("calendarFeed.intro")}</p>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <code className="min-w-0 flex-1 truncate rounded-md bg-zinc-50 px-3 py-2 font-mono text-xs text-zinc-600">
@@ -45,13 +41,11 @@ export function CalendarFeedCard({ url }: { url: string }) {
             pendingLabel={t("calendarFeed.replacing")}
             className="rounded-md px-3 py-2 text-xs text-zinc-500 hover:text-zinc-800 hover:underline disabled:opacity-50"
           >
-            Replace link
+            {t("calendarFeed.replace")}
           </SubmitButton>
         </form>
       </div>
-      <p className="mt-2 text-xs text-zinc-400">
-        Replacing the link stops any calendar already subscribed to the old one.
-      </p>
+      <p className="mt-2 text-xs text-zinc-400">{t("calendarFeed.replaceNote")}</p>
     </section>
   );
 }

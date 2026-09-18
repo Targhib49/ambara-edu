@@ -1,3 +1,5 @@
+import type { MessageKey } from "@/lib/i18n/messages";
+
 /**
  * Question generation and marking for Mental Math Sprint. Pure functions: the
  * random source is passed in, so the game calls these from event handlers only.
@@ -5,11 +7,11 @@
 
 export type Level = "warmup" | "integers" | "tables" | "fractions";
 
-export const LEVELS: { key: Level; title: string; blurb: string }[] = [
-  { key: "warmup", title: "Warm-up", blurb: "Add and subtract up to 100" },
-  { key: "integers", title: "Integers", blurb: "Negative numbers with + − × ÷" },
-  { key: "tables", title: "Times tables", blurb: "× and ÷ up to 12 × 12" },
-  { key: "fractions", title: "Fractions", blurb: "Add, subtract and multiply fractions" },
+export const LEVELS: { key: Level; titleKey: MessageKey; blurbKey: MessageKey }[] = [
+  { key: "warmup", titleKey: "game.level.warmup", blurbKey: "game.level.warmupBlurb" },
+  { key: "integers", titleKey: "game.level.integers", blurbKey: "game.level.integersBlurb" },
+  { key: "tables", titleKey: "game.level.tables", blurbKey: "game.level.tablesBlurb" },
+  { key: "fractions", titleKey: "game.level.fractions", blurbKey: "game.level.fractionsBlurb" },
 ];
 
 export type Question = {

@@ -221,7 +221,7 @@ async function VideoEmbedRenderer({ url, caption }: { url: string; caption: stri
  * type-specific renderer. New block types get a case here (the switch is
  * exhaustive over BlockType, so the compiler flags omissions).
  */
-export function BlockRenderer({
+export async function BlockRenderer({
   block,
 }: {
   block: { id: string; type: BlockType; data: unknown };
@@ -231,9 +231,7 @@ export function BlockRenderer({
     parsed = toAnyBlock(block);
   } catch {
     return (
-      <p className="rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
-        This block has invalid data and can’t be displayed.
-      </p>
+      <p className="rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">{(await getT())("block.invalid")}</p>
     );
   }
 

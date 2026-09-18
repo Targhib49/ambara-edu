@@ -7,7 +7,8 @@ import { cardCls } from "@/components/ui/styles";
 import { getT } from "@/lib/i18n/server";
 
 /** Game cards: live games open; coming-soon ones are shown but can't be clicked. */
-export function GamesGrid({ basePath }: { basePath: string }) {
+export async function GamesGrid({ basePath }: { basePath: string }) {
+  const t = await getT();
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {GAMES.map((game) => {
@@ -16,18 +17,18 @@ export function GamesGrid({ basePath }: { basePath: string }) {
             <div className={`relative flex h-28 items-end bg-gradient-to-br p-4 ${game.accent} ${game.status === "coming_soon" ? "opacity-60 grayscale-[35%]" : ""}`}>
               <span className="text-xl font-bold text-white drop-shadow-sm">{game.title}</span>
               {game.status === "coming_soon" && (
-                <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-800">Coming soon</span>
+                <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-800">{t("game.comingSoon")}</span>
               )}
             </div>
             <div className="flex flex-1 flex-col gap-2 p-4">
-              <p className="text-sm text-zinc-600">{game.blurb}</p>
+              <p className="text-sm text-zinc-600">{t(game.blurbKey)}</p>
               <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
-                {game.tags.map((tag) => (
-                  <span key={tag} className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-600">
-                    {tag}
+                {game.tagKeys.map((key) => (
+                  <span key={key} className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-600">
+                    {t(key)}
                   </span>
                 ))}
-                {game.status === "live" && <span className="ml-auto text-xs font-semibold text-blue-700">Play →</span>}
+                {game.status === "live" && <span className="ml-auto text-xs font-semibold text-blue-700">{t("game.playCta")}</span>}
               </div>
             </div>
           </>
@@ -54,7 +55,7 @@ export function GamesGrid({ basePath }: { basePath: string }) {
 }
 
 /** A course's animations, grouped by chapter, each opening as its lesson set it up. */
-export function CourseVizList({
+export async function CourseVizList({
   courses,
   basePath,
   emptyText,
@@ -63,6 +64,7 @@ export function CourseVizList({
   basePath: string;
   emptyText: string;
 }) {
+  const t = await getT();
   if (courses.length === 0) {
     return <p className={`${cardCls} px-5 py-8 text-center text-sm text-zinc-500`}>{emptyText}</p>;
   }
@@ -73,7 +75,7 @@ export function CourseVizList({
           <header className="flex items-baseline justify-between gap-3 border-b border-zinc-100 bg-zinc-50/60 px-5 py-3">
             <h3 className="font-semibold text-zinc-900">{course.title}</h3>
             <span className="text-xs text-zinc-500">
-              {course.count} animation{course.count === 1 ? "" : "s"}
+              {t(course.count === 1 ? "playgroundCards.animation" : "playgroundCards.animations", { n: course.count })}
             </span>
           </header>
           <div className="divide-y divide-zinc-100">
@@ -92,9 +94,9 @@ export function CourseVizList({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium text-zinc-900 group-hover:text-blue-700">{item.title}</span>
-                          <span className="block truncate text-xs text-zinc-500">in {item.lessonTitle}</span>
+                          <span className="block truncate text-xs text-zinc-500">{t("playgroundCards.inLesson", { title: item.lessonTitle })}</span>
                         </span>
-                        <span className="text-xs font-medium text-blue-700">Open →</span>
+                        <span className="text-xs font-medium text-blue-700">{t("playgroundCards.open")}</span>
                       </Link>
                     </li>
                   ))}
@@ -108,7 +110,8 @@ export function CourseVizList({
   );
 }
 
-export function ToolsGrid({ basePath }: { basePath: string }) {
+export async function ToolsGrid({ basePath }: { basePath: string }) {
+  const t = await getT();
   return (
     <ul className="grid gap-4 sm:grid-cols-2">
       <li>
@@ -118,8 +121,8 @@ export function ToolsGrid({ basePath }: { basePath: string }) {
         >
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-900 font-mono text-sm font-bold text-emerald-400">py</span>
           <span className="min-w-0">
-            <span className="block font-medium text-zinc-900 group-hover:text-blue-700">{PYTHON_ITEM.title}</span>
-            <span className="mt-0.5 block text-sm text-zinc-500">{PYTHON_ITEM.blurb}</span>
+            <span className="block font-medium text-zinc-900 group-hover:text-blue-700">{t(PYTHON_ITEM.titleKey)}</span>
+            <span className="mt-0.5 block text-sm text-zinc-500">{t(PYTHON_ITEM.blurbKey)}</span>
           </span>
         </Link>
       </li>
@@ -148,8 +151,8 @@ export async function VizLibraryGrid({ basePath, usage }: { basePath: string; us
               >
                 {used ? t("playgroundCards.inLessons", { n: used }) : t("playgroundCards.notInLesson")}
               </span>
-              {item.blurb && <span className="text-sm text-zinc-500">{item.blurb}</span>}
-              <span className="mt-auto pt-1 text-xs font-medium text-blue-700">Preview →</span>
+              {item.blurbKey && <span className="text-sm text-zinc-500">{t(item.blurbKey)}</span>}
+              <span className="mt-auto pt-1 text-xs font-medium text-blue-700">{t("playgroundCards.preview")}</span>
             </Link>
           </li>
         );

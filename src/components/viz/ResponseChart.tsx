@@ -93,10 +93,11 @@ export function StepStats({
   finalValue: number;
   unstable: boolean;
 }) {
+  const tr = useT();
   if (unstable) {
     return (
       <p className="rounded-md bg-red-50 px-3 py-1.5 text-center text-xs font-medium text-red-700">
-        Unstable — the output grows without bound
+        {tr("viz.resp.unstable")}
       </p>
     );
   }
@@ -108,9 +109,9 @@ export function StepStats({
   );
   return (
     <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs">
-      {stat("overshoot", overshootPct === null ? "—" : `${overshootPct.toFixed(1)}%`)}
-      {stat("settling (2%)", settlingTime === null ? "—" : `${settlingTime.toFixed(2)} s`)}
-      {stat("final value", niceNumber(finalValue))}
+      {stat(tr("viz.resp.overshoot"), overshootPct === null ? "—" : `${overshootPct.toFixed(1)}%`)}
+      {stat(tr("viz.resp.settling"), settlingTime === null ? "—" : `${settlingTime.toFixed(2)} s`)}
+      {stat(tr("viz.resp.finalValue"), niceNumber(finalValue))}
     </div>
   );
 }

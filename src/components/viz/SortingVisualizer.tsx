@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { z } from "zod";
 import type { sortingVisualizerProps } from "@/lib/viz/schemas";
-import { vizBtn, vizBtnPrimary } from "./controls";
+import { vizBtn, vizBtnPrimary, type VizNote } from "./controls";
 import { useT } from "@/lib/i18n/client";
 
 type Props = z.infer<typeof sortingVisualizerProps>;
@@ -12,7 +12,7 @@ type SortStep = {
   array: number[];
   compare: number[]; // indices currently being looked at
   sorted: number[]; // indices locked in their final position
-  note: string;
+  note: VizNote;
 };
 
 function bubbleSteps(input: number[]): SortStep[] {
@@ -27,14 +27,14 @@ function bubbleSteps(input: number[]): SortStep[] {
           array: [...a],
           compare: [j, j + 1],
           sorted: [...sorted],
-          note: `${a[j + 1]} > ${a[j]} — swap them`,
+          note: { key: "viz.sort.swap", vars: { a: a[j + 1], b: a[j] } },
         });
       } else {
         steps.push({
           array: [...a],
           compare: [j, j + 1],
           sorted: [...sorted],
-          note: `${a[j]} ≤ ${a[j + 1]} — already in order`,
+          note: { key: "viz.sort.inOrder", vars: { a: a[j], b: a[j + 1] } },
         });
       }
     }
@@ -43,7 +43,7 @@ function bubbleSteps(input: number[]): SortStep[] {
       array: [...a],
       compare: [],
       sorted: [...sorted],
-      note: `Pass ${pass + 1} done — ${a[a.length - 1 - pass]} is in its final place`,
+      note: { key: "viz.sort.passDone", vars: { pass: pass + 1, n: a[a.length - 1 - pass] } },
     });
   }
   return steps;
@@ -60,7 +60,7 @@ function selectionSteps(input: number[]): SortStep[] {
         array: [...a],
         compare: [min, j],
         sorted: [...sorted],
-        note: `Is ${a[j]} smaller than ${a[min]}?${a[j] < a[min] ? " Yes — new minimum" : " No"}`,
+        note: { key: a[j] < a[min] ? "viz.sort.newMin" : "viz.sort.notMin", vars: { a: a[j], b: a[min] } },
       });
       if (a[j] < a[min]) min = j;
     }
@@ -70,7 +70,7 @@ function selectionSteps(input: number[]): SortStep[] {
       array: [...a],
       compare: [],
       sorted: [...sorted],
-      note: `Smallest of the rest is ${a[i]} — it goes to position ${i + 1}`,
+      note: { key: "viz.sort.placeMin", vars: { n: a[i], pos: i + 1 } },
     });
   }
   return steps;
@@ -85,7 +85,7 @@ function insertionSteps(input: number[]): SortStep[] {
       array: [...a],
       compare: [i],
       sorted: [],
-      note: `Take ${a[i]} and walk it left until it fits`,
+      note: { key: "viz.sort.take", vars: { n: a[i] } },
     });
     while (j > 0 && a[j - 1] > a[j]) {
       [a[j - 1], a[j]] = [a[j], a[j - 1]];
@@ -94,7 +94,7 @@ function insertionSteps(input: number[]): SortStep[] {
         array: [...a],
         compare: [j, j + 1],
         sorted: [],
-        note: `${a[j]} < ${a[j + 1]} — shift it left`,
+        note: { key: "viz.sort.shift", vars: { a: a[j], b: a[j + 1] } },
       });
     }
   }
@@ -134,14 +134,14 @@ export function SortingVisualizer({ algorithm, values }: Props) {
       array: [...order].sort((x, y) => x - y),
       compare: [],
       sorted: order.map((_, i) => i),
-      note: "Done — the array is sorted!",
+      note: { key: "viz.sort.done" },
     });
     return generated;
   }, [algorithm, order]);
 
   const current: SortStep =
     stepIdx === 0
-      ? { array: order, compare: [], sorted: [], note: "Press Play, or Step through it" }
+      ? { array: order, compare: [], sorted: [], note: { key: "viz.sort.intro" } }
       : steps[stepIdx - 1];
   const atEnd = stepIdx >= steps.length;
 
@@ -151,8 +151,8 @@ export function SortingVisualizer({ algorithm, values }: Props) {
 
   useEffect(() => {
     if (!running) return;
-    const t = setInterval(() => setStepIdx((s) => Math.min(s + 1, steps.length)), 500);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setStepIdx((s) => Math.min(s + 1, steps.length)), 500);
+    return () => clearInterval(timer);
   }, [running, steps.length]);
 
   const max = Math.max(...current.array);
@@ -163,7 +163,7 @@ export function SortingVisualizer({ algorithm, values }: Props) {
       <div className="mb-2 flex items-baseline justify-between">
         <span className="text-sm font-medium text-zinc-700">{ALGORITHM_LABELS[algorithm]}</span>
         <span className="text-xs text-zinc-400">
-          Step {stepIdx} / {steps.length}
+          {t("viz.stepOf", { n: stepIdx, total: steps.length })}
         </span>
       </div>
       <svg viewBox="0 0 100 46" className="w-full" role="img" aria-label={t("viz.sortingAria")}>
@@ -197,7 +197,7 @@ export function SortingVisualizer({ algorithm, values }: Props) {
           );
         })}
       </svg>
-      <p className="mt-1 min-h-5 text-center text-xs text-zinc-600">{current.note}</p>
+      <p className="mt-1 min-h-5 text-center text-xs text-zinc-600">{t(current.note.key, current.note.vars)}</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
         <button
           className={vizBtn}
@@ -206,7 +206,7 @@ export function SortingVisualizer({ algorithm, values }: Props) {
             setStepIdx(0);
           }}
         >
-          ⏮ Reset
+          {t("viz.reset")}
         </button>
         <button
           className={vizBtn}
@@ -216,10 +216,10 @@ export function SortingVisualizer({ algorithm, values }: Props) {
             setStepIdx((s) => Math.max(0, s - 1));
           }}
         >
-          ◀ Back
+          {t("viz.back")}
         </button>
         <button className={vizBtnPrimary} disabled={atEnd} onClick={() => setPlaying((p) => !p)}>
-          {running ? "⏸ Pause" : "▶ Play"}
+          {running ? t("viz.pause") : t("viz.play")}
         </button>
         <button
           className={vizBtn}
@@ -229,7 +229,7 @@ export function SortingVisualizer({ algorithm, values }: Props) {
             setStepIdx((s) => Math.min(steps.length, s + 1));
           }}
         >
-          Step ▶
+          {t("viz.step")}
         </button>
         <button
           className={vizBtn}
@@ -239,7 +239,7 @@ export function SortingVisualizer({ algorithm, values }: Props) {
             setOrder(shuffle(order));
           }}
         >
-          🔀 Shuffle
+          {t("viz.shuffle")}
         </button>
       </div>
     </div>

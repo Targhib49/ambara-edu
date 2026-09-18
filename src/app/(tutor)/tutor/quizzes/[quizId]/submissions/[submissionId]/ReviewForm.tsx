@@ -30,11 +30,11 @@ export function ReviewForm({
     <div className="rounded-xl border border-zinc-200 bg-white p-5">
       <h2 className="mb-3 font-medium">{t("review.title")}</h2>
       <p className="mb-3 text-sm text-zinc-600">
-        Auto-graded so far: <strong>{autoScore}</strong> / {totalPoints} points.
-        {status === "REVIEWED" && " Already reviewed — you can update it below."}
+        {t("reviewForm.autoSoFar", { score: autoScore, total: totalPoints })}
+        {status === "REVIEWED" && ` ${t("reviewForm.alreadyReviewed")}`}
       </p>
       <label className="mb-1 block text-xs font-medium text-zinc-500">
-        Additional points for manually-reviewed questions
+        {t("reviewForm.additionalPoints")}
       </label>
       <input
         type="number"

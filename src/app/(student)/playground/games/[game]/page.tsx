@@ -16,7 +16,7 @@ export default async function StudentGamePage({ params }: { params: Promise<{ ga
     <PlaygroundFrame
       crumbs={[{ label: t("nav.home"), href: "/dashboard" }, { label: t("playground.title"), href: "/playground" }, { label: game.title }]}
       title={game.title}
-      meta={game.tags.join(" · ")}
+      meta={game.tagKeys.map((key) => t(key)).join(" · ")}
     >
       <GameView slug={game.slug} />
     </PlaygroundFrame>

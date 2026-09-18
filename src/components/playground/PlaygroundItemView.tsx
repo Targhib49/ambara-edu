@@ -1,4 +1,4 @@
-import type { PlaygroundItem } from "@/lib/playground";
+import { playgroundItemTitle, type PlaygroundItem } from "@/lib/playground";
 import { getT } from "@/lib/i18n/server";
 import { VizBlock } from "@/components/viz/VizBlock";
 import { CodeEditorBlock } from "@/components/blocks/CodeEditorBlock";
@@ -21,15 +21,17 @@ export async function PlaygroundItemView({
 }) {
   const t = await getT();
   const section = item.kind === "python" ? "tools" : "library";
+  const title = playgroundItemTitle(item, t);
+  const blurb = item.blurbKey ? t(item.blurbKey) : "";
   return (
     <PlaygroundFrame
       crumbs={[
         { label: t("nav.home"), href: homeHref },
         { label: t("playground.title"), href: basePath.startsWith("/tutor") ? `${basePath}?tab=${section}` : basePath },
-        { label: item.title },
+        { label: title },
       ]}
-      title={item.title}
-      meta={item.kind === "viz" ? `Preview with default settings · ${item.blurb}` : item.blurb}
+      title={title}
+      meta={item.kind === "viz" ? [t("playground.previewDefaults"), blurb].filter(Boolean).join(" · ") : blurb}
     >
       {item.kind === "python" ? <CodeEditorBlock starterCode={STARTER_CODE} /> : <VizBlock data={item.data} />}
     </PlaygroundFrame>

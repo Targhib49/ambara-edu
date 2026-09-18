@@ -113,15 +113,15 @@ export function MentalMathGame() {
               onClick={() => start(l.key)}
               className={`${cardCls} group flex flex-col items-start gap-1 p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md`}
             >
-              <span className="font-semibold text-zinc-900 group-hover:text-blue-700">{l.title}</span>
-              <span className="text-sm text-zinc-500">{l.blurb}</span>
+              <span className="font-semibold text-zinc-900 group-hover:text-blue-700">{t(l.titleKey)}</span>
+              <span className="text-sm text-zinc-500">{t(l.blurbKey)}</span>
               <span className="mt-2 text-xs text-zinc-500">
                 {bests[l.key] ? (
                   <>
-                    Your best: <strong className="text-zinc-800">{bests[l.key]}</strong>
+                    {t("game.yourBestLabel")} <strong className="text-zinc-800">{bests[l.key]}</strong>
                   </>
                 ) : (
-                  "Not played yet"
+                  t("game.notPlayed")
                 )}
               </span>
             </button>
@@ -140,21 +140,21 @@ export function MentalMathGame() {
     return (
       <div className="space-y-5">
         <div className="rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-6 text-center text-white">
-          <p className="text-sm uppercase tracking-wide text-white/70">{levelInfo.title} · time&rsquo;s up</p>
+          <p className="text-sm uppercase tracking-wide text-white/70">{t(levelInfo.titleKey)} · {t("game.timesUp")}</p>
           <p className="mt-1 text-5xl font-bold tabular-nums">{score}</p>
           <p className="mt-1 text-sm text-white/80">
-            right answers · {accuracy}% accuracy · {answered.length} tried
+            {t("game.resultLine", { accuracy, tried: answered.length })}
           </p>
           <p className="mt-3 inline-block rounded-full bg-white/15 px-3 py-1 text-sm font-medium">
-            {newBest ? "New best score!" : `Your best: ${Math.max(bestBefore, score)}`}
+            {newBest ? t("game.newBest") : t("game.yourBest", { n: Math.max(bestBefore, score) })}
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-2">
           <button onClick={() => start(level)} className={btnPrimary}>
-            Play again
+            {t("game.playAgain")}
           </button>
           <button onClick={backToLevels} className={btnSecondary}>
-            Change level
+            {t("game.changeLevel")}
           </button>
         </div>
         {answered.length > 0 && (
@@ -183,9 +183,9 @@ export function MentalMathGame() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="font-medium text-zinc-700">{levelInfo.title}</span>
+        <span className="font-medium text-zinc-700">{t(levelInfo.titleKey)}</span>
         <span className="tabular-nums text-zinc-500">
-          Score <strong className="text-zinc-900">{score}</strong>
+          {t("game.scoreLabel")} <strong className="text-zinc-900">{score}</strong>
         </span>
         <span className={`tabular-nums font-semibold ${seconds <= 10 ? "text-red-600" : "text-zinc-900"}`}>{seconds}s</span>
       </div>
@@ -203,7 +203,7 @@ export function MentalMathGame() {
         }`}
       >
         <p className="font-mono text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">{question?.prompt} = ?</p>
-        <span className="sr-only">{flash === "right" ? "Correct" : flash === "wrong" ? "Not quite" : ""}</span>
+        <span className="sr-only">{flash === "right" ? t("quiz.correct") : flash === "wrong" ? t("game.notQuite") : ""}</span>
       </div>
 
       {question?.choices ? (
@@ -244,14 +244,14 @@ export function MentalMathGame() {
             className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-4 py-3 text-center font-mono text-2xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
           <button type="submit" className={`${btnPrimary} px-6 text-base`}>
-            Enter
+            {t("drill.submit")}
           </button>
         </form>
       )}
 
       <div className="flex justify-between text-xs text-zinc-500">
         <button onClick={backToLevels} className="hover:text-zinc-800 hover:underline">
-          Quit round
+          {t("game.quitRound")}
         </button>
         <span>{t("game.pressEnter")}</span>
       </div>

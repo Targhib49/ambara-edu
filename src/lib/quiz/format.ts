@@ -5,12 +5,6 @@ import { parseCorrectAnswer, parseResponse } from "@/lib/quiz/schema";
 /** Dictionary key for a submission status. */
 export const submissionStatusKey = (status: SubmissionStatus) => `submission.${status}` as MessageKey;
 
-export const SUBMISSION_STATUS_LABEL: Record<SubmissionStatus, string> = {
-  AUTO_GRADED: "Auto-graded",
-  PENDING_REVIEW: "Pending review",
-  REVIEWED: "Reviewed",
-};
-
 export const SUBMISSION_STATUS_BADGE_CLASS: Record<SubmissionStatus, string> = {
   AUTO_GRADED: "bg-green-100 text-green-700",
   PENDING_REVIEW: "bg-amber-100 text-amber-700",

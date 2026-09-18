@@ -306,13 +306,13 @@ export function CourseCatalog({ courses, suggestions }: { courses: CatalogCourse
                 {(current - 1) * GRID_PAGE + 1}–{Math.min(current * GRID_PAGE, visible.length)} of {visible.length}
               </span>
               <div className="flex items-center gap-2">
-                <button onClick={() => setPage(Math.max(1, current - 1))} disabled={current === 1} aria-label="Previous page" className="grid h-9 place-items-center rounded-md border border-zinc-300 bg-white px-3 text-zinc-700 disabled:opacity-40">
+                <button onClick={() => setPage(Math.max(1, current - 1))} disabled={current === 1} aria-label={tr("pagination.previous")} className="grid h-9 place-items-center rounded-md border border-zinc-300 bg-white px-3 text-zinc-700 disabled:opacity-40">
                   <ChevronLeftIcon className="h-4 w-4" />
                 </button>
                 <span className="text-xs tabular-nums text-zinc-500">
                   {current} / {pages}
                 </span>
-                <button onClick={() => setPage(Math.min(pages, current + 1))} disabled={current >= pages} aria-label="Next page" className="grid h-9 place-items-center rounded-md border border-zinc-300 bg-white px-3 text-zinc-700 disabled:opacity-40">
+                <button onClick={() => setPage(Math.min(pages, current + 1))} disabled={current >= pages} aria-label={tr("pagination.next")} className="grid h-9 place-items-center rounded-md border border-zinc-300 bg-white px-3 text-zinc-700 disabled:opacity-40">
                   <ChevronRightIcon className="h-4 w-4" />
                 </button>
               </div>

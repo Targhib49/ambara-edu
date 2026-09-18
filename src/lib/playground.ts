@@ -4,6 +4,8 @@ import {
   type VisualizationData,
   type VizComponentName,
 } from "@/lib/viz/schemas";
+import type { MessageKey } from "@/lib/i18n/messages";
+import type { Translate } from "@/lib/i18n/translate";
 
 /**
  * The playground is a place to poke at the interactive pieces outside a
@@ -12,8 +14,10 @@ import {
  * here on its own and can't quietly fall out of sync.
  */
 export type PlaygroundItem =
-  | { slug: string; title: string; blurb: string; kind: "viz"; data: VisualizationData }
-  | { slug: string; title: string; blurb: string; kind: "python" };
+  // A visualization's title is its name and stays as written; the scratchpad
+  // is a tool, so its title is worded like the rest of the interface.
+  | { slug: string; title: string; blurbKey: MessageKey | null; kind: "viz"; data: VisualizationData }
+  | { slug: string; titleKey: MessageKey; blurbKey: MessageKey; kind: "python" };
 
 /**
  * Keyed loosely by component name rather than by the VizComponentName union on
@@ -22,35 +26,40 @@ export type PlaygroundItem =
  * description. Tying this to the union would turn "wrote the copy early" into
  * a compile error.
  */
-const VIZ_BLURBS: Record<string, string> = {
-  sorting_visualizer: "Watch a sorting algorithm rearrange a list one comparison at a time.",
-  loop_stepper: "Step through a loop and see the counter and accumulator change on each pass.",
-  structure_ops: "Push and pop a stack, or enqueue and dequeue a queue, and watch it react.",
-  step_response: "Feed a system a step or impulse and see how its output settles.",
-  pid_tuning: "Drag the P, I and D gains and watch the response overshoot, oscillate or settle.",
-  pole_zero_explorer: "Move poles around the s-plane and see the shape of the response follow.",
-  em_widget: "Vector algebra visualisations from the Electromagnetics course.",
+const VIZ_BLURBS: Record<string, MessageKey> = {
+  sorting_visualizer: "vizBlurb.sorting",
+  loop_stepper: "vizBlurb.loop",
+  structure_ops: "vizBlurb.structure",
+  step_response: "vizBlurb.stepResponse",
+  pid_tuning: "vizBlurb.pid",
+  pole_zero_explorer: "vizBlurb.poleZero",
+  em_widget: "vizBlurb.em",
 };
 
-export const PYTHON_ITEM: PlaygroundItem = {
+export const PYTHON_ITEM = {
   slug: "python",
-  title: "Python scratchpad",
-  blurb: "Write and run Python in the browser. Nothing is saved or marked — experiment freely.",
+  titleKey: "playground.python.title",
+  blurbKey: "playground.python.blurb",
   kind: "python",
-};
+} as const satisfies PlaygroundItem;
 
 export const PLAYGROUND_ITEMS: PlaygroundItem[] = [
   PYTHON_ITEM,
   ...(Object.keys(VIZ_LABELS) as VizComponentName[]).map((component) => ({
     slug: component.replace(/_/g, "-"),
     title: VIZ_LABELS[component],
-    blurb: VIZ_BLURBS[component] ?? "",
+    blurbKey: VIZ_BLURBS[component] ?? null,
     kind: "viz" as const,
     // The registry's defaults are already valid for each component's schema,
     // which is what makes rendering these outside a saved block safe.
     data: { component, props: vizDefaultProps[component] } as VisualizationData,
   })),
 ];
+
+/** The title as shown: a visualization's own name, or the scratchpad's in the viewer's language. */
+export function playgroundItemTitle(item: PlaygroundItem, t: Translate): string {
+  return item.kind === "python" ? t(item.titleKey) : item.title;
+}
 
 export function findPlaygroundItem(slug: string): PlaygroundItem | undefined {
   return PLAYGROUND_ITEMS.find((item) => item.slug === slug);

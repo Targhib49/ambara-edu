@@ -7,6 +7,7 @@ import { simulateResponse, stepInfo } from "@/lib/viz/control";
 import { ResponseChart, StepStats } from "./ResponseChart";
 import { vizBtn } from "./controls";
 import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
 
 type Props = z.infer<typeof poleZeroExplorerProps>;
 
@@ -27,11 +28,11 @@ function polesFor(zeta: number, omegaN: number): Pole[] {
   ];
 }
 
-function regimeLabel(zeta: number): string {
-  if (zeta === 0) return "Undamped — poles on the imaginary axis, the output oscillates forever";
-  if (zeta < 1) return "Underdamped — complex poles, the response overshoots and rings";
-  if (zeta < 1.02) return "Critically damped — fastest response with no overshoot";
-  return "Overdamped — two real poles, slow but overshoot-free";
+function regimeKey(zeta: number): MessageKey {
+  if (zeta === 0) return "viz.pz.undamped";
+  if (zeta < 1) return "viz.pz.underdamped";
+  if (zeta < 1.02) return "viz.pz.critical";
+  return "viz.pz.overdamped";
 }
 
 function SPlane({ poles }: { poles: Pole[] }) {
@@ -53,7 +54,7 @@ function SPlane({ poles }: { poles: Pole[] }) {
       <line x1={originX} y1={0} x2={originX} y2={S} stroke="#d4d4d8" strokeWidth={0.4} />
       <text x={S - 1} y={S / 2 - 1.5} textAnchor="end" fontSize={3} fill="#a1a1aa">Re</text>
       <text x={originX + 1.5} y={3.5} fontSize={3} fill="#a1a1aa">Im</text>
-      <text x={2} y={S - 2} fontSize={2.8} fill="#86efac">stable region</text>
+      <text x={2} y={S - 2} fontSize={2.8} fill="#86efac">{t("viz.pz.stableRegion")}</text>
       {poles.map((p, i) => (
         <text
           key={i}
@@ -72,6 +73,7 @@ function SPlane({ poles }: { poles: Pole[] }) {
 }
 
 export function PoleZeroExplorer({ zeta: zeta0, omegaN: omegaN0 }: Props) {
+  const t = useT();
   const [zeta, setZeta] = useState(zeta0);
   const [omegaN, setOmegaN] = useState(omegaN0);
 
@@ -107,10 +109,10 @@ export function PoleZeroExplorer({ zeta: zeta0, omegaN: omegaN0 }: Props) {
           {zeta > 0 && <StepStats {...info} unstable={sim.unstable} />}
         </div>
       </div>
-      <p className="mt-2 min-h-4 text-center text-xs text-zinc-500">{regimeLabel(zeta)}</p>
+      <p className="mt-2 min-h-4 text-center text-xs text-zinc-500">{t(regimeKey(zeta))}</p>
       <div className="mx-auto mt-2 max-w-sm space-y-1.5">
         <label className="flex items-center gap-2 text-xs text-zinc-600">
-          <span className="w-14 font-mono">ζ (damping)</span>
+          <span className="w-14 font-mono">ζ ({t("viz.pz.damping")})</span>
           <input
             type="range"
             min={0}

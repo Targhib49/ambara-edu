@@ -16,7 +16,7 @@ export default async function TutorGamePage({ params }: { params: Promise<{ game
     <PlaygroundFrame
       crumbs={[{ label: t("nav.home"), href: "/tutor" }, { label: t("playground.title"), href: "/tutor/playground" }, { label: game.title }]}
       title={game.title}
-      meta={game.tags.join(" · ")}
+      meta={game.tagKeys.map((key) => t(key)).join(" · ")}
     >
       <GameView slug={game.slug} />
     </PlaygroundFrame>

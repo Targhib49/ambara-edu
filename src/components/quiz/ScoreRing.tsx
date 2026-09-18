@@ -7,7 +7,7 @@ export function ScoreRing({ pct, size = 44 }: { pct: number; size?: number }) {
   const offset = c - (clamped / 100) * c;
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0" role="img" aria-label={`${Math.round(pct)}% score`}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0" role="img" aria-label={`${Math.round(pct)}%`}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e4e4e7" strokeWidth={4} />
       <circle
         cx={size / 2}

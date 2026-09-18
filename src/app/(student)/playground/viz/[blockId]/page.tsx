@@ -21,7 +21,7 @@ export default async function StudentCourseVizPage({ params }: { params: Promise
       meta={`${viz.course.title} › ${viz.chapterTitle} › ${viz.lesson.title}`}
       actions={
         <Link href={`/courses/${viz.course.id}/lessons/${viz.lesson.id}`} className={btnSecondary}>
-          Open the lesson
+          {t("playground.openLesson")}
         </Link>
       }
     >

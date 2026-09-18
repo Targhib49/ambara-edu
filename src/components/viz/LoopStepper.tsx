@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { z } from "zod";
 import type { loopStepperProps } from "@/lib/viz/schemas";
-import { vizBtn, vizBtnPrimary } from "./controls";
+import { vizBtn, vizBtnPrimary, type VizNote } from "./controls";
+import { useT } from "@/lib/i18n/client";
 
 type Props = z.infer<typeof loopStepperProps>;
 
@@ -13,14 +14,14 @@ type LoopState = {
   line: number; // index into the code lines being highlighted
   i: number | null;
   total: number;
-  note: string;
+  note: VizNote;
 };
 
 function buildTrace({ start, end, step, operation }: Props): LoopState[] {
   const init = operation === "sum" ? 0 : 1;
   const op = operation === "sum" ? "+" : "*";
   const states: LoopState[] = [
-    { line: 0, i: null, total: init, note: `total starts at ${init}` },
+    { line: 0, i: null, total: init, note: { key: "viz.loop.start", vars: { n: init } } },
   ];
   let total = init;
   let count = 0;
@@ -30,17 +31,18 @@ function buildTrace({ start, end, step, operation }: Props): LoopState[] {
         line: 1,
         i,
         total,
-        note: `Stopped after ${MAX_ITERATIONS} iterations to keep this readable`,
+        note: { key: "viz.loop.capped", vars: { n: MAX_ITERATIONS } },
       });
       return states;
     }
-    states.push({ line: 1, i, total, note: `i takes the value ${i}` });
+    states.push({ line: 1, i, total, note: { key: "viz.loop.takes", vars: { i } } });
     const next = operation === "sum" ? total + i : total * i;
     states.push({
       line: 2,
       i,
       total: next,
-      note: `total = ${total} ${op} ${i} = ${next}`,
+      // Arithmetic reads the same in every language.
+      note: { key: "viz.loop.update", vars: { total, op, i, next } },
     });
     total = next;
   }
@@ -48,13 +50,14 @@ function buildTrace({ start, end, step, operation }: Props): LoopState[] {
     line: 1,
     i: states.at(-1)?.i ?? null,
     total,
-    note: "range is used up — the loop ends",
+    note: { key: "viz.loop.ends" },
   });
-  states.push({ line: 3, i: states.at(-1)?.i ?? null, total, note: `prints ${total}` });
+  states.push({ line: 3, i: states.at(-1)?.i ?? null, total, note: { key: "viz.loop.prints", vars: { n: total } } });
   return states;
 }
 
 export function LoopStepper(props: Props) {
+  const t = useT();
   const { start, end, step, operation } = props;
   const trace = useMemo(() => buildTrace(props), [props]);
   const [idx, setIdx] = useState(0);
@@ -69,8 +72,8 @@ export function LoopStepper(props: Props) {
 
   useEffect(() => {
     if (!running) return;
-    const t = setInterval(() => setIdx((s) => Math.min(s + 1, trace.length - 1)), 800);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setIdx((s) => Math.min(s + 1, trace.length - 1)), 800);
+    return () => clearInterval(timer);
   }, [running, trace.length]);
 
   const codeLines = [
@@ -104,7 +107,7 @@ export function LoopStepper(props: Props) {
           </div>
         </div>
       </div>
-      <p className="mt-2 min-h-5 text-center text-xs text-zinc-600">{state.note}</p>
+      <p className="mt-2 min-h-5 text-center text-xs text-zinc-600">{t(state.note.key, state.note.vars)}</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
         <button
           className={vizBtn}
@@ -113,7 +116,7 @@ export function LoopStepper(props: Props) {
             setIdx(0);
           }}
         >
-          ⏮ Reset
+          {t("viz.reset")}
         </button>
         <button
           className={vizBtn}
@@ -123,10 +126,10 @@ export function LoopStepper(props: Props) {
             setIdx((s) => Math.max(0, s - 1));
           }}
         >
-          ◀ Back
+          {t("viz.back")}
         </button>
         <button className={vizBtnPrimary} disabled={atEnd} onClick={() => setPlaying((p) => !p)}>
-          {running ? "⏸ Pause" : "▶ Play"}
+          {running ? t("viz.pause") : t("viz.play")}
         </button>
         <button
           className={vizBtn}
@@ -136,7 +139,7 @@ export function LoopStepper(props: Props) {
             setIdx((s) => Math.min(trace.length - 1, s + 1));
           }}
         >
-          Step ▶
+          {t("viz.step")}
         </button>
         <span className="text-xs text-zinc-400">
           {idx} / {trace.length - 1}

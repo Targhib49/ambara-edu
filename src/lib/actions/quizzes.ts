@@ -18,15 +18,16 @@ import type { QuestionType, QuizStatus, QuizStyle } from "@/generated/prisma/enu
 import type { Prisma } from "@/generated/prisma/client";
 
 export async function previewImport(formData: FormData): Promise<ImportResult> {
+  const t = await getT();
   await requireTutor();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { drafts: [], errors: [{ rowNumber: 0, message: "No file uploaded." }] };
+    return { drafts: [], errors: [{ rowNumber: 0, message: t("action.importNoFile") }] };
   }
   const buffer = await file.arrayBuffer();
   const rows = parseWorkbook(buffer);
   if (rows.length === 0) {
-    return { drafts: [], errors: [{ rowNumber: 0, message: "The sheet has no data rows." }] };
+    return { drafts: [], errors: [{ rowNumber: 0, message: t("action.importNoRows") }] };
   }
   return validateRows(rows);
 }

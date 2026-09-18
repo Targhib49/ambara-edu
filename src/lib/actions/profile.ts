@@ -43,8 +43,8 @@ export async function updateProfile(
   return {
     success:
       email !== user.email
-        ? "Profile updated — use the new email next time you sign in."
-        : "Profile updated.",
+        ? t("action.profileUpdatedNewEmail")
+        : t("action.profileUpdated"),
   };
 }
 

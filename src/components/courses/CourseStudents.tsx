@@ -70,7 +70,7 @@ export function CourseStudentsTable({ courseId, students }: { courseId: string; 
         <button
           disabled={pending}
           onClick={() => {
-            if (confirm(`Remove ${s.name} from this course? Their progress is kept if you add them back.`)) {
+            if (confirm(t("courseStudents.removeConfirm", { name: s.name }))) {
               setRemovingId(s.id);
               startTransition(() => setEnrollment(courseId, s.id, false));
             }
@@ -112,7 +112,7 @@ export function EnrollStudentsForm({ courseId, students }: { courseId: string; s
     return needle ? students.filter((s) => `${s.label} ${s.hint ?? ""}`.toLowerCase().includes(needle)) : students;
   }, [students, q]);
 
-  if (students.length === 0) return <p className="text-sm text-zinc-500">Every student is already enrolled.</p>;
+  if (students.length === 0) return <p className="text-sm text-zinc-500">{t("courseStudents.allEnrolled")}</p>;
 
   const toggle = (id: string) =>
     setPicked((prev) => {
@@ -124,9 +124,9 @@ export function EnrollStudentsForm({ courseId, students }: { courseId: string; s
 
   return (
     <div className="space-y-4">
-      <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email" className={inputCls} aria-label="Search students" />
+      <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("courseStudents.searchPlaceholder")} className={inputCls} aria-label={t("courseStudents.searchAria")} />
       <ul className="max-h-[50vh] divide-y divide-zinc-100 overflow-y-auto rounded-md border border-zinc-200">
-        {matches.length === 0 && <li className="px-3 py-3 text-sm text-zinc-500">No matches</li>}
+        {matches.length === 0 && <li className="px-3 py-3 text-sm text-zinc-500">{t("courseStudents.noMatches")}</li>}
         {matches.map((s) => (
           <li key={s.value}>
             <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-zinc-50">

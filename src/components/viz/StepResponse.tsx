@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/client";
 import { useMemo, useState } from "react";
 import type { z } from "zod";
 import type { stepResponseProps } from "@/lib/viz/schemas";
@@ -10,6 +11,7 @@ import { vizBtn, vizBtnPrimary } from "./controls";
 type Props = z.infer<typeof stepResponseProps>;
 
 export function StepResponse({ num, den, tMax: tMaxProp }: Props) {
+  const t = useT();
   const [input, setInput] = useState<"step" | "impulse">("step");
   const [tMax, setTMax] = useState(tMaxProp);
 
@@ -42,7 +44,7 @@ export function StepResponse({ num, den, tMax: tMaxProp }: Props) {
           <StepStats overshootPct={null} settlingTime={null} finalValue={0} unstable />
         ) : null}
         <label className="flex items-center justify-center gap-2 text-xs text-zinc-500">
-          time span
+          {t("viz.resp.timeSpan")}
           <input
             type="range"
             min={1}

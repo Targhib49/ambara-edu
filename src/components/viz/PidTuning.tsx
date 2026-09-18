@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/client";
 import { useMemo, useState } from "react";
 import type { z } from "zod";
 import type { pidTuningProps } from "@/lib/viz/schemas";
@@ -52,6 +53,7 @@ function GainSlider({
 }
 
 export function PidTuning({ plantNum, plantDen, kp: kp0, ki: ki0, kd: kd0 }: Props) {
+  const t = useT();
   const [kp, setKp] = useState(kp0);
   const [ki, setKi] = useState(ki0);
   const [kd, setKd] = useState(kd0);
@@ -65,9 +67,9 @@ export function PidTuning({ plantNum, plantDen, kp: kp0, ki: ki0, kd: kd0 }: Pro
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-medium text-zinc-700">PID tuning — closed-loop step response</span>
+        <span className="text-sm font-medium text-zinc-700">{t("viz.pid.title")}</span>
         <span className="font-mono text-xs text-zinc-500">
-          plant: ({formatPoly(plantNum)}) / ({formatPoly(plantDen)})
+          {t("viz.pid.plant")}: ({formatPoly(plantNum)}) / ({formatPoly(plantDen)})
         </span>
       </div>
       <ResponseChart t={sim.t} y={sim.y} tMax={T_MAX} yRef={1} />

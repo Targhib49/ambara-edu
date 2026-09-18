@@ -13,16 +13,6 @@ export const weekdayShortKey = (weekday: number) => `weekdayShort.${weekday}` as
 
 export const attendanceKey = (value: "ATTENDED" | "NO_SHOW") => `attendance.${value}` as MessageKey;
 
-export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
-  PROPOSED: "Proposed",
-  CONFIRMED: "Confirmed",
-  RESCHEDULE_REQUESTED_BY_STUDENT: "Reschedule requested",
-  RESCHEDULE_REQUESTED_BY_TUTOR: "Reschedule proposed",
-  CANCELLED: "Cancelled",
-  COMPLETED: "Completed",
-  AWAITING_RESCHEDULE: "Awaiting new time",
-};
-
 export const SESSION_STATUS_BADGE_CLASS: Record<SessionStatus, string> = {
   PROPOSED: "bg-zinc-100 text-zinc-600",
   CONFIRMED: "bg-green-100 text-green-700",

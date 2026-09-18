@@ -96,11 +96,11 @@ export default async function SubmissionReviewPage({
                 </span>
               ) : submission.status === "REVIEWED" ? (
                 <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                  Reviewed
+                  {t("submission.REVIEWED")}
                 </span>
               ) : (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                  Needs your review
+                  {t("reviewForm.needsReview")}
                 </span>
               )}
             </div>

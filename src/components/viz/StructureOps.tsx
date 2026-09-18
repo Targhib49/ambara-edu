@@ -4,10 +4,12 @@ import { useState } from "react";
 import type { z } from "zod";
 import type { structureOpsProps } from "@/lib/viz/schemas";
 import { vizBtn, vizBtnPrimary } from "./controls";
+import { useT } from "@/lib/i18n/client";
 
 type Props = z.infer<typeof structureOpsProps>;
 
 export function StructureOps({ structure, initial, capacity }: Props) {
+  const t = useT();
   const [items, setItems] = useState(initial);
   const [value, setValue] = useState("");
   const [log, setLog] = useState<string[]>([]);
@@ -24,7 +26,7 @@ export function StructureOps({ structure, initial, capacity }: Props) {
     const v = value.trim().slice(0, 6);
     if (!v) return;
     if (items.length >= capacity) {
-      report(`${addLabel.toLowerCase()}(${v}) ✗ — full (capacity ${capacity})`);
+      report(`${addLabel.toLowerCase()}(${v}) ✗ — ${t("viz.struct.full", { n: capacity })}`);
       return;
     }
     setItems((arr) => [...arr, v]);
@@ -34,7 +36,7 @@ export function StructureOps({ structure, initial, capacity }: Props) {
 
   function remove() {
     if (items.length === 0) {
-      report(`${removeLabel.toLowerCase()}() ✗ — ${structure} is empty`);
+      report(`${removeLabel.toLowerCase()}() ✗ — ${t(isStack ? "viz.struct.stackEmpty" : "viz.struct.queueEmpty")}`);
       return;
     }
     // Stack removes from the top (end); queue removes from the front.
@@ -50,7 +52,7 @@ export function StructureOps({ structure, initial, capacity }: Props) {
     <div className="rounded-lg border border-zinc-200 bg-white p-4">
       <div className="mb-3 flex items-baseline justify-between">
         <span className="text-sm font-medium text-zinc-700">
-          {isStack ? "Stack (LIFO — last in, first out)" : "Queue (FIFO — first in, first out)"}
+          {t(isStack ? "viz.struct.stackTitle" : "viz.struct.queueTitle")}
         </span>
         <span className="text-xs text-zinc-400">
           {items.length} / {capacity}
@@ -59,14 +61,14 @@ export function StructureOps({ structure, initial, capacity }: Props) {
 
       <div className="flex min-h-44 items-center justify-center rounded-md bg-zinc-50 p-4">
         {items.length === 0 ? (
-          <p className="text-xs italic text-zinc-400">empty</p>
+          <p className="text-xs italic text-zinc-400">{t("viz.struct.empty")}</p>
         ) : isStack ? (
           <div className="flex flex-col-reverse items-center gap-1.5">
             {items.map((item, i) => (
               <div key={`${i}-${item}`} className="flex items-center gap-2">
                 <div className={boxCls}>{item}</div>
                 <span className="w-12 text-xs text-zinc-400">
-                  {i === items.length - 1 ? "← top" : ""}
+                  {i === items.length - 1 ? t("viz.struct.top") : ""}
                 </span>
               </div>
             ))}
@@ -81,8 +83,8 @@ export function StructureOps({ structure, initial, capacity }: Props) {
               ))}
             </div>
             <div className="flex w-full justify-between text-xs text-zinc-400">
-              <span>↑ front (leaves first)</span>
-              <span>rear (joins here) ↑</span>
+              <span>{t("viz.struct.front")}</span>
+              <span>{t("viz.struct.rear")}</span>
             </div>
           </div>
         )}
@@ -94,7 +96,7 @@ export function StructureOps({ structure, initial, capacity }: Props) {
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           maxLength={6}
-          placeholder="value"
+          placeholder={t("viz.struct.value")}
           className="w-24 rounded-md border border-zinc-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
         />
         <button className={vizBtnPrimary} onClick={add}>
@@ -111,7 +113,7 @@ export function StructureOps({ structure, initial, capacity }: Props) {
             setValue("");
           }}
         >
-          ⏮ Reset
+          {t("viz.reset")}
         </button>
       </div>
 
