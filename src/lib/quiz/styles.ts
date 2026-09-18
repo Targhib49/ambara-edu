@@ -24,6 +24,8 @@ export const QUIZ_STYLE_GRADED: Record<QuizStyle, boolean> = {
   MASTERY: false,
   DRILL: false,
   REVIEW: false,
+  // Targhib's call: a guided project replaces the stage quizzes, so it counts.
+  PROJECT: true,
 };
 
 export const GRADED_STYLES = (Object.keys(QUIZ_STYLE_GRADED) as QuizStyle[]).filter((s) => QUIZ_STYLE_GRADED[s]);
@@ -39,6 +41,7 @@ export const QUIZ_STYLE_CHIP: Record<QuizStyle, string> = {
   MASTERY: "bg-emerald-50 text-emerald-700",
   DRILL: "bg-amber-50 text-amber-800",
   REVIEW: "bg-teal-50 text-teal-700",
+  PROJECT: "bg-indigo-50 text-indigo-700",
 };
 
 /** What a new try-out starts with — the settings every existing try-out uses. */

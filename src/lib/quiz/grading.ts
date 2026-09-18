@@ -1,5 +1,6 @@
 import type { QuestionType, SubmissionStatus } from "@/generated/prisma/enums";
 import { parseCorrectAnswer, parseResponse } from "@/lib/quiz/schema";
+import { projectStepShare } from "@/lib/projects/schema";
 
 export type QuestionGrade = {
   status: "AUTO_GRADED" | "PENDING_REVIEW";
@@ -170,6 +171,15 @@ export function gradeQuestion(
       const fixed = matchesWrittenAnswer(correctAnswer.correction, parsed?.correction ?? "");
       const share = (foundLine ? 0.5 : 0) + (fixed ? 0.5 : 0);
       return { status: "AUTO_GRADED", correct: foundLine && fixed, earnedPoints: round2(points * share) };
+    }
+
+    case "PROJECT_STEP": {
+      // The step's own checks ran in the browser and decided pass or fail;
+      // what reaches the grade is how many tries it took. Like code, it always
+      // goes to the tutor, who reads the finished project and can adjust.
+      const parsed = tryParseResponse(type, response);
+      const earned = parsed?.passed ? round2(points * projectStepShare(parsed.failedChecks)) : 0;
+      return { status: "PENDING_REVIEW", correct: null, earnedPoints: earned };
     }
   }
 }

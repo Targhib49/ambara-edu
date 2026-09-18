@@ -68,6 +68,11 @@ export function formatCorrectAnswer(type: QuestionType, correctAnswer: unknown, 
         ? `${a.testCases.length} test case${a.testCases.length === 1 ? "" : "s"} + manual review`
         : "(reviewed manually)";
     }
+    case "PROJECT_STEP": {
+      // Where the step sits; its checks are the project's business.
+      const a = parseCorrectAnswer(type, correctAnswer);
+      return `${a.stage} › ${a.title}`;
+    }
   }
 }
 
@@ -112,6 +117,12 @@ export function formatResponse(
     case "CODE": {
       const r = safeParse(type, response);
       return r && r.code ? r.code : noAnswer;
+    }
+    case "PROJECT_STEP": {
+      // ✓ with the failed checks before it passed, e.g. "✓ (2)".
+      const r = safeParse(type, response);
+      if (!r) return noAnswer;
+      return r.passed ? (r.failedChecks > 0 ? `✓ (${r.failedChecks})` : "✓") : "✗";
     }
   }
 }

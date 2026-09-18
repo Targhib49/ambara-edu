@@ -701,9 +701,17 @@ export function QuestionEditor({ question }: { question: QuestionForEdit }) {
       return <MultiPartEditor question={question} />;
     case "FIND_MISTAKE":
       return <FindMistakeEditor question={question} />;
+    case "PROJECT_STEP":
+      // A step belongs to its project and is written with it, not one by one here.
+      return <ProjectStepNotice />;
     default: {
       const _exhaustive: never = question.type;
       return _exhaustive;
     }
   }
+}
+
+function ProjectStepNotice() {
+  const t = useT();
+  return <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">{t("qEditor.projectStepNotice")}</p>;
 }

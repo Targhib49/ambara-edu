@@ -10,7 +10,7 @@ export type RunOutcome = { lines: OutputLine[]; resultRepr: string | null; error
 type TestOutcome = { lines: OutputLine[]; error: string | null };
 
 type WorkerResponse =
-  | { id: number; ok: true; run?: RunOutcome; tests?: TestOutcome[] }
+  | { id: number; ok: true; run?: RunOutcome; tests?: TestOutcome[]; runs?: TestOutcome[] }
   | { id: number; ok: false; error: string };
 type WorkerReply = { kind: "ready" } | WorkerResponse;
 
@@ -60,7 +60,11 @@ function ensureWorker(): Promise<void> {
   return workerReady;
 }
 
-function request(payload: { kind: "run" | "test"; code: string; testCases?: { input: string }[] }) {
+type WorkerRequest =
+  | { kind: "run" | "test"; code: string; testCases?: { input: string }[] }
+  | { kind: "project"; files: Record<string, string>; entry: string; inputs: string[] };
+
+function request(payload: WorkerRequest) {
   const result = queue.then(async () => {
     await ensureWorker();
     const id = nextId++;
@@ -107,7 +111,7 @@ export async function runPythonCode(code: string): Promise<RunOutcome> {
  * Whitespace-tolerant output comparison (classic judge rules): trailing
  * whitespace per line and trailing newlines are ignored.
  */
-function normalizeOutput(text: string): string {
+export function normalizeOutput(text: string): string {
   return text
     .replace(/\r\n/g, "\n")
     .split("\n")
@@ -137,4 +141,31 @@ export async function runTestCases(code: string, testCases: TestCaseInput[]): Pr
       actualOutput,
     };
   });
+}
+
+/** What one run of a project printed, as a student would see it in the output panel. */
+export type ProjectRunResult = { output: string; error: string | null };
+
+/**
+ * Runs a multi-file project once per input: the files are written into the
+ * worker's Python file system and `entry` runs as the main program, so
+ * `import data` finds data.py. Each run starts from the files as given.
+ */
+export async function runProject(
+  files: Record<string, string>,
+  inputs: string[],
+  entry: string
+): Promise<ProjectRunResult[]> {
+  const reply = await request({ kind: "project", files, entry, inputs });
+  if (!reply.ok) return inputs.map(() => ({ output: "", error: reply.error }));
+  return reply.runs!.map((run) => ({
+    // Same newline reconstruction as the quiz runner above.
+    output: run.lines.map((l) => l.text).join("\n").slice(0, 20000),
+    error: run.error,
+  }));
+}
+
+/** Judge-style comparison: trailing spaces on a line and trailing blank lines don't count. */
+export function outputsMatch(actual: string, expected: string): boolean {
+  return normalizeOutput(actual) === normalizeOutput(expected);
 }

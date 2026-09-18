@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { QuestionType } from "@/generated/prisma/enums";
+import { projectStepResponseSchema, projectStepSchema } from "@/lib/projects/schema";
 
 const LETTER = z.enum(["A", "B", "C", "D"]);
 
@@ -44,6 +45,8 @@ export const correctAnswerSchemas = {
     })
     // A wrong line past the end would save fine and never be answerable.
     .refine((a) => a.wrongIndex < a.lines.length, { message: "wrongIndex must point at one of the lines", path: ["wrongIndex"] }),
+  // One step of a guided project — see src/lib/projects/schema.ts.
+  PROJECT_STEP: projectStepSchema,
 } as const satisfies Record<QuestionType, z.ZodType>;
 
 export type CorrectAnswerMap = {
@@ -78,6 +81,7 @@ export const responseSchemas = {
     lineIndex: z.number().int().min(0).nullable().default(null),
     correction: z.string().default(""),
   }),
+  PROJECT_STEP: projectStepResponseSchema,
 } as const satisfies Record<QuestionType, z.ZodType>;
 
 export type ResponseMap = {

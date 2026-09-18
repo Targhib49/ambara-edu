@@ -75,6 +75,7 @@ enum QuestionType {
   STEPS        // a problem worked through in ordered steps, each checked
   MULTI_PART   // one stem with parts (a)(b)(c), each carrying its own marks
   FIND_MISTAKE // a worked solution with one wrong step, for the student to spot
+  PROJECT_STEP // one step of a guided project: an instruction plus the runs that check it
 }
 
 enum QuizStatus {
@@ -91,6 +92,7 @@ enum QuizStyle {
   DRILL   // practice: timed rounds of generated questions, aiming for a target score
   REVIEW  // practice: a mixed set drawn from earlier chapters, for spaced revision
   EXAM    // graded: a try-out you only get one go at
+  PROJECT // graded: a guided project in a mini editor, one PROJECT_STEP question per step
 }
 
 enum SubmissionStatus {
@@ -120,6 +122,7 @@ model User {
   calendarFeed      CalendarFeedToken?
   timedQuizSessions TimedQuizSession[]
   practiceProgress  PracticeProgress[]
+  projectProgress   ProjectProgress[]
   verificationTokens EmailVerificationToken[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -358,11 +361,15 @@ model Quiz {
   // How many questions a review set draws from earlier chapters. Only read
   // when style is REVIEW; the questions themselves belong to other quizzes.
   reviewCount            Int?
+  // A guided project's starter files, { "main.py": "…", "data.py": "…" }. Only
+  // read when style is PROJECT; the steps themselves are its questions.
+  projectFiles           Json?
   questions     Question[]
   submissions   Submission[]
   submissionAttempts SubmissionAttempt[]
   timedSessions TimedQuizSession[]
   practiceProgress PracticeProgress[]
+  projectProgress ProjectProgress[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -393,6 +400,30 @@ model TimedQuizSession {
 // purpose: practice must never reach a score, an average or the review queue,
 // and a separate table makes that true by construction rather than by every
 // query remembering to filter.
+// A student's work on a guided project (style PROJECT). The files carry over
+// from step to step, so the project grows as they go; finishing it turns it
+// into a Submission for review, and this row stays as the record of how.
+// Steps are tracked by question id, not position, so editing a project later
+// can't scramble anyone's progress.
+model ProjectProgress {
+  studentId    String    @db.Uuid
+  student      User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  quizId       String    @db.Uuid
+  quiz         Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  // The student's files as they are now, { "main.py": "…", … }.
+  files        Json
+  // Steps whose check has passed. The current step is the first one not here.
+  passedIds    String[]
+  // Checks that failed before each step passed, { "<questionId>": 2 } — the score.
+  failedChecks Json      @default("{}")
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@id([studentId, quizId])
+  @@index([quizId])
+}
+
 model PracticeProgress {
   studentId   String    @db.Uuid
   student     User      @relation(fields: [studentId], references: [id], onDelete: Cascade)

@@ -9,6 +9,9 @@ type PracticeQuestion = { type: QuestionType; points: number; correctAnswer: unk
  * which a code question can only give when it has test cases to run.
  */
 export function isPracticable(question: PracticeQuestion): boolean {
+  // A project step only makes sense inside its project, so it never turns up
+  // in mastery practice or a mixed review.
+  if (question.type === "PROJECT_STEP") return false;
   if (question.type !== "CODE") return true;
   try {
     return parseCorrectAnswer("CODE", question.correctAnswer).testCases.length > 0;

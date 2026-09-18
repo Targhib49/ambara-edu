@@ -23,6 +23,7 @@ const TYPE_KEYS: Record<QuestionType, MessageKey> = {
   STEPS: "questionType.STEPS",
   MULTI_PART: "questionType.MULTI_PART",
   FIND_MISTAKE: "questionType.FIND_MISTAKE",
+  PROJECT_STEP: "questionType.PROJECT_STEP",
 };
 
 /**
