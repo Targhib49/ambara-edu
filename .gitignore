@@ -57,3 +57,6 @@ tutoring_lms_spec.md
 
 # real student/course data for import — contains PII, never publish
 /data-import/
+
+# JSON backups written by scripts/project.ts before it changes the database
+/backups/
