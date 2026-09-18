@@ -958,6 +958,7 @@ export const MESSAGES = {
   "action.emailUpdateFailed": { ID: "Gagal memperbarui email: {message}", EN: "Could not update email: {message}" },
   "action.passwordChangeFailed": { ID: "Gagal mengganti password: {message}", EN: "Could not change password: {message}" },
   "action.sessionScheduled": { ID: "Sesi dengan {name} dijadwalkan \u2713", EN: "Session with {name} scheduled \u2713" },
+  "action.emailNotSent": { ID: "Belum berhasil terkirim \u2014 coba lagi nanti atau hubungi tutor kamu.", EN: "It didn\u2019t go out \u2014 try again later, or ask your tutor." },
   "action.verificationSent": { ID: "Terkirim \u2014 cek {email}.", EN: "Sent \u2014 check {email}." },
   "action.accountCreateFailed": { ID: "Gagal membuat akun: {message}", EN: "Could not create account: {message}" },
   "action.studentCreated": { ID: "{email} dibuat \u2014 berikan password yang barusan kamu set.", EN: "Created {email} \u2014 hand them the password you just set." },

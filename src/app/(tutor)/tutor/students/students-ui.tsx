@@ -39,7 +39,7 @@ const makeTabs = (t: Translate): Tab<StudentRow>[] => [
   { key: "unenrolled", label: t("students.notEnrolled"), match: (s) => s.courses.length === 0 },
 ];
 
-const makeColumns = (t: Translate): Column<StudentRow>[] => [
+const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] => [
   {
     key: "name",
     header: t("students.header.student"),
@@ -111,7 +111,9 @@ const makeColumns = (t: Translate): Column<StudentRow>[] => [
         >
           {s.emailVerifiedAt ? t("students.verified") : t("students.pending")}
         </span>
-        {!s.emailVerifiedAt && (
+        {/* Nothing to resend while mail is off; the badge still tells the
+            tutor the address was never confirmed. */}
+        {!s.emailVerifiedAt && mailEnabled && (
           <button onClick={() => void resendVerificationEmail(s.id)} className="text-xs text-blue-600 hover:underline">
             {t("students.resend")}
           </button>
@@ -156,12 +158,20 @@ function BulkAssign({ courses, studentIds, onDone }: { courses: ComboOption[]; s
   );
 }
 
-export function StudentTable({ students, courses }: { students: StudentRow[]; courses: ComboOption[] }) {
+export function StudentTable({
+  students,
+  courses,
+  mailEnabled,
+}: {
+  students: StudentRow[];
+  courses: ComboOption[];
+  mailEnabled: boolean;
+}) {
   const t = useT();
   return (
     <DataTable
       rows={students}
-      columns={makeColumns(t)}
+      columns={makeColumns(t, mailEnabled)}
       rowKey={(s) => s.id}
       rowHref={(s) => `/tutor/students/${s.id}`}
       tabs={makeTabs(t)}

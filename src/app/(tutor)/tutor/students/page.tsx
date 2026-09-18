@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { StudentTable, CreateStudentForm, type StudentRow } from "./students-ui";
+import { isEmailConfigured } from "@/lib/email";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { formatSessionShort, nowMs } from "@/lib/sessions/format";
@@ -66,7 +67,7 @@ export default async function StudentsPage() {
           </SlideOverButton>
         }
       />
-      <StudentTable students={rows} courses={courses} />
+      <StudentTable students={rows} courses={courses} mailEnabled={isEmailConfigured()} />
     </div>
   );
 }
