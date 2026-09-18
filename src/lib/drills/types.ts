@@ -22,6 +22,8 @@ export type DrillSkillDefinition = {
    * generator pure and callable from event handlers only.
    */
   make: (index: number, rand: Rand) => DrillQuestion;
+  /** Answers can be negative, so the boxes accept a leading minus. */
+  signed?: boolean;
 };
 
 export const drillInt = (rand: Rand, min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min;

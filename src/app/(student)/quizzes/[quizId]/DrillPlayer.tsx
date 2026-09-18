@@ -88,14 +88,22 @@ export function DrillPlayer({
   }
 
   function submit() {
-    if (!question || phase !== "playing" || inputs.some((v) => v === "")) return;
+    if (!question || phase !== "playing" || inputs.some((v) => v === "" || v === "-")) return;
     const correct = isDrillAnswerCorrect(question, inputs.map(Number));
     if (correct) {
       scoreRef.current += 1;
       setScore(scoreRef.current);
       setFlash({ correct: true });
     } else {
-      setFlash({ correct: false, text: `${question.prompt} = ${question.answer.join(` ${question.separator} `)}` });
+      // Printed with the same minus sign the prompt uses, not a hyphen.
+      const shown = question.answer
+        .map((n) => (n < 0 ? `\u2212${-n}` : `${n}`))
+        .join(question.separator === ":" ? " : " : question.separator);
+      // "3/4 = … %" reads as "3/4 = 75 %"; a prompt without a blank gets "= answer".
+      const text = question.prompt.includes("…")
+        ? question.prompt.replace("…", shown)
+        : `${question.prompt} = ${shown}`;
+      setFlash({ correct: false, text });
     }
     indexRef.current += 1;
     nextQuestion(indexRef.current);
@@ -105,7 +113,12 @@ export function DrillPlayer({
     if (event.key === "Enter") {
       event.preventDefault();
       submit();
-    } else if ((event.key === ":" || event.key === " ") && index < inputs.length - 1) {
+    } else if (
+      // The key a student naturally types between the parts — ":" in a ratio,
+      // "/" in a fraction — moves on to the next box, as does a space.
+      (event.key === ":" || event.key === " " || event.key === question?.separator) &&
+      index < inputs.length - 1
+    ) {
       event.preventDefault();
       boxRefs.current[index + 1]?.focus();
     }
@@ -182,11 +195,15 @@ export function DrillPlayer({
               }}
               value={value}
               onChange={(event) => {
-                const digits = event.target.value.replace(/\D/g, "").slice(0, 4);
+                // Digits only — plus one leading minus for a skill whose answers can be negative.
+                const raw = event.target.value.replace(/\u2212/g, "-");
+                const digits = "signed" in definition && definition.signed
+                  ? raw.replace(/(?!^-)\D/g, "").slice(0, 5)
+                  : raw.replace(/\D/g, "").slice(0, 4);
                 setInputs((prev) => prev.map((v, j) => (j === i ? digits : v)));
               }}
               onKeyDown={(event) => onBoxKey(i, event)}
-              inputMode="numeric"
+              inputMode={"signed" in definition && definition.signed ? "text" : "numeric"}
               autoComplete="off"
               aria-label={t("drill.answerAria", { n: i + 1 })}
               className="h-14 w-20 rounded-lg border border-zinc-300 text-center text-2xl font-semibold tabular-nums focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
