@@ -11,6 +11,7 @@ import { parseVideoUrl } from "@/lib/blocks/video";
 import type { BlockType } from "@/generated/prisma/enums";
 import { CodeEditorBlock } from "./CodeEditorBlock";
 import { VizBlock } from "@/components/viz/VizBlock";
+import { PdfFlipViewer } from "./PdfFlipViewer";
 
 function MarkdownRenderer({ markdown }: { markdown: string }) {
   return (
@@ -92,10 +93,10 @@ async function FileDownloadRow({
 }
 
 /**
- * In-page PDF viewer. The iframe points at the access-checked route in inline
- * mode, so the signed URL is still short-lived and enrollment-gated. Mobile
- * browsers render framed PDFs badly (iOS shows page one and stops), so small
- * screens get an open-in-a-tab button instead of a broken-looking frame.
+ * In-page PDF reader. The pages are fetched through the access-checked route,
+ * so the signed URL stays short-lived and enrollment-gated, and drawn by
+ * pdf.js — see PdfFlipViewer for why it isn't the browser's own viewer in a
+ * frame. The header keeps the open-in-a-tab and download links either way.
  */
 function PdfViewer({
   blockId,
@@ -135,20 +136,7 @@ function PdfViewer({
           Download ↓
         </a>
       </figcaption>
-      <iframe
-        src={`/api/files/${blockId}?inline=1`}
-        title={fileName}
-        loading="lazy"
-        className="hidden h-[70vh] min-h-100 w-full bg-zinc-100 sm:block"
-      />
-      <a
-        href={`/api/files/${blockId}?inline=1`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 bg-zinc-50 px-4 py-6 text-sm font-medium text-blue-700 sm:hidden"
-      >
-        Open PDF ↗
-      </a>
+      <PdfFlipViewer blockId={blockId} fileName={fileName} />
     </figure>
   );
 }
