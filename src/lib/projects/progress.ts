@@ -68,6 +68,28 @@ export function withStepFiles(files: ProjectFiles, step: LoadedStep | null): Pro
   return next;
 }
 
+/** A step of the answer key: the whole program once the step is done, and which files it touched. */
+export type KeyStep = { files: ProjectFiles; changed: string[] } | null;
+
+/**
+ * The answer key, step by step, for the tutor: each step's reference solution
+ * merged onto the previous step's finished program, the way a student builds
+ * it. Null for a step with no stored solution (a project applied before keys
+ * were stored), and for every step after it, since they build on it.
+ */
+export function answerKey(projectFiles: unknown, steps: LoadedStep[]): KeyStep[] {
+  let files: ProjectFiles | null = starterFiles(projectFiles);
+  return steps.map((step) => {
+    const solution = step.step.solution;
+    if (!files || !solution) {
+      files = null;
+      return null;
+    }
+    files = { ...withStepFiles(files, step), ...solution };
+    return { files, changed: Object.keys(solution) };
+  });
+}
+
 /** Failed checks by step id, read defensively from the JSON column. */
 export function failedChecksOf(value: Prisma.JsonValue): Record<string, number> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};

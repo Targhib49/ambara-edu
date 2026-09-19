@@ -28,6 +28,7 @@ npx tsx scripts/project.ts validate content/projects/<file>.ts   # no database n
 npx tsx scripts/project.ts plan     content/projects/<file>.ts   # what apply/publish would change
 npx tsx scripts/project.ts apply    content/projects/<file>.ts   # create it as a DRAFT
 npx tsx scripts/project.ts publish  content/projects/<file>.ts   # publish it, archive what it replaces
+npx tsx scripts/project.ts key      content/projects/<file>.ts   # update only the tutor's answer key
 ```
 
 - **`validate`** walks the project exactly as a student would, applying each
@@ -45,6 +46,16 @@ npx tsx scripts/project.ts publish  content/projects/<file>.ts   # publish it, a
 - **`publish`** publishes it and archives the quizzes listed in `replaces`:
   each becomes a draft named `[Arsip] …`, detached from its lesson, with its
   submissions kept. Both happen in one transaction.
+
+- **`key`** rewrites only the answer key (each step's `solution`) on a project
+  that already exists, even a published one: students never see it and
+  nothing they're checked against changes. It refuses if the steps' titles or
+  order differ from the file — that needs a new project, not a key update.
+
+The answer key is stored with each step and shown only to tutors: step by
+step on the project's page (the whole program once the step is done, with the
+files it changed marked), as the finished program on each review, and as an
+*Isi dengan kunci* button in the preview for walking through the project.
 
 The database is shared with production. `apply` and `publish` refuse to run on
 a project that doesn't validate, write a JSON backup to `backups/projects/`

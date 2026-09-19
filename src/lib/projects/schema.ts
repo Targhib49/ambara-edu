@@ -84,6 +84,12 @@ export const projectStepSchema = z.object({
   lessonId: z.string().uuid().optional(),
   /** Files that appear in the student's project when this step opens, e.g. a data.py to import. */
   addFiles: z.record(projectFileNameSchema, z.string()).default({}),
+  /**
+   * The answer key for the tutor: the files this step changes or adds, as
+   * they are once it's done. Never sent to a student — their pages pick the
+   * fields they show, and the checks come from `tests`.
+   */
+  solution: z.record(projectFileNameSchema, z.string()).optional(),
 });
 export type ProjectStep = z.infer<typeof projectStepSchema>;
 

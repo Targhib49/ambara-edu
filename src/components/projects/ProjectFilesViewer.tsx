@@ -6,10 +6,14 @@ import { ENTRY_FILE } from "@/lib/projects/schema";
 
 const noop = () => {};
 
-/** A finished project's files, read-only, one tab per file — what the tutor reads when reviewing. */
-export function ProjectFilesViewer({ files }: { files: Record<string, string> }) {
+/**
+ * A project's files, read-only, one tab per file — a student's finished work
+ * or the answer key. `changed` marks the files a step touched, and the first
+ * of them opens first.
+ */
+export function ProjectFilesViewer({ files, changed = [] }: { files: Record<string, string>; changed?: string[] }) {
   const names = Object.keys(files).sort((a, b) => (a === ENTRY_FILE ? -1 : b === ENTRY_FILE ? 1 : a.localeCompare(b)));
-  const [active, setActive] = useState(names[0] ?? ENTRY_FILE);
+  const [active, setActive] = useState(names.find((n) => changed.includes(n)) ?? names[0] ?? ENTRY_FILE);
   return (
     <div className="overflow-hidden rounded-xl border border-zinc-300 bg-white">
       <div className="flex overflow-x-auto border-b border-zinc-200 bg-zinc-50">
@@ -23,6 +27,7 @@ export function ProjectFilesViewer({ files }: { files: Record<string, string> })
             }`}
           >
             {name}
+            {changed.includes(name) && <span className="ml-1 text-blue-600" aria-hidden>●</span>}
           </button>
         ))}
       </div>

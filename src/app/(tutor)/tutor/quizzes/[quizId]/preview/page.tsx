@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getT } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ProjectPlayer, type PlayerStep, type PreviewData } from "@/components/projects/ProjectPlayer";
-import { currentStep, loadSteps, starterFiles, withStepFiles } from "@/lib/projects/progress";
+import { answerKey, currentStep, loadSteps, starterFiles, withStepFiles } from "@/lib/projects/progress";
 import { stepHints } from "@/lib/projects/schema";
 
 /**
@@ -37,6 +37,7 @@ export default async function ProjectPreviewPage({ params }: { params: Promise<{
   const preview: PreviewData = {
     runs: Object.fromEntries(steps.map((s) => [s.id, [{ ...s.step.example, label: "" }, ...s.step.tests]])),
     addFiles: Object.fromEntries(steps.map((s) => [s.id, s.step.addFiles])),
+    keys: Object.fromEntries(answerKey(quiz.projectFiles, steps).flatMap((k, i) => (k ? [[steps[i].id, k.files]] : []))),
   };
 
   return (

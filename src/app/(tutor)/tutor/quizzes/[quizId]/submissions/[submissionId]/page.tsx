@@ -9,7 +9,7 @@ import { ReviewForm } from "./ReviewForm";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ProjectFilesViewer } from "@/components/projects/ProjectFilesViewer";
 import { ProjectReviewForm } from "./ProjectReviewForm";
-import { loadSteps } from "@/lib/projects/progress";
+import { answerKey, loadSteps } from "@/lib/projects/progress";
 import { projectStepResponseSchema } from "@/lib/projects/schema";
 
 export default async function SubmissionReviewPage({
@@ -54,6 +54,8 @@ export default async function SubmissionReviewPage({
       const grade = gradeQuestion({ type: "PROJECT_STEP", points: s.points, correctAnswer: s.step }, answer?.response ?? null);
       return { ...s, failedChecks: response.success ? response.data.failedChecks : 0, earned: grade.earnedPoints };
     });
+    // The finished program from the answer key, to read the student's against.
+    const finalKey = answerKey(submission.quiz.projectFiles, loadSteps(submission.quiz.questions)).at(-1) ?? null;
     const autoScore = submission.autoScore ?? 0;
     const currentScore =
       submission.status === "REVIEWED" ? Math.round((autoScore + (submission.manualScore ?? 0)) * 100) / 100 : autoScore;
@@ -104,6 +106,15 @@ export default async function SubmissionReviewPage({
             <p className="text-sm text-zinc-500">{t("projectReview.noFiles")}</p>
           )}
         </section>
+
+        {finalKey && (
+          <details className="group space-y-2">
+            <summary className="cursor-pointer font-medium text-blue-700 hover:underline">{t("projectKey.final")}</summary>
+            <div className="pt-2">
+              <ProjectFilesViewer files={finalKey.files} />
+            </div>
+          </details>
+        )}
 
         <ProjectReviewForm
           submissionId={submission.id}

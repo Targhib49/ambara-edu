@@ -7,6 +7,7 @@
  *   npx tsx scripts/project.ts apply <file>       create the project as a DRAFT
  *        [--replace-draft]                        …replacing a draft of it nobody has opened
  *   npx tsx scripts/project.ts publish <file>     publish it and archive the quizzes it replaces
+ *   npx tsx scripts/project.ts key <file>         update only the tutor's answer key, even once published
  *
  * The database is shared with production, so apply and publish refuse to run
  * on a project that doesn't validate, and write a JSON backup first.
@@ -333,12 +334,55 @@ async function publish(def: ProjectDefinition) {
   }
 }
 
+/**
+ * Writes each step's reference solution — the tutor's answer key — into the
+ * stored project, touching nothing else. It works on a published project with
+ * students in it because students never see the key and nothing they're
+ * checked against changes; so it insists the steps are the same ones, in the
+ * same order.
+ */
+async function key(def: ProjectDefinition) {
+  const db = database();
+  try {
+    const where = await locate(db, def);
+    if (!where.existing) throw new Error(`"${def.title}" doesn't exist yet — run apply first`);
+    const questions = await db.question.findMany({
+      where: { quizId: where.existing.id, type: "PROJECT_STEP" },
+      orderBy: { order: "asc" },
+      select: { id: true, correctAnswer: true },
+    });
+    if (questions.length !== def.steps.length) {
+      throw new Error(`the stored project has ${questions.length} steps and the file ${def.steps.length} — the steps changed, so key alone can't update it`);
+    }
+    const updates = questions.map((q, i) => {
+      const stored = q.correctAnswer as { title?: string } | null;
+      if (stored?.title !== def.steps[i].title) {
+        throw new Error(`step ${i + 1} is "${stored?.title}" in the database but "${def.steps[i].title}" in the file — the steps changed`);
+      }
+      return { id: q.id, correctAnswer: { ...(q.correctAnswer as object), solution: def.steps[i].solution } };
+    });
+
+    const file = backup("key", { quizId: where.existing.id, questions });
+    console.log(`Backed up the steps to ${path.relative(process.cwd(), file)}`);
+    // All or nothing, with room for a slow connection to the shared database.
+    await db.$transaction(
+      async (tx) => {
+        for (const u of updates) await tx.question.update({ where: { id: u.id }, data: { correctAnswer: u.correctAnswer } });
+      },
+      { timeout: 60_000 }
+    );
+    console.log(`✓ Stored the answer key for ${updates.length} steps of "${def.title}" (${where.existing.status}).`);
+  } finally {
+    await db.$disconnect();
+  }
+}
+
 // ---------------------------------------------------------------- main
 
 async function main() {
   const [command, file, ...flags] = process.argv.slice(2);
-  if (!command || !file || !["validate", "plan", "apply", "publish"].includes(command)) {
-    console.error("usage: npx tsx scripts/project.ts <validate|plan|apply|publish> <definition file> [--replace-draft]");
+  if (!command || !file || !["validate", "plan", "apply", "publish", "key"].includes(command)) {
+    console.error("usage: npx tsx scripts/project.ts <validate|plan|apply|publish|key> <definition file> [--replace-draft]");
     process.exit(2);
   }
   const def = await loadDefinition(file);
@@ -351,6 +395,7 @@ async function main() {
   }
   console.log();
   if (command === "apply") return apply(def, flags.includes("--replace-draft"));
+  if (command === "key") return key(def);
   return publish(def);
 }
 

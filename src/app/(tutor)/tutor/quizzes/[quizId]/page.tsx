@@ -13,6 +13,9 @@ import { getT } from "@/lib/i18n/server";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { QuestionsSection } from "@/components/quiz/QuestionsSection";
+import { ProjectAnswerKey, type AnswerKeyStep } from "@/components/projects/ProjectAnswerKey";
+import { answerKey, loadSteps } from "@/lib/projects/progress";
+import { stepHints } from "@/lib/projects/schema";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { QuizPlacementFields } from "@/components/quiz/QuizPlacementFields";
@@ -64,6 +67,25 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
   // the page already when the tutor picks Mixed review.
   const reviewPoolSize = (await reviewPool(quiz.id)).length;
   const unpracticable = quiz.questions.length - practicableIds.size;
+
+  // A project's steps with the answer key, in place of the question list.
+  let keySteps: AnswerKeyStep[] = [];
+  if (quiz.style === "PROJECT") {
+    const steps = loadSteps(quiz.questions);
+    const key = answerKey(quiz.projectFiles, steps);
+    keySteps = steps.map((s, i) => ({
+      id: s.id,
+      stage: s.step.stage,
+      title: s.step.title,
+      points: s.points,
+      instruction: s.instruction,
+      example: s.step.example,
+      inputTests: s.step.tests.filter((c) => !c.script).length,
+      functionChecks: s.step.tests.filter((c) => c.script).length,
+      hints: stepHints(s.step),
+      key: key[i],
+    }));
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8">
@@ -304,8 +326,12 @@ export default async function TutorQuizDetailPage({ params }: { params: Promise<
         </section>
       ) : (
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">{t("quizDetail.questions")}</h2>
-        <QuestionsSection questions={quiz.questions} practice={!isGradedStyle(quiz.style)} />
+        <h2 className="text-lg font-semibold">{quiz.style === "PROJECT" ? t("projectKey.heading") : t("quizDetail.questions")}</h2>
+        {quiz.style === "PROJECT" ? (
+          <ProjectAnswerKey steps={keySteps} />
+        ) : (
+          <QuestionsSection questions={quiz.questions} practice={!isGradedStyle(quiz.style)} />
+        )}
 
         {/* A project's steps are written with the project, not added one type at a time. */}
         {quiz.style === "PROJECT" ? (

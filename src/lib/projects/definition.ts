@@ -111,6 +111,7 @@ export function toStoredStep(step: DefinitionStep, lessonId?: string) {
     hints: step.hints,
     lessonId,
     addFiles: step.addFiles,
+    solution: step.solution,
   });
 }
 

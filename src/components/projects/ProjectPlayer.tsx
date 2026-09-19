@@ -21,6 +21,8 @@ type RunOutput = { output: string; error: string | null } | null;
 export type PreviewData = {
   runs: Record<string, ProjectCheck[]>;
   addFiles: Record<string, Record<string, string>>;
+  /** The answer key: the whole program once each step is done, to fill in and step through. */
+  keys?: Record<string, Record<string, string>>;
 };
 
 const SAVE_LABEL = {
@@ -164,6 +166,15 @@ export function ProjectPlayer({
     updateFiles({ ...filesRef.current, [name]: checkpoint[name] });
     setNotice({ tone: "info", text: t("project.restored", { name }) });
   };
+  // Preview only: jump to the answer key, so a tutor can walk the whole project quickly.
+  const previewKey = preview && current ? preview.keys?.[current.id] : undefined;
+  const fillKey = () => {
+    if (!previewKey) return;
+    updateFiles({ ...previewKey });
+    setView("code");
+    setNotice({ tone: "info", text: t("projectKey.filled") });
+  };
+
   const canRestore = !complete && activeFile in checkpoint && checkpoint[activeFile] !== files[activeFile];
 
   // ---- run and check
@@ -319,6 +330,16 @@ export function ProjectPlayer({
           >
             {preview ? t("project.previewNotSaved") : complete ? t("project.readOnly") : t(SAVE_LABEL[saveState])}
           </span>
+          {previewKey && (
+            <button
+              type="button"
+              onClick={fillKey}
+              title={t("projectKey.fillTitle")}
+              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
+            >
+              {t("projectKey.fill")}
+            </button>
+          )}
           {!complete && current && (
             <button
               type="button"
