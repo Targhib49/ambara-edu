@@ -1301,6 +1301,7 @@ export const MESSAGES = {
   "qEditor.sampleAnswer": { ID: "jawaban", EN: "answer" },
   "qEditor.explanationPractice": { ID: "Pembahasan (ditampilkan setelah jawaban benar, atau saat siswa minta pembahasan)", EN: "Explanation (shown after a right answer, or when the student asks for the solution)" },
   "outline.overview": { ID: "Ringkasan", EN: "Overview" },
+  "outline.projectBadge": { ID: "Proyek", EN: "Project" },
   "quizDuplicate.button": { ID: "Duplikat sebagai\u2026", EN: "Duplicate as\u2026" },
   "quizDuplicate.title": { ID: "Duplikat quiz", EN: "Duplicate quiz" },
   "quizDuplicate.description": { ID: "Salin {n} pertanyaan ke quiz baru, biasanya dengan gaya lain. Hasil dan progres siswa tidak ikut disalin.", EN: "Copies the {n} questions into a new quiz, usually in another style. Students' results and progress aren't copied." },

@@ -4,6 +4,7 @@ import { requireStudent } from "@/lib/auth";
 import { SidebarNav, type SidebarSection } from "@/components/ui/SidebarNav";
 import { SidebarShell } from "@/components/ui/SidebarShell";
 import { getT } from "@/lib/i18n/server";
+import { isGradedStyle } from "@/lib/quiz/styles";
 
 export default async function StudentTrackLayout({
   children,
@@ -31,6 +32,20 @@ export default async function StudentTrackLayout({
               progress: { where: { studentId: student.id }, select: { completedAt: true } },
             },
           },
+          // The chapter's own quizzes — a chapter test or a guided project —
+          // listed after its lessons, as on the course page. Quizzes inside a
+          // lesson stay there, a click away, so the sidebar doesn't double up.
+          quizzes: {
+            where: { status: "PUBLISHED", lessonId: null },
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              title: true,
+              style: true,
+              submissions: { where: { studentId: student.id }, select: { id: true } },
+              practiceProgress: { where: { studentId: student.id }, select: { completedAt: true } },
+            },
+          },
         },
       },
     },
@@ -40,17 +55,26 @@ export default async function StudentTrackLayout({
   const sections: SidebarSection[] = [
     { items: [{ href: `/courses/${course.id}`, label: t("outline.overview") }] },
     ...course.chapters
-      .filter((c) => c.lessons.length > 0)
+      .filter((c) => c.lessons.length > 0 || c.quizzes.length > 0)
       .map((c) => {
-        const done = c.lessons.filter((l) => l.progress[0]?.completedAt != null).length;
-        return {
-          title: c.title,
-          meta: `${done}/${c.lessons.length}`,
-          items: c.lessons.map((l) => ({
+        const items = [
+          ...c.lessons.map((l) => ({
             href: `/courses/${course.id}/lessons/${l.id}`,
             label: l.title,
             done: l.progress[0]?.completedAt != null,
           })),
+          ...c.quizzes.map((q) => ({
+            href: `/quizzes/${q.id}`,
+            label: q.title,
+            badge: q.style === "PROJECT" ? t("outline.projectBadge") : t("quizList.chapterTest"),
+            // Graded work is done once submitted (a project, once finished); practice once completed.
+            done: isGradedStyle(q.style) ? q.submissions.length > 0 : q.practiceProgress[0]?.completedAt != null,
+          })),
+        ];
+        return {
+          title: c.title,
+          meta: `${items.filter((i) => i.done).length}/${items.length}`,
+          items,
         };
       }),
   ];

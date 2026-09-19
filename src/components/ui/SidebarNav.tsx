@@ -30,6 +30,8 @@ export function SidebarNav({ sections }: { sections: SidebarSection[] }) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    // Long titles are cut off; the full one shows on hover.
+                    title={item.label}
                     className={`flex items-center gap-2 rounded-md border-l-2 px-3 py-2 text-sm ${
                       active
                         ? "border-blue-600 bg-blue-50 font-medium text-blue-700"
