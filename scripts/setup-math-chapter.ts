@@ -24,8 +24,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { DRILL_SKILLS } from "../src/lib/drills/registry";
 import { questionRow, type ChapterContent } from "./content/math-types";
 import { BAB2_CHAPTER } from "./content/math-bab2-chapter";
+import { BAB3_CHAPTER } from "./content/math-bab3-chapter";
 
-const CONTENT: Record<string, ChapterContent> = { "2": BAB2_CHAPTER };
+const CONTENT: Record<string, ChapterContent> = { "2": BAB2_CHAPTER, "3": BAB3_CHAPTER };
 
 const BACKUP_DIR = path.resolve(__dirname, "../../Elementary Maths and Python/Mid Math/Buku/backups");
 
@@ -83,7 +84,8 @@ async function main() {
   const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
   try {
     const course = await db.course.findFirstOrThrow({ where: { title: { contains: "Intermediate Math", mode: "insensitive" } } });
-    const chapter = await db.chapter.findFirstOrThrow({ where: { courseId: course.id, title: content.chapterTitle } });
+    // Match by number: the lesson script may not have renamed the chapter yet.
+    const chapter = await db.chapter.findFirstOrThrow({ where: { courseId: course.id, title: { startsWith: `Bab ${bab}:` } } });
     const existing = await db.quiz.findMany({
       where: { chapterId: chapter.id, lessonId: null },
       orderBy: { createdAt: "asc" },

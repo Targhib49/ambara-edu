@@ -26,8 +26,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { blockDataSchemas } from "../src/lib/blocks/schema";
 import { questionRow, type BabContent, type Block } from "./content/math-types";
 import { BAB2 } from "./content/math-bab2";
+import { BAB3 } from "./content/math-bab3";
 
-const CONTENT: Record<string, BabContent> = { "2": BAB2 };
+const CONTENT: Record<string, BabContent> = { "2": BAB2, "3": BAB3 };
 
 const BOOK_DIR = path.resolve(__dirname, "../../Elementary Maths and Python/Mid Math/Buku");
 const BACKUP_DIR = path.join(BOOK_DIR, "backups");
