@@ -23,6 +23,8 @@ export type CourseItem = {
   /** Graded quizzes only: percentage once graded, and how the submission stands. */
   scorePct: number | null;
   status: SubmissionStatus | null;
+  /** A guided project that's started but not finished: steps passed so far. */
+  projectSteps?: { passed: number; total: number } | null;
 };
 
 /**
@@ -52,7 +54,17 @@ type QuizInput = {
   questions: { points: number }[];
   submissions: { status: SubmissionStatus; autoScore: number | null; manualScore: number | null }[];
   practiceProgress: { completedAt: Date | null }[];
+  /** Guided projects only: the student's progress, if they've opened it. */
+  projectProgress?: { passedIds: unknown }[];
 };
+
+/** Steps a student has passed in a started project, or null if it isn't one they've started. */
+export function projectStepsOf(quiz: { style: QuizStyle; questions: unknown[]; projectProgress?: { passedIds: unknown }[] }) {
+  const progress = quiz.style === "PROJECT" ? quiz.projectProgress?.[0] : undefined;
+  if (!progress) return null;
+  const passed = Array.isArray(progress.passedIds) ? progress.passedIds.length : 0;
+  return { passed: Math.min(passed, quiz.questions.length), total: quiz.questions.length };
+}
 
 type LessonInput = {
   id: string;
@@ -86,11 +98,13 @@ function quizItem(quiz: QuizInput, labelKey: MessageKey): CourseItem {
         : (submission.autoScore ?? 0);
   return {
     ...base,
-    labelKey,
+    // A guided project says so, wherever it sits in the chapter.
+    labelKey: quiz.style === "PROJECT" ? quizStyleKey(quiz.style) : labelKey,
     complete: submission !== null,
     optional: false,
     scorePct: submission !== null && totalPoints > 0 ? ((score ?? 0) / totalPoints) * 100 : null,
     status: submission?.status ?? null,
+    projectSteps: submission === null ? projectStepsOf(quiz) : null,
   };
 }
 

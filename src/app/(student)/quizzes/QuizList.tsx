@@ -30,6 +30,8 @@ export type StudentQuizRow = {
   attemptsRemaining: number | null;
   status: SubmissionStatus | null;
   scorePct: number | null;
+  /** A guided project that's started but not finished: steps passed so far. */
+  projectSteps: { passed: number; total: number } | null;
 };
 
 const makeTabs = (t: Translate): Tab<StudentQuizRow>[] => [
@@ -49,7 +51,13 @@ const statusLabel = (q: StudentQuizRow, t: Translate) =>
       : t("status.notStarted")
     : q.status
       ? t(submissionStatusKey(q.status))
-      : t("status.notStarted");
+      : q.projectSteps
+        ? t("project.inProgressSteps", { n: q.projectSteps.passed, total: q.projectSteps.total })
+        : t("status.notStarted");
+
+/** How big it is: a project counts steps, not questions. */
+const sizeLabel = (q: StudentQuizRow, t: Translate) =>
+  q.style === "PROJECT" ? t("quizList.steps", { n: q.questionCount }) : t("quizList.questions", { n: q.questionCount });
 
 const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
   {
@@ -73,7 +81,7 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
             {statusLabel(q, t)} · {q.lessonTitle ?? t("quizList.chapterTest")} ·{" "}
             {q.style === "DRILL"
               ? t("drill.listDetails", { seconds: q.drillSeconds ?? DRILL_DEFAULTS.drillSeconds, target: q.drillTarget ?? DRILL_DEFAULTS.drillTarget })
-              : t("quizList.questions", { n: q.questionCount })}
+              : sizeLabel(q, t)}
             {q.scorePct !== null && ` · ${Math.round(q.scorePct)}%`}
           </span>
         </span>
@@ -109,7 +117,7 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
         q.style === "DRILL"
           ? t("drill.listDetails", { seconds: q.drillSeconds ?? DRILL_DEFAULTS.drillSeconds, target: q.drillTarget ?? DRILL_DEFAULTS.drillTarget })
           : q.graded
-            ? t("quizList.questions", { n: q.questionCount })
+            ? sizeLabel(q, t)
             : t("quizList.practiceDetails", { n: q.questionCount }),
         q.graded ? t("quizTable.pts", { n: q.totalPoints }) : null,
         q.timeLimitMinutes ? t("quizList.minutes", { n: q.timeLimitMinutes }) : null,
@@ -128,7 +136,7 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
                 target: q.drillTarget ?? DRILL_DEFAULTS.drillTarget,
               })
             : q.graded
-              ? t("quizList.questionsPoints", { n: q.questionCount, points: q.totalPoints })
+              ? t(q.style === "PROJECT" ? "quizList.stepsPoints" : "quizList.questionsPoints", { n: q.questionCount, points: q.totalPoints })
               : t("quizList.practiceDetails", { n: q.questionCount })}
         </span>
         {(q.timeLimitMinutes || q.attemptsRemaining !== null) && (
@@ -156,7 +164,9 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
               : "bg-zinc-100 text-zinc-600"
             : q.status
               ? SUBMISSION_STATUS_BADGE_CLASS[q.status]
-              : "bg-zinc-100 text-zinc-600"
+              : q.projectSteps
+                ? "bg-blue-50 text-blue-700"
+                : "bg-zinc-100 text-zinc-600"
         }`}
       >
         {statusLabel(q, t)}

@@ -79,6 +79,7 @@ async function ItemRow({ item, isNext }: { item: CourseItem; isNext: boolean }) 
             {t(item.labelKey)}
             {item.optional && item.complete && ` · ${t("outline.practiceDone")}`}
             {item.status && ` · ${t(submissionStatusKey(item.status))}`}
+            {item.projectSteps && ` · ${t("project.inProgressSteps", { n: item.projectSteps.passed, total: item.projectSteps.total })}`}
             {item.scorePct !== null &&
               ` · ${t("outline.grade")}: ${item.scorePct.toFixed(item.scorePct % 1 === 0 ? 0 : 2)}%`}
           </span>

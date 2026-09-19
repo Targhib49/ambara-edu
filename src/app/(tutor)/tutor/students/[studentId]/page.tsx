@@ -9,6 +9,7 @@ import { ScheduleSessionForm } from "@/components/sessions/ScheduleSessionForm";
 import { StatusBadge } from "@/components/sessions/StatusBadge";
 import { formatSessionShort, nowMs } from "@/lib/sessions/format";
 import { summarizeCourseProgress } from "@/lib/progress";
+import { failedChecksOf } from "@/lib/projects/progress";
 import { toLocalParts } from "@/lib/scheduling";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import { cardCls } from "@/components/ui/styles";
@@ -120,6 +121,37 @@ export default async function StudentDetailPage({
   // Sessions reference the student with no cascade, so the database refuses to
   // delete a student who has any. Checked here so the button never offers it.
   const sessionCount = await db.session.count({ where: { studentId } });
+
+  // Guided projects the student has started but not finished. A finished one
+  // is a submission, listed with the quiz results; until then this is the only
+  // place on the student's page that shows it.
+  const openProjects = (
+    await db.projectProgress.findMany({
+      where: { studentId, completedAt: null, quiz: { status: "PUBLISHED" } },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        passedIds: true,
+        failedChecks: true,
+        updatedAt: true,
+        quiz: {
+          select: {
+            id: true,
+            title: true,
+            chapter: { select: { title: true, course: { select: { title: true } } } },
+            _count: { select: { questions: { where: { type: "PROJECT_STEP" } } } },
+          },
+        },
+      },
+    })
+  ).map((p) => ({
+    quizId: p.quiz.id,
+    title: p.quiz.title,
+    where: [p.quiz.chapter?.course.title, p.quiz.chapter?.title].filter(Boolean).join(" › "),
+    passed: Math.min(Array.isArray(p.passedIds) ? p.passedIds.length : 0, p.quiz._count.questions),
+    total: p.quiz._count.questions,
+    failed: Object.values(failedChecksOf(p.failedChecks)).reduce((n, f) => n + f, 0),
+    updatedLabel: dateFmt.format(p.updatedAt),
+  }));
 
   const now = nowMs();
 
@@ -285,6 +317,32 @@ export default async function StudentDetailPage({
               )}
             </section>
 
+            {openProjects.length > 0 && (
+              <section className={cardCls}>
+                <SectionHead title={t("studentPage.openProjects")} />
+                <ul className="divide-y divide-zinc-100">
+                  {openProjects.map((p) => (
+                    <li key={p.quizId}>
+                      <Link href={`/tutor/quizzes/${p.quizId}`} className="block px-5 py-3 hover:bg-zinc-50">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="truncate text-sm font-medium text-zinc-900">{p.title}</span>
+                          <span className="shrink-0 text-xs tabular-nums text-zinc-500">
+                            {t("projectProgress.steps", { n: p.passed, total: p.total })}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 truncate text-xs text-zinc-500">
+                          {p.where || "—"} · {t("projectProgress.failed", { n: p.failed })} · {t("studentPage.lastActive", { date: p.updatedLabel })}
+                        </p>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                          <div className="h-full rounded-full bg-blue-600" style={{ width: `${p.total ? (p.passed / p.total) * 100 : 0}%` }} />
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             <section className={cardCls}>
               <SectionHead title={t("studentPage.recentQuizResults")} href={`${base}?tab=quizzes`} />
               {quizRows.length === 0 ? (
@@ -361,14 +419,16 @@ function Stat({ label, value, sub, small }: { label: string; value: string; sub:
   );
 }
 
-async function SectionHead({ title, href }: { title: string; href: string }) {
+async function SectionHead({ title, href }: { title: string; href?: string }) {
   const t = await getT();
   return (
     <div className="flex items-center justify-between px-5 pb-2 pt-4">
       <h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
-      <Link href={href} className="text-xs font-medium text-blue-700 hover:underline">
-        {t("studentPage.viewAll")}
-      </Link>
+      {href && (
+        <Link href={href} className="text-xs font-medium text-blue-700 hover:underline">
+          {t("studentPage.viewAll")}
+        </Link>
+      )}
     </div>
   );
 }

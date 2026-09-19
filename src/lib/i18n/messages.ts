@@ -190,6 +190,9 @@ export const MESSAGES = {
   },
   "quizList.questions": { ID: "{n} soal", EN: "{n} questions" },
   "quizList.questionsPoints": { ID: "{n} soal · {points} poin", EN: "{n} questions · {points} pts" },
+  "quizList.steps": { ID: "{n} langkah", EN: "{n} steps" },
+  "quizList.stepsPoints": { ID: "{n} langkah · {points} poin", EN: "{n} steps · {points} pts" },
+  "project.inProgressSteps": { ID: "Sedang dikerjakan \u00b7 {n}/{total} langkah", EN: "In progress \u00b7 {n}/{total} steps" },
   "quizList.minutes": { ID: "{n} menit", EN: "{n} min" },
   "quizList.attemptsLeft": { ID: "sisa {n} percobaan", EN: "{n} attempts left" },
 
@@ -495,6 +498,8 @@ export const MESSAGES = {
   "studentPage.noCourses": { ID: "Belum terdaftar di course mana pun. Pakai \u201cTugaskan course\u201d di atas.", EN: "Not enrolled in any course yet. Use \u201cAssign course\u201d above." },
   "studentPage.recentQuizResults": { ID: "Hasil quiz terbaru", EN: "Recent quiz results" },
   "studentPage.noQuizzes": { ID: "Belum ada quiz yang dikirim.", EN: "No quizzes submitted yet." },
+  "studentPage.openProjects": { ID: "Proyek yang sedang dikerjakan", EN: "Projects in progress" },
+  "studentPage.lastActive": { ID: "terakhir {date}", EN: "last active {date}" },
   "studentPage.noSessions": { ID: "Belum ada sesi.", EN: "No sessions yet." },
   "studentPage.account": { ID: "Akun", EN: "Account" },
   "studentPage.deleteBlocked": { ID: "Ada {n} sesi tercatat yang disimpan sebagai riwayat mengajar kamu \u2014 jadi akun ini tidak bisa dihapus.", EN: "Has {n} session on record, which is kept as part of your teaching history \u2014 so this account can't be deleted." },

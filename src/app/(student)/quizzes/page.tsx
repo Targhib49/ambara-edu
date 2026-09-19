@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { isGradedStyle } from "@/lib/quiz/styles";
+import { projectStepsOf } from "@/lib/courseItems";
 import { requireStudent } from "@/lib/auth";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getT } from "@/lib/i18n/server";
@@ -24,6 +25,7 @@ export default async function StudentQuizzesPage() {
       submissions: { where: { studentId: student.id } },
       submissionAttempts: { where: { studentId: student.id }, select: { id: true } },
       practiceProgress: { where: { studentId: student.id }, select: { completedAt: true } },
+      projectProgress: { where: { studentId: student.id }, select: { passedIds: true } },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -56,6 +58,7 @@ export default async function StudentQuizzesPage() {
       attemptsRemaining:
         quiz.maxAttempts !== null ? Math.max(0, quiz.maxAttempts - attemptsUsed) : null,
       status: submission?.status ?? null,
+      projectSteps: submission === null ? projectStepsOf(quiz) : null,
       scorePct: submission && totalPoints > 0 ? ((score ?? 0) / totalPoints) * 100 : null,
     };
   });

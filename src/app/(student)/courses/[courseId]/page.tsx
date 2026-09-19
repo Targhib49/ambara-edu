@@ -54,6 +54,7 @@ export default async function StudentTrackPage({
                     select: { status: true, autoScore: true, manualScore: true },
                   },
                   practiceProgress: { where: { studentId: student.id }, select: { completedAt: true } },
+                  projectProgress: { where: { studentId: student.id }, select: { passedIds: true } },
                 },
               },
             },
@@ -77,6 +78,7 @@ export default async function StudentTrackPage({
       questions: { select: { points: true } },
       submissions: { where: { studentId: student.id }, select: { status: true, autoScore: true, manualScore: true } },
       practiceProgress: { where: { studentId: student.id }, select: { completedAt: true } },
+      projectProgress: { where: { studentId: student.id }, select: { passedIds: true } },
     },
   });
   const testsByChapter = new Map<string, typeof chapterTests>();
