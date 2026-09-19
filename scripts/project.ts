@@ -7,7 +7,8 @@
  *   npx tsx scripts/project.ts apply <file>       create the project as a DRAFT
  *        [--replace-draft]                        …replacing a draft of it nobody has opened
  *   npx tsx scripts/project.ts publish <file>     publish it and archive the quizzes it replaces
- *   npx tsx scripts/project.ts key <file>         update only the tutor's answer key, even once published
+ *   npx tsx scripts/project.ts sync <file>        update wording, hints and the answer key, even once published
+ *        [--dry-run]                              …listing what would change, writing nothing
  *
  * The database is shared with production, so apply and publish refuse to run
  * on a project that doesn't validate, and write a JSON backup first.
@@ -28,6 +29,7 @@ import {
   walkSteps,
   type ProjectDefinition,
 } from "../src/lib/projects/definition";
+import { projectStepSchema, type ProjectStep } from "../src/lib/projects/schema";
 
 const ARCHIVE_PREFIX = "[Arsip] ";
 const RUN_TIMEOUT_MS = 10_000;
@@ -335,13 +337,14 @@ async function publish(def: ProjectDefinition) {
 }
 
 /**
- * Writes each step's reference solution — the tutor's answer key — into the
- * stored project, touching nothing else. It works on a published project with
- * students in it because students never see the key and nothing they're
- * checked against changes; so it insists the steps are the same ones, in the
- * same order.
+ * Brings an existing project — even a published one with students in it — up
+ * to date with the file in everything a student isn't checked against: the
+ * instructions, hints, lesson links, and the tutor's answer key. The steps
+ * must be the same ones in the same order, and every step's example, hidden
+ * checks, added files and points must be unchanged; anything else needs a new
+ * project, not an update under students' feet.
  */
-async function key(def: ProjectDefinition) {
+async function sync(def: ProjectDefinition, dryRun: boolean) {
   const db = database();
   try {
     const where = await locate(db, def);
@@ -349,29 +352,49 @@ async function key(def: ProjectDefinition) {
     const questions = await db.question.findMany({
       where: { quizId: where.existing.id, type: "PROJECT_STEP" },
       orderBy: { order: "asc" },
-      select: { id: true, correctAnswer: true },
+      select: { id: true, prompt: true, points: true, correctAnswer: true },
     });
     if (questions.length !== def.steps.length) {
-      throw new Error(`the stored project has ${questions.length} steps and the file ${def.steps.length} — the steps changed, so key alone can't update it`);
+      throw new Error(`the stored project has ${questions.length} steps and the file ${def.steps.length} — the steps changed, so sync can't update it`);
     }
+    const checked = (step: ProjectStep) => JSON.stringify([step.example, step.tests, step.addFiles]);
     const updates = questions.map((q, i) => {
-      const stored = q.correctAnswer as { title?: string } | null;
-      if (stored?.title !== def.steps[i].title) {
-        throw new Error(`step ${i + 1} is "${stored?.title}" in the database but "${def.steps[i].title}" in the file — the steps changed`);
+      const fileStep = def.steps[i];
+      // Read through the schema, so defaults fill in the same way on both sides.
+      const parsed = projectStepSchema.safeParse(q.correctAnswer);
+      if (!parsed.success) throw new Error(`step ${i + 1} is stored in a shape that doesn't parse`);
+      const stored = parsed.data;
+      const next = toStoredStep(fileStep, where.stepLessonIds[i]);
+      if (stored.title !== fileStep.title) {
+        throw new Error(`step ${i + 1} is "${stored.title}" in the database but "${fileStep.title}" in the file — the steps changed`);
       }
-      return { id: q.id, correctAnswer: { ...(q.correctAnswer as object), solution: def.steps[i].solution } };
+      if (checked(stored) !== checked(next) || q.points !== fileStep.points) {
+        throw new Error(`step ${i + 1} ("${fileStep.title}") changes what students are checked against or its points — that needs a new project`);
+      }
+      const changed = [
+        q.prompt !== fileStep.instruction && "instruction",
+        JSON.stringify([stored.hint, stored.hints]) !== JSON.stringify([next.hint, next.hints]) && "hints",
+        stored.lessonId !== next.lessonId && "lesson link",
+        JSON.stringify(stored.solution) !== JSON.stringify(next.solution) && "answer key",
+      ].filter(Boolean);
+      return { id: q.id, title: fileStep.title, changed, prompt: fileStep.instruction, correctAnswer: next };
     });
 
-    const file = backup("key", { quizId: where.existing.id, questions });
+    const toWrite = updates.filter((u) => u.changed.length);
+    for (const u of toWrite) console.log(`  • ${u.title}: ${u.changed.join(", ")}`);
+    if (!toWrite.length) return console.log("Nothing to update — the project already matches the file.");
+    if (dryRun) return console.log("(dry run — nothing written)");
+
+    const file = backup("sync", { quizId: where.existing.id, questions });
     console.log(`Backed up the steps to ${path.relative(process.cwd(), file)}`);
     // All or nothing, with room for a slow connection to the shared database.
     await db.$transaction(
       async (tx) => {
-        for (const u of updates) await tx.question.update({ where: { id: u.id }, data: { correctAnswer: u.correctAnswer } });
+        for (const u of toWrite) await tx.question.update({ where: { id: u.id }, data: { prompt: u.prompt, correctAnswer: u.correctAnswer } });
       },
       { timeout: 60_000 }
     );
-    console.log(`✓ Stored the answer key for ${updates.length} steps of "${def.title}" (${where.existing.status}).`);
+    console.log(`✓ Updated ${toWrite.length} step(s) of "${def.title}" (${where.existing.status}).`);
   } finally {
     await db.$disconnect();
   }
@@ -381,8 +404,8 @@ async function key(def: ProjectDefinition) {
 
 async function main() {
   const [command, file, ...flags] = process.argv.slice(2);
-  if (!command || !file || !["validate", "plan", "apply", "publish", "key"].includes(command)) {
-    console.error("usage: npx tsx scripts/project.ts <validate|plan|apply|publish|key> <definition file> [--replace-draft]");
+  if (!command || !file || !["validate", "plan", "apply", "publish", "sync"].includes(command)) {
+    console.error("usage: npx tsx scripts/project.ts <validate|plan|apply|publish|sync> <definition file> [--replace-draft]");
     process.exit(2);
   }
   const def = await loadDefinition(file);
@@ -395,7 +418,7 @@ async function main() {
   }
   console.log();
   if (command === "apply") return apply(def, flags.includes("--replace-draft"));
-  if (command === "key") return key(def);
+  if (command === "sync") return sync(def, flags.includes("--dry-run"));
   return publish(def);
 }
 

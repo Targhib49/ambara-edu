@@ -356,8 +356,8 @@ const RINGKASAN = py`
 
 print("Jumlah siswa:", len(data_nilai))
 daftar_nama = []
-for nama in data_nilai:
-    daftar_nama.append(nama)
+for siswa in data_nilai:
+    daftar_nama.append(siswa)
 print("Daftar siswa:", ", ".join(daftar_nama))
 print()
 `;
@@ -737,8 +737,9 @@ Kumpulkan namanya ke sebuah list dulu, lalu gabungkan dengan \`", ".join(...)\`.
         { input: "Joko", expectedOutput: withSummary("Siswa tidak ditemukan") },
       ],
       hints: [
-        "for nama in data_nilai: menelusuri key-nya — nama-nama siswa.",
+        "for siswa in data_nilai: menelusuri key-nya — nama-nama siswa.",
         "print() tanpa isi mencetak baris kosong.",
+        "Output-nya selalu nilai Rina, apa pun input-nya? Loop-mu mungkin memakai nama variabel yang sama dengan hasil input() — misalnya for nama in data_nilai menimpa nama yang tadi dibaca. Pakai nama lain untuk variabel loop-nya (for siswa in …), atau baca input() setelah ringkasan dicetak.",
       ],
       solution: { "main.py": MAIN_2 },
     },

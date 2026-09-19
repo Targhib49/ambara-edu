@@ -28,7 +28,7 @@ npx tsx scripts/project.ts validate content/projects/<file>.ts   # no database n
 npx tsx scripts/project.ts plan     content/projects/<file>.ts   # what apply/publish would change
 npx tsx scripts/project.ts apply    content/projects/<file>.ts   # create it as a DRAFT
 npx tsx scripts/project.ts publish  content/projects/<file>.ts   # publish it, archive what it replaces
-npx tsx scripts/project.ts key      content/projects/<file>.ts   # update only the tutor's answer key
+npx tsx scripts/project.ts sync     content/projects/<file>.ts   # update wording, hints and the key, even once published
 ```
 
 - **`validate`** walks the project exactly as a student would, applying each
@@ -47,10 +47,12 @@ npx tsx scripts/project.ts key      content/projects/<file>.ts   # update only t
   each becomes a draft named `[Arsip] …`, detached from its lesson, with its
   submissions kept. Both happen in one transaction.
 
-- **`key`** rewrites only the answer key (each step's `solution`) on a project
-  that already exists, even a published one: students never see it and
-  nothing they're checked against changes. It refuses if the steps' titles or
-  order differ from the file — that needs a new project, not a key update.
+- **`sync`** updates a project that already exists — even a published one
+  with students in it — in everything students aren't checked against: the
+  instructions, hints, lesson links and the answer key. It refuses if the
+  steps' titles or order differ, or if any step's example, hidden checks,
+  added files or points changed; that needs a new project. Use it to add a
+  hint for a mistake students keep making.
 
 The answer key is stored with each step and shown only to tutors: step by
 step on the project's page (the whole program once the step is done, with the
