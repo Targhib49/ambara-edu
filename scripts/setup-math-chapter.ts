@@ -1,12 +1,15 @@
 /**
  * Adds an Intermediate Math bab's closing sequence (scripts/content/math-bab<N>-chapter.ts):
- * 2 practices → 2 try-outs (standar + pengayaan) → 1 exam, all chapter-level.
+ * practices (mastery, terpadu, drill) → 2 try-outs (standar + pengayaan) → 1 exam, all chapter-level.
  * The generalised form of scripts/setup-math-bab1-chapter.ts, for Bab 2 onward.
  *
  *   npx tsx scripts/setup-math-chapter.ts 2 validate   offline: every answer parses, points add up
  *   npx tsx scripts/setup-math-chapter.ts 2 plan       read-only: what exists, what would be created
  *   npx tsx scripts/setup-math-chapter.ts 2 apply      creates the quizzes as DRAFT
  *   npx tsx scripts/setup-math-chapter.ts 2 publish    publishes them and archives the ones they replace, in one transaction
+ *   npx tsx scripts/setup-math-chapter.ts 2 sync       after editing content that apply already created: rewrites the
+ *                                                      questions of changed quizzes nobody has submitted or practised,
+ *                                                      creates new ones as DRAFT, and re-stamps the order
  *
  * Chapter-level quizzes are listed by createdAt, so apply stamps them one
  * second apart in the content's order. Publish archives the replaced quizzes
@@ -30,7 +33,7 @@ const bab = process.argv[2] ?? "";
 const mode = process.argv[3] ?? "plan";
 const content = CONTENT[bab];
 if (!content) {
-  console.error(`usage: npx tsx scripts/setup-math-chapter.ts <${Object.keys(CONTENT).join("|")}> <validate|plan|apply|publish>`);
+  console.error(`usage: npx tsx scripts/setup-math-chapter.ts <${Object.keys(CONTENT).join("|")}> <validate|plan|apply|publish|sync>`);
   process.exit(1);
 }
 
@@ -75,7 +78,7 @@ function validate() {
 async function main() {
   validate();
   if (mode === "validate") return;
-  if (!["plan", "apply", "publish"].includes(mode)) throw new Error(`unknown mode "${mode}" — use validate | plan | apply | publish`);
+  if (!["plan", "apply", "publish", "sync"].includes(mode)) throw new Error(`unknown mode "${mode}" — use validate | plan | apply | publish | sync`);
 
   const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
   try {
@@ -127,6 +130,60 @@ async function main() {
         console.log(`✓ created DRAFT ${quiz.style} ${quiz.title}`);
       }
       console.log("\nReview them under Tutor → Quizzes, then run `publish`.");
+      return;
+    }
+
+    if (mode === "sync") {
+      if (!mine.length) throw new Error("nothing created yet — run apply first");
+      const full = await db.quiz.findMany({
+        where: { id: { in: mine.map((q) => q.id) } },
+        include: { questions: { orderBy: { order: "asc" } }, _count: { select: { submissions: true, practiceProgress: true } } },
+      });
+      const shape = (qs: { type: string; prompt: string; points: number; explanation: string | null; options: unknown; correctAnswer: unknown }[]) =>
+        JSON.stringify(qs.map((q) => [q.type, q.prompt, q.points, q.explanation ?? "", q.options, q.correctAnswer]));
+      const plan: { title: string; action: "keep" | "rewrite" | "create"; id?: string }[] = [];
+      for (const quiz of content.quizzes) {
+        const live = full.find((q) => q.title === quiz.title);
+        if (!live) {
+          plan.push({ title: quiz.title, action: "create" });
+          continue;
+        }
+        const wanted = quiz.questions.map((q) => ({ prompt: q.prompt, points: q.points, explanation: q.explanation, ...questionRow(q) }));
+        if (shape(live.questions) === shape(wanted) && live.style === quiz.style) {
+          plan.push({ title: quiz.title, action: "keep", id: live.id });
+          continue;
+        }
+        if (live._count.submissions || live._count.practiceProgress)
+          throw new Error(`"${quiz.title}" changed but already has ${live._count.submissions} submissions / ${live._count.practiceProgress} practice rows — not rewriting it`);
+        plan.push({ title: quiz.title, action: "rewrite", id: live.id });
+      }
+      for (const p of plan) console.log(`  ${p.action.padEnd(7)} ${p.title}`);
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
+      const file = path.join(BACKUP_DIR, `bab${bab}-before-sync-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+      fs.writeFileSync(file, JSON.stringify(full, null, 2));
+      console.log(`backup → ${file}`);
+
+      // Keep the chapter's order: stamp everything from the first quiz's createdAt, one second apart.
+      const base = Math.min(...full.map((q) => q.createdAt.getTime()));
+      await db.$transaction(async (tx) => {
+        for (const [i, quiz] of content.quizzes.entries()) {
+          const p = plan[i];
+          const createdAt = new Date(base + i * 1000);
+          const questions = quiz.questions.map((q, order) => ({ order, prompt: q.prompt, points: q.points, explanation: q.explanation, ...questionRow(q) }));
+          if (p.action === "create") {
+            await tx.quiz.create({
+              data: { chapterId: chapter.id, lessonId: null, title: quiz.title, style: quiz.style, status: "DRAFT", createdAt, ...quiz.settings, questions: { create: questions } },
+            });
+            continue;
+          }
+          if (p.action === "rewrite") {
+            await tx.question.deleteMany({ where: { quizId: p.id } });
+            await tx.quiz.update({ where: { id: p.id }, data: { style: quiz.style, ...quiz.settings, questions: { create: questions } } });
+          }
+          await tx.quiz.update({ where: { id: p.id }, data: { createdAt } });
+        }
+      }, { timeout: 60_000 });
+      console.log("\n✓ synced. New quizzes are DRAFT — run `publish` to publish them.");
       return;
     }
 

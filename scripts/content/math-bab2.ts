@@ -517,7 +517,7 @@ export const BAB2: BabContent = {
             "",
             "Lanjut ke **Sesi 11 — Latihan Mandiri** (10 soal, termasuk 1 soal kode). Untuk jawaban rupiah, tulis angkanya tanpa titik ribuan, misalnya `42000`.",
             "",
-            "Setelah itu, uji seluruh Bab 2 dengan **Latihan Penguasaan**, **Drill Kilat**, dua **Try Out**, dan **Ujian — Bab 2**. 🎉",
+            "Setelah itu, uji seluruh Bab 2 dengan **Latihan Penguasaan**, **Latihan Terpadu** (Bab 2 yang memakai ilmu Bab 1), **Drill Kilat**, dua **Try Out**, dan **Ujian — Bab 2**. 🎉",
           ].join("\n"),
         },
       ],

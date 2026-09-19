@@ -2,11 +2,17 @@
  * Intermediate Math — Bab 2: Bilangan Rasional, the chapter's closing sequence
  * (Sept 2026), read by scripts/setup-math-chapter.ts:
  *
- *   Sesi → Classic quiz (repeat) → 2 practices → 2 try-outs (standar + pengayaan) → 1 exam
+ *   Sesi → Classic quiz (repeat) → practices → 2 try-outs (standar + pengayaan) → 1 exam
  *
- * Practice = MASTERY over Sesi 7–11 + a fraction↔percent DRILL. The try-out
- * standar and the exam cover Sesi 7–10 (the Buku Siswa material); the try-out
- * pengayaan leans on Sesi 11 (persen, pembulatan, Python).
+ * Practices: Latihan Penguasaan (Bab 2 only), Latihan Terpadu (Bab 2 using Bab 1)
+ * and the fraction↔percent Drill.
+ *
+ * Targhib's rule (2026-09-19): the earlier chapters come in *integrated*, never
+ * as a pool of old questions. Latihan Terpadu and the Try Out Pengayaan are
+ * written so each item is a Bab 2 problem that needs a Bab 1 skill (sign rules,
+ * KPK/FPB, faktorisasi prima, pangkat, sisa bagi); the Ujian carries a few of
+ * them. Latihan Penguasaan, the Drill and the Try Out Standar stay Bab 2 only.
+ * Tags like [KPK + Sesi 9] name the two skills a Terpadu item joins.
  *
  * Every answer here was recomputed in Python (fractions.Fraction) before being
  * written down. Prompts are plain text (Unicode maths).
@@ -124,7 +130,27 @@ export const BAB2_CHAPTER: ChapterContent = {
       ],
     },
 
-    // ─────────────────────────── Practice 2: Drill ───────────────────────────
+    // ─────────────────────────── Practice 2: Terpadu ───────────────────────────
+    {
+      title: "Latihan Terpadu — Bab 2: Bilangan Rasional",
+      style: "MASTERY",
+      questions: [
+        { type: "FRACTION", points: 1, prompt: `[KPK + Sesi 9] Hitung: 5/12 + 7/18. Petunjuk: penyebut persekutuan terkecilnya adalah KPK(12, 18). ${FRAC}`, answer: "29/36", explanation: "12 = 2² × 3 dan 18 = 2 × 3², jadi KPK = 2² × 3² = 36. 5/12 = 15/36 dan 7/18 = 14/36. Jumlahnya 29/36." },
+        { type: "MULTIPLE_CHOICE", points: 1, prompt: "[FPB + Sesi 7] Pecahan 84/126 disederhanakan sekali jalan dengan membagi pembilang dan penyebut dengan FPB(84, 126). Hasilnya…", options: ["2/3", "4/6", "12/18", "3/4"], answer: "A", explanation: "84 = 2² × 3 × 7 dan 126 = 2 × 3² × 7, jadi FPB = 2 × 3 × 7 = 42. 84 : 42 = 2 dan 126 : 42 = 3." },
+        { type: "NUMERIC", points: 1, prompt: `[Aturan tanda + Sesi 10] Hitung: (−3/4) × (−8) × (−1/6). ${NEG}`, answer: -1, explanation: "Tiga faktor negatif (ganjil), jadi hasilnya negatif. 3/4 × 8 × 1/6 = 24/24 = 1. Hasilnya −1." },
+        { type: "FRACTION", points: 1, prompt: `[Pangkat + Sesi 10] Hitung: (−2/3)³. ${FRAC}`, answer: "-8/27", explanation: "(−2/3) × (−2/3) × (−2/3): pembilang 2³ = 8, penyebut 3³ = 27, dan pangkat ganjil membuat tandanya negatif." },
+        { type: "FRACTION", points: 1, prompt: `[Pangkat + Sesi 9] Hitung: (1/2)² + (1/3)². ${FRAC}`, answer: "13/36", explanation: "(1/2)² = 1/4 dan (1/3)² = 1/9. KPK(4, 9) = 36: 9/36 + 4/36 = 13/36." },
+        { type: "MULTI_SELECT", points: 1, prompt: "[Faktorisasi prima + Sesi 7] Tanpa membagi, pilih SEMUA pecahan yang desimalnya terbatas. Faktorkan penyebutnya.", options: ["7/80", "5/48", "11/125", "13/60"], answer: ["A", "C"], explanation: "80 = 2⁴ × 5 dan 125 = 5³ hanya memuat 2 dan 5 → terbatas. 48 = 2⁴ × 3 dan 60 = 2² × 3 × 5 memuat 3 → berulang (pecahannya sudah paling sederhana)." },
+        { type: "NUMERIC", points: 1, prompt: `[Bilangan bulat + Sesi 9] Suhu sebuah ruang pendingin −4,5 °C. Suhunya naik 7¼ derajat, lalu turun 5,5 derajat. Berapa suhu akhirnya (°C)? ${NEG} ${DEC}`, answer: -2.75, explanation: "−4,5 + 7,25 = 2,75, lalu 2,75 − 5,5 = −2,75 °C." },
+        { type: "NUMERIC", points: 1, prompt: `[Urutan operasi + Sesi 10] Hitung: −2 + 3 × (−1/2)² − 1/4 : (−1/8). ${DEC}`, answer: 0.75, explanation: "Pangkat dulu: (−1/2)² = 1/4. Lalu kali dan bagi: 3 × 1/4 = 3/4 dan 1/4 : (−1/8) = −2. Terakhir: −2 + 3/4 − (−2) = 3/4 = 0,75." },
+        { type: "NUMERIC", points: 1, prompt: "[KPK + Sesi 10] Bus A berangkat dari terminal setiap 1¼ jam dan bus B setiap 1⅔ jam. Keduanya baru saja berangkat bersamaan. Setelah berapa jam keduanya berangkat bersamaan lagi?", answer: 5, explanation: "Ubah ke menit: 1¼ jam = 75 menit dan 1⅔ jam = 100 menit. KPK(75, 100) = 300 menit = 5 jam." },
+        { type: "NUMERIC", points: 1, prompt: `[FPB + Sesi 10] Pita merah 2,4 m dan pita biru 3,6 m dipotong menjadi potongan yang sama panjang, sepanjang mungkin, tanpa sisa. Berapa meter panjang setiap potongan? ${DEC}`, answer: 1.2, explanation: "Ubah ke cm supaya bulat: FPB(240, 360) = 120 cm = 1,2 m. Pita merah jadi 2 potong, pita biru 3 potong." },
+        { type: "NUMERIC", points: 1, prompt: "[Sisa bagi + Sesi 7] Bentuk desimal 5/7 adalah 0,714285714285… (angka 714285 berulang). Berapakah angka ke-50 di belakang koma?", answer: 1, explanation: "Polanya 6 angka. 50 = 6 × 8 + 2, jadi angka ke-50 sama dengan angka ke-2 dalam pola 714285, yaitu 1." },
+        { type: "NUMERIC", points: 1, prompt: "[Sifat distributif + Sesi 10] Hitung dengan cara cepat: 3/7 × 45 + 3/7 × (−38)", answer: 3, explanation: "Sifat distributif dari Bab 1: 3/7 × (45 + (−38)) = 3/7 × 7 = 3." },
+      ],
+    },
+
+    // ─────────────────────────── Practice 3: Drill ───────────────────────────
     {
       title: "Drill Kilat — Pecahan & Persen",
       style: "DRILL",
@@ -172,26 +198,26 @@ export const BAB2_CHAPTER: ChapterContent = {
       style: "TRYOUT",
       settings: { timeLimitMinutes: 60, maxAttempts: 2, randomizeQuestionOrder: true },
       questions: [
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Sebuah barang didiskon 30%, lalu didiskon lagi 20% dari harga setelah diskon pertama. Diskon totalnya adalah…", options: ["50%", "44%", "56%", "40%"], answer: "B", explanation: "0,7 × 0,8 = 0,56. Pembeli membayar 56%, jadi diskon totalnya 44%." },
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Harga sebuah barang naik 20%, lalu turun 20%. Harga akhirnya…", options: ["sama dengan harga awal", "4% lebih rendah dari harga awal", "4% lebih tinggi dari harga awal", "20% lebih rendah dari harga awal"], answer: "B", explanation: "1,2 × 0,8 = 0,96. Harga akhir 96% dari harga awal, yaitu 4% lebih rendah. Turun 20% dihitung dari harga yang sudah naik." },
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Apa keluaran kode Python  print(0.1 * 3 == 0.3) ?", options: ["True", "False", "0.3", "Error"], answer: "B", explanation: "0.1 tidak bisa disimpan persis dalam float, sehingga 0.1 * 3 menghasilkan 0.30000000000000004, bukan 0.3." },
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Apa keluaran kode Python  print(round(0.125, 2)) ?", options: ["0.12", "0.13", "0.1", "0.125"], answer: "A", explanation: "0,125 tersimpan persis dan tepat di tengah 0,12 dan 0,13. Python membulatkan angka tengah ke angka akhir yang genap, jadi 0.12." },
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Apa keluaran kode Python berikut?\n\nfrom fractions import Fraction\nprint(Fraction(5, 6) - Fraction(1, 3))", options: ["1/2", "4/3", "0.5", "2/4"], answer: "A", explanation: "5/6 − 2/6 = 3/6. Fraction selalu menyederhanakan, jadi yang dicetak 1/2." },
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Hasil 7 : 3 dibulatkan ke dua angka desimal adalah…", options: ["2,33", "2,34", "2,3", "2,333"], answer: "A", explanation: "7 : 3 = 2,3333… Angka desimal ketiga 3 (kurang dari 5), jadi dibulatkan ke bawah: 2,33." },
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Tabungan Rp2.400.000 mendapat bunga 5% per tahun (bunga tidak ikut dibungakan). Besar bunga setiap bulannya adalah…", options: ["Rp10.000", "Rp12.000", "Rp120.000", "Rp100.000"], answer: "A", explanation: "Bunga setahun 5% × 2.400.000 = 120.000. Per bulan 120.000 : 12 = 10.000." },
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Setelah didiskon 35%, harga sebuah jaket menjadi Rp91.000. Harga jaket sebelum diskon adalah…", options: ["Rp140.000", "Rp122.850", "Rp126.000", "Rp135.000"], answer: "A", explanation: "Harga awal × 0,65 = 91.000, jadi harga awal = 91.000 : 0,65 = 140.000. Rp122.850 muncul jika 35% dihitung dari harga setelah diskon." },
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Bentuk desimal 1/7 adalah 0,142857142857… (angka 142857 berulang). Angka ke-20 di belakang koma adalah…", options: ["1", "4", "2", "8"], answer: "B", explanation: "Polanya berulang setiap 6 angka. 20 = 6 × 3 + 2, jadi angka ke-20 sama dengan angka ke-2, yaitu 4." },
-        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Jika x adalah bilangan dengan 0 < x < 1, manakah yang PASTI paling besar?", options: ["x", "x²", "1/x", "x/2"], answer: "C", explanation: "Untuk 0 < x < 1: x² dan x/2 lebih kecil dari x, sedangkan 1/x lebih besar dari 1. Contoh x = ½: x² = ¼, x/2 = ¼, 1/x = 2." },
-        { type: "NUMERIC", points: 6, prompt: `Harga sebuah barang Rp240.000 naik 15%, lalu didiskon 10%. Berapa harga akhirnya dalam rupiah? ${RP}`, answer: 248400, explanation: "240.000 × 1,15 × 0,9 = 240.000 × 1,035 = 248.400." },
-        { type: "NUMERIC", points: 6, prompt: "Pengunjung perpustakaan turun dari 1.250 orang menjadi 1.000 orang. Berapa persen penurunannya? Tulis angkanya saja.", answer: 20, explanation: "Penurunan 250 dibagi nilai LAMA: 250/1.250 × 100% = 20%." },
-        { type: "FRACTION", points: 6, prompt: `Ubah 0,2333… (hanya angka 3 yang berulang) menjadi pecahan. ${FRAC}`, answer: "7/30", explanation: "x = 0,2333… 100x = 23,333… dan 10x = 2,333… Kurangkan: 90x = 21, jadi x = 21/90 = 7/30." },
-        { type: "NUMERIC", points: 6, prompt: "Apa keluaran kode Python  print(7 / 4 * 2 - 0.5) ? Tulis nilainya.", answer: 3, explanation: "Dari kiri: 7 / 4 = 1.75, lalu 1.75 * 2 = 3.5, lalu 3.5 − 0.5 = 3.0." },
-        { type: "NUMERIC", points: 6, prompt: `Hitung: (1 − 1/2) × (1 − 1/3) × (1 − 1/4) × … × (1 − 1/10). ${DEC}`, answer: 0.1, explanation: "Setiap faktor bernilai (k − 1)/k: 1/2 × 2/3 × 3/4 × … × 9/10. Pembilang dan penyebut saling mencoret, tersisa 1/10 = 0,1." },
-        { type: "NUMERIC", points: 6, prompt: "Harga sebuah barang dinaikkan 25%. Agar kembali ke harga semula, harga baru harus diturunkan berapa persen? Tulis angkanya saja.", answer: 20, explanation: "Harga baru = 1,25 × harga awal. Supaya kembali, kalikan dengan 1/1,25 = 0,8, yaitu turun 20% (dari harga yang lebih besar)." },
-        { type: "NUMERIC", points: 6, prompt: "Tabungan Rp3.000.000 menghasilkan bunga Rp135.000 dalam 9 bulan (bunga tidak ikut dibungakan). Berapa persen bunga per tahunnya? Tulis angkanya saja.", answer: 6, explanation: "Bunga per bulan 135.000 : 9 = 15.000, per tahun 180.000. 180.000/3.000.000 = 6%." },
-        { type: "FRACTION", points: 6, prompt: `Hitung: 1/2 + 1/6 + 1/12 + 1/20 + 1/30. ${FRAC}`, answer: "5/6", explanation: "Setiap suku bisa ditulis sebagai selisih: 1/2 = 1 − 1/2, 1/6 = 1/2 − 1/3, dan seterusnya sampai 1/30 = 1/5 − 1/6. Hampir semua saling menghapus, tersisa 1 − 1/6 = 5/6." },
-        { type: "NUMERIC", points: 6, prompt: "Apa keluaran kode Python  print(round(2.5) + round(3.5) + round(4.5)) ?", answer: 10, explanation: "Python membulatkan angka tengah ke bilangan genap: round(2.5) = 2, round(3.5) = 4, round(4.5) = 4. Jumlahnya 10." },
-        { type: "NUMERIC", points: 6, prompt: "Sebuah toko memberi promo \"beli 3 gratis 1\" untuk kaos seharga Rp45.000. Jika membeli 4 kaos dengan promo ini, berapa persen diskon yang sebenarnya diterima? Tulis angkanya saja.", answer: 25, explanation: "Membayar 3 kaos untuk mendapat 4, jadi membayar 3/4 = 75% dari harga normal. Diskonnya 25%, berapa pun harga kaosnya." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Hasil dari (−1/2)³ × (−4)² adalah…", options: ["−2", "2", "−8", "8"], answer: "A", explanation: "(−1/2)³ = −1/8 (pangkat ganjil, negatif) dan (−4)² = 16 (pangkat genap, positif). −1/8 × 16 = −2." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Hasil dari −3 − (−1¼) × 4 + 2/3 : (−1/6) adalah…", options: ["−2", "−10", "6", "−4"], answer: "A", explanation: "Kali dan bagi dulu: (−1¼) × 4 = −5 dan 2/3 : (−1/6) = 2/3 × (−6) = −4. Lalu −3 − (−5) + (−4) = −3 + 5 − 4 = −2." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Untuk menjumlahkan 7/24 + 5/36 + 1/16, penyebut persekutuan terkecilnya adalah…", options: ["144", "72", "288", "576"], answer: "A", explanation: "24 = 2³ × 3, 36 = 2² × 3², 16 = 2⁴. KPK = 2⁴ × 3² = 144." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Bilangan bulat n TERBESAR yang membuat 3/7 × n menjadi bilangan bulat negatif adalah…", options: ["−7", "−3", "7", "−21"], answer: "A", explanation: "3/7 × n bulat hanya jika n kelipatan 7 (3 dan 7 tidak punya faktor persekutuan). Supaya negatif, n harus negatif: −7, −14, … Yang terbesar −7, dengan hasil −3." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Harga sebuah barang turun 20%, lalu naik 20%, lalu turun 20% lagi. Harga akhirnya adalah … dari harga awal.", options: ["76,8%", "80%", "84%", "96%"], answer: "A", explanation: "Kalikan faktornya: 0,8 × 1,2 × 0,8 = 0,768 = 76,8%." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Manakah yang nilainya paling dekat dengan 0?", options: ["(−1/2)³", "(1/3)²", "−0,2 × 0,5", "1/5 − 1/4"], answer: "D", explanation: "(−1/2)³ = −0,125; (1/3)² ≈ 0,111; −0,2 × 0,5 = −0,1; 1/5 − 1/4 = −1/20 = −0,05. Jarak ke nol terkecil −0,05." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Apa keluaran kode Python berikut?\n\nfrom fractions import Fraction\nprint(Fraction(-3, 4) ** 2 - Fraction(1, 2))", options: ["1/16", "-1/16", "17/16", "0.0625"], answer: "A", explanation: "(−3/4)² = 9/16 (pangkat genap, positif). 9/16 − 8/16 = 1/16. Fraction mencetak pecahan, bukan desimal." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Rata-rata dari −1/2, 3/4, dan −5/6 adalah…", options: ["−7/36", "−7/12", "7/36", "−1/4"], answer: "A", explanation: "Jumlahnya dengan penyebut 12: −6/12 + 9/12 − 10/12 = −7/12. Dibagi 3: −7/36." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Nilai dari (−2/3)² − (−2/3) × 3/4 adalah…", options: ["17/18", "−1/18", "1/18", "−17/18"], answer: "A", explanation: "(−2/3)² = 4/9 dan (−2/3) × 3/4 = −1/2. 4/9 − (−1/2) = 8/18 + 9/18 = 17/18." },
+        { type: "MULTIPLE_CHOICE", points: 4, prompt: "Hasil 1 − 1/2 + 1/3 − 1/4 + 1/5 − 1/6 dibulatkan ke dua angka desimal adalah…", options: ["0,62", "0,61", "0,60", "0,63"], answer: "A", explanation: "KPK(2, 3, 4, 5, 6) = 60: (60 − 30 + 20 − 15 + 12 − 10)/60 = 37/60 = 0,6166… Angka ketiga 6, jadi dibulatkan ke atas: 0,62." },
+        { type: "NUMERIC", points: 6, prompt: `Sebuah jaket seharga Rp240.000 didiskon 25%, lalu dikenai pajak 10% dari harga setelah diskon. Berapa harga yang dibayar, dalam rupiah? ${RP}`, answer: 198000, explanation: "Kalikan faktornya: 240.000 × 0,75 × 1,1 = 198.000." },
+        { type: "FRACTION", points: 6, prompt: `Hitung: (3/4 − 5/6)² : (−1/24). ${FRAC}`, answer: "-1/6", explanation: "Kurung dulu: 3/4 − 5/6 = 9/12 − 10/12 = −1/12. Pangkat: (−1/12)² = 1/144. Bagi: 1/144 × (−24) = −24/144 = −1/6." },
+        { type: "NUMERIC", points: 6, prompt: `Suhu awal sebuah freezer −3,5 °C. Suhunya turun 1¼ derajat setiap jam selama 4 jam, lalu naik 2,5 derajat. Berapa suhu akhirnya (°C)? ${NEG}`, answer: -6, explanation: "Turun 4 × 1¼ = 5 derajat. −3,5 − 5 + 2,5 = −6 °C." },
+        { type: "NUMERIC", points: 6, prompt: "Sebuah drum air terisi 3/4 bagian. Setelah 18 liter dipakai, drum tinggal terisi 3/10 bagian. Berapa liter kapasitas drum?", answer: 40, explanation: "Yang terpakai 3/4 − 3/10 = 15/20 − 6/20 = 9/20 bagian = 18 liter. Kapasitas = 18 : 9/20 = 18 × 20/9 = 40 liter." },
+        { type: "FRACTION", points: 6, prompt: `Sederhanakan (2⁴ × 3²) / (2² × 3³ × 5) menjadi pecahan paling sederhana. ${FRAC}`, answer: "4/15", explanation: "Coret faktor prima yang sama: 2⁴/2² = 2² = 4 di atas, 3²/3³ menyisakan 3 di bawah, dan 5 tetap di bawah. Hasilnya 4/(3 × 5) = 4/15." },
+        { type: "NUMERIC", points: 6, prompt: "Ada berapa bilangan bulat n yang memenuhi −5/2 < n/3 < 7/4?", answer: 13, explanation: "Kalikan semuanya dengan 3: −7,5 < n < 5,25. Bilangan bulatnya −7, −6, …, 5, yaitu 7 + 1 + 5 = 13 bilangan." },
+        { type: "NUMERIC", points: 6, prompt: "Tiga tongkat panjangnya 1,2 m, 1,8 m, dan 2,4 m. Semuanya dipotong menjadi potongan yang sama panjang, sepanjang mungkin, tanpa sisa. Berapa potong yang diperoleh seluruhnya?", answer: 9, explanation: "Dalam dm: FPB(12, 18, 24) = 6 dm = 0,6 m. Banyak potongan 12/6 + 18/6 + 24/6 = 2 + 3 + 4 = 9." },
+        { type: "NUMERIC", points: 6, prompt: `Apa keluaran kode Python  print(-7 // 2 + 7 / 2) ? ${NEG} ${DEC}`, answer: -0.5, explanation: "-7 // 2 membulatkan −3,5 ke bawah menjadi −4 (Bab 1). 7 / 2 = 3.5. −4 + 3.5 = −0.5." },
+        { type: "NUMERIC", points: 6, prompt: `Harga sebuah sepeda Rp2.000.000 naik 10% setiap tahun, dihitung dari harga tahun sebelumnya. Berapa harganya setelah 3 tahun, dalam rupiah? ${RP}`, answer: 2662000, explanation: "Kalikan faktor 1,1 tiga kali: 2.000.000 × 1,1³ = 2.000.000 × 1,331 = 2.662.000. Pangkat dari Bab 1 muncul lagi di sini." },
+        { type: "NUMERIC", points: 6, prompt: "Hitung: (1 + 1/2) × (1 + 1/3) × (1 + 1/4) × … × (1 + 1/99)", answer: 50, explanation: "Setiap faktor bernilai (k + 1)/k: 3/2 × 4/3 × 5/4 × … × 100/99. Semua saling mencoret kecuali 100/2 = 50." },
       ],
     },
 
@@ -201,19 +227,19 @@ export const BAB2_CHAPTER: ChapterContent = {
       style: "EXAM",
       settings: { timeLimitMinutes: 60, maxAttempts: 1, randomizeQuestionOrder: true },
       questions: [
-        { type: "MULTIPLE_CHOICE", points: 3, prompt: "Bilangan berikut yang merupakan bilangan bulat negatif adalah…", options: ["−2/3", "−12/4", "−0,5", "−1,333…"], answer: "B", explanation: "−12/4 = −3, sebuah bilangan bulat. Tiga lainnya rasional tetapi bukan bilangan bulat." },
+        { type: "MULTIPLE_CHOICE", points: 3, prompt: "Hasil dari (−1/2)² − 3 × (−1/4) adalah…", options: ["1", "−1/2", "1/2", "−1"], answer: "A", explanation: "Pangkat dulu: (−1/2)² = 1/4. Lalu 3 × (−1/4) = −3/4. 1/4 − (−3/4) = 1/4 + 3/4 = 1." },
         { type: "MULTIPLE_CHOICE", points: 3, prompt: "Pecahan yang bentuk desimalnya TERBATAS adalah…", options: ["2/15", "7/12", "11/40", "5/6"], answer: "C", explanation: "40 = 2³ × 5 hanya memuat faktor 2 dan 5, jadi 11/40 = 0,275. Penyebut lain memuat faktor 3." },
         { type: "MULTI_SELECT", points: 3, prompt: "Pilih SEMUA yang nilainya sama dengan 1,25.", options: ["5/4", "125%", "12/5", "1¼"], answer: ["A", "B", "D"], explanation: "5/4 = 1¼ = 1,25 = 125%. 12/5 = 2,4." },
         { type: "MULTIPLE_CHOICE", points: 3, prompt: "Urutan bilangan −0,25, −1/3, −2/9, dan 0 dari yang TERBESAR adalah…", options: ["0; −2/9; −0,25; −1/3", "0; −1/3; −0,25; −2/9", "−1/3; −0,25; −2/9; 0", "0; −0,25; −2/9; −1/3"], answer: "A", explanation: "−2/9 ≈ −0,222, −0,25, −1/3 ≈ −0,333. Yang lebih dekat ke nol lebih besar." },
         { type: "MULTIPLE_CHOICE", points: 3, prompt: "Hasil dari 1½ + 2/3 − 5/6 adalah…", options: ["4/3", "1", "7/6", "5/3"], answer: "A", explanation: "Penyebut 6: 9/6 + 4/6 − 5/6 = 8/6 = 4/3." },
         { type: "MULTIPLE_CHOICE", points: 3, prompt: "Hasil dari −2/3 × (−9/10) adalah…", options: ["3/5", "−3/5", "20/27", "−20/27"], answer: "A", explanation: "Negatif kali negatif hasilnya positif. 2/3 × 9/10 = 18/30 = 3/5." },
         { type: "MULTIPLE_CHOICE", points: 3, prompt: "Hasil dari 5 : 2/3 adalah…", options: ["7½", "3⅓", "10/3", "2/15"], answer: "A", explanation: "5 × 3/2 = 15/2 = 7½. Masuk akal: berapa banyak 2/3 yang muat dalam 5? Lebih dari 5." },
-        { type: "MULTIPLE_CHOICE", points: 3, prompt: "Rina belajar 3/4 jam, Sari 0,8 jam, Tono 42 menit, dan Umi 5/6 jam. Siapa yang belajar paling lama?", options: ["Rina", "Sari", "Tono", "Umi"], answer: "D", explanation: "Ubah ke menit: Rina 45, Sari 48, Tono 42, Umi 50 menit." },
+        { type: "MULTIPLE_CHOICE", points: 3, prompt: "Untuk menghitung 5/18 + 7/24, penyebut persekutuan terkecilnya adalah…", options: ["72", "144", "432", "36"], answer: "A", explanation: "18 = 2 × 3² dan 24 = 2³ × 3. KPK = 2³ × 3² = 72. Mengalikan kedua penyebut (432) juga bisa, tetapi angkanya jauh lebih besar." },
         { type: "FRACTION", points: 4, prompt: `Hitung: 3/8 + 5/12. ${FRAC}`, answer: "19/24", explanation: "KPK(8, 12) = 24. 9/24 + 10/24 = 19/24." },
-        { type: "NUMERIC", points: 4, prompt: "Hitung: 8,4 : 0,12", answer: 70, explanation: "Geser koma dua langkah pada keduanya: 840 : 12 = 70." },
+        { type: "NUMERIC", points: 4, prompt: `Hitung: −2¼ + 3 × (−5/6). ${NEG} ${DEC}`, answer: -4.75, explanation: "Kali dulu: 3 × (−5/6) = −5/2 = −2,5. Lalu −2,25 + (−2,5) = −4,75." },
         { type: "NUMERIC", points: 4, prompt: `Hitung: 2,5 − 3¾. ${NEG} ${DEC}`, answer: -1.25, explanation: "3¾ = 3,75. 2,5 − 3,75 = −1,25." },
         { type: "FRACTION", points: 4, prompt: `Hitung: (−5/6) : (−10/9). ${FRAC}`, answer: "3/4", explanation: "−5/6 × (−9/10) = 45/60 = 3/4. Negatif dibagi negatif hasilnya positif." },
-        { type: "NUMERIC", points: 4, prompt: "Sekarung beras 25 kg dibagi ke dalam kantong-kantong berisi 1¼ kg. Berapa kantong yang diperlukan?", answer: 20, explanation: "25 : 5/4 = 25 × 4/5 = 20 kantong." },
+        { type: "NUMERIC", points: 4, prompt: `Tiga lampu hias berkedip setiap ½ detik, ¾ detik, dan 1⅛ detik. Ketiganya baru saja berkedip bersamaan. Setelah berapa detik ketiganya berkedip bersamaan lagi? ${DEC}`, answer: 4.5, explanation: "Dalam satuan 1/8 detik: 4, 6, dan 9. KPK(4, 6, 9) = 36, yaitu 36/8 = 4,5 detik." },
         { type: "NUMERIC", points: 4, prompt: `Pecahan 3/8 sama dengan berapa persen? Tulis angkanya saja. ${DEC}`, answer: 37.5, explanation: "3/8 = 0,375 = 37,5%." },
         {
           type: "STEPS", points: 8,
