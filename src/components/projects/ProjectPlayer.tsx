@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { ProjectEditor } from "./ProjectEditor";
 import { ProjectGuide, type Notice, type PlayerStep } from "./ProjectGuide";
-import { CheckFeedback, lastLine } from "./CheckFeedback";
+import { CheckFeedback, isEofError, lastLine } from "./CheckFeedback";
 import { runProject } from "@/lib/pyodideWorker";
 import { checkRuns, type CheckResult } from "@/lib/projects/check";
 import { CHECK_FILE, ENTRY_FILE, type ProjectCheck } from "@/lib/projects/schema";
@@ -67,7 +67,8 @@ export function ProjectPlayer({
   const [openTabs, setOpenTabs] = useState<string[]>([ENTRY_FILE]);
   const [passedIds, setPassedIds] = useState(initialPassedIds);
   const [complete, setComplete] = useState(initialComplete);
-  const [stdin, setStdin] = useState("");
+  // Starts with the current step's example input, so Run works straight away.
+  const [stdin, setStdin] = useState(() => steps.find((s) => !initialPassedIds.includes(s.id))?.example.input ?? "");
   const [runOutput, setRunOutput] = useState<RunOutput>(null);
   const [running, setRunning] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -83,6 +84,13 @@ export function ProjectPlayer({
   const [, startSave] = useTransition();
 
   const current = useMemo(() => steps.find((s) => !passedIds.includes(s.id)) ?? null, [steps, passedIds]);
+
+  // When a step opens, its example input goes in the Input box — unless the
+  // student has typed their own, which is left alone.
+  const openStepInput = (nextPassed: string[]) => {
+    const next = steps.find((s) => !nextPassed.includes(s.id));
+    if (next && (stdin.trim() === "" || stdin === current?.example.input)) setStdin(next.example.input);
+  };
 
   // ---- autosave: a short pause after the last edit, and before leaving.
   const filesRef = useRef(files);
@@ -214,6 +222,7 @@ export function ProjectPlayer({
       filesRef.current = record.files;
       setFiles(record.files);
       setCheckpoint(record.files);
+      openStepInput(record.passedIds);
       setPassedIds(record.passedIds);
       setCheckResult(null);
       setDockTab("output");
@@ -264,6 +273,7 @@ export function ProjectPlayer({
       openFile(newNames[0]);
     }
     setCheckpoint({ ...filesRef.current });
+    openStepInput(nextPassed);
     setPassedIds(nextPassed);
     setCheckResult(null);
     setDockTab("output");
@@ -570,6 +580,9 @@ export function ProjectPlayer({
                   <>
                     {runOutput.output}
                     {runOutput.error && <span className="text-red-400">{(runOutput.output ? "\n" : "") + lastLine(runOutput.error)}</span>}
+                    {isEofError(runOutput.error) && (
+                      <span className="mt-2 block whitespace-normal font-sans text-amber-300">{t("project.eofRun")}</span>
+                    )}
                   </>
                 ) : (
                   <span className="text-zinc-500">{t("project.outputEmpty")}</span>

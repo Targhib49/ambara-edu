@@ -949,6 +949,8 @@ export const MESSAGES = {
   "project.outputEmpty": { ID: "Tekan Jalankan untuk melihat output program kamu.", EN: "Press Run to see what your program prints." },
   "project.guide": { ID: "Panduan", EN: "Guide" },
   "project.code": { ID: "Kode", EN: "Code" },
+  "project.eofRun": { ID: "EOFError artinya program memanggil input() lebih banyak daripada baris di kotak Input. Tulis satu baris untuk setiap input() \u2014 atau tekan \u201cPakai input ini\u201d di Panduan.", EN: "EOFError means the program called input() more times than there are lines in the Input box. Write one line for each input() \u2014 or press \u201cUse this input\u201d in the Guide." },
+  "project.eofCheck": { ID: "Program kamu memanggil input() lebih banyak daripada baris input di langkah ini. Cek lagi berapa kali kamu memanggil input().", EN: "Your program calls input() more times than this step gives it lines of input. Check how many times you call input()." },
   "projectKey.heading": { ID: "Langkah & kunci jawaban", EN: "Steps & answer key" },
   "projectKey.title": { ID: "Kunci jawaban setelah langkah ini", EN: "Answer key once this step is done" },
   "projectKey.changed": { ID: "\u25cf diubah di langkah ini: {files}", EN: "\u25cf changed in this step: {files}" },

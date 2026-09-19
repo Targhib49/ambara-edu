@@ -9,6 +9,11 @@ export function lastLine(error: string): string {
   return lines[lines.length - 1] ?? error;
 }
 
+/** Python's "ran out of input": input() was called more times than there were lines to read. */
+export function isEofError(error: string | null): boolean {
+  return !!error && /\bEOFError\b/.test(error);
+}
+
 /** Up to this many failed function checks are listed; more would bury the first. */
 const MAX_SCRIPT_FAILURES = 5;
 
@@ -66,6 +71,7 @@ export function CheckFeedback({ result }: { result: CheckResult }) {
           <pre className="mt-0.5 whitespace-pre-wrap rounded bg-white px-2 py-1 font-mono text-[11px] text-zinc-800 ring-1 ring-red-100">
             {inputFailure.error ? lastLine(inputFailure.error) : inputFailure.output || t("project.noOutput")}
           </pre>
+          {isEofError(inputFailure.error) && <p className="mt-1 text-red-700">{t("project.eofCheck")}</p>}
         </div>
       )}
     </div>
@@ -91,6 +97,7 @@ function ExampleDiff({ run }: { run: CheckRun }) {
         <pre className="mt-1 whitespace-pre-wrap rounded bg-white px-2 py-1 font-mono text-[11px] text-zinc-800 ring-1 ring-red-100">
           {lastLine(run.error)}
         </pre>
+        {isEofError(run.error) && <p className="mt-1 text-red-700">{t("project.eofCheck")}</p>}
       </div>
     );
   }
