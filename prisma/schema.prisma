@@ -120,6 +120,8 @@ model User {
   seriesAsTutor     SessionSeries[] @relation("SeriesTutor")
   seriesAsStudent   SessionSeries[] @relation("SeriesStudent")
   calendarFeed      CalendarFeedToken?
+  billingPlans      BillingPlan[]
+  invoices          Invoice[]
   timedQuizSessions TimedQuizSession[]
   practiceProgress  PracticeProgress[]
   projectProgress   ProjectProgress[]
@@ -270,6 +272,8 @@ model Session {
   series          SessionSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  // The invoice line this session was billed on, if it has been.
+  invoiceItem     InvoiceItem?
 
   @@index([tutorId, startTime])
   @@index([studentId, startTime])
@@ -502,4 +506,102 @@ model SubmissionAttempt {
   submittedAt   DateTime
 
   @@index([studentId, quizId])
+}
+
+// ---------------------------------------------------------------- billing
+//
+// Money is kept as whole rupiah in Int: the currency has no subunit in
+// practice, and integers never drift the way floats do. One tutor, one
+// currency, so no currency column.
+
+// How a student pays. Each student's arrangement is its own row, so a price
+// change is a new row and last month's invoice still says what was charged.
+enum BillingKind {
+  PER_SESSION // charged for each session held, at `amount` apiece
+  MONTHLY // a fixed amount per month, whatever the number of sessions
+  EXTERNAL // someone else pays (an agency, a platform) — sessions are tracked, never invoiced
+  FREE // no charge
+}
+
+model BillingPlan {
+  id               String      @id @default(uuid()) @db.Uuid
+  studentId        String      @db.Uuid
+  student          User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  kind             BillingKind
+  /// Whole rupiah: per session, or per month. Zero for EXTERNAL and FREE.
+  amount           Int         @default(0)
+  /// MONTHLY only: sessions the fee covers, for spotting a month that ran over. Null = unlimited.
+  includedSessions Int?
+  /// EXTERNAL: who pays, e.g. "Superprof". Shown wherever the plan is.
+  payer            String      @default("")
+  /// The day this arrangement starts. The plan in force on a date is the latest one not after it.
+  startsOn         DateTime    @db.Date
+  note             String      @default("")
+  createdAt        DateTime    @default(now())
+
+  @@index([studentId, startsOn])
+}
+
+enum InvoiceStatus {
+  DRAFT // being put together; the student can't see it
+  SENT // the student can see it and owes it
+  PAID // settled in full
+  VOID // cancelled, kept for the record
+}
+
+/// One month's bill for one student. The period is a calendar month, but
+/// stored as dates so an off-cycle invoice is still possible.
+model Invoice {
+  id          String        @id @default(uuid()) @db.Uuid
+  studentId   String        @db.Uuid
+  student     User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// Sequential, human-readable: INV-2026-09-0001. Unique across the platform.
+  number      String        @unique
+  periodStart DateTime      @db.Date
+  periodEnd   DateTime      @db.Date
+  status      InvoiceStatus @default(DRAFT)
+  issuedAt    DateTime?     @db.Timestamptz(3)
+  dueOn       DateTime?     @db.Date
+  /// Shown to the student, e.g. payment instructions or what a discount was for.
+  note        String        @default("")
+  items       InvoiceItem[]
+  payments    Payment[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([studentId, periodStart])
+  @@index([status])
+}
+
+/// A line on an invoice. A line that came from a session points at it, which
+/// is also what stops the same session being billed twice.
+model InvoiceItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  invoiceId   String   @db.Uuid
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sessionId   String?  @unique @db.Uuid
+  session     Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  description String
+  quantity    Int      @default(1)
+  /// Whole rupiah; negative for a discount.
+  unitAmount  Int
+  order       Int      @default(0)
+
+  @@index([invoiceId])
+}
+
+/// Money received, recorded by hand — a transfer, cash, whatever. Always
+/// against an invoice, so "what is this payment for" is never a guess.
+model Payment {
+  id        String   @id @default(uuid()) @db.Uuid
+  invoiceId String   @db.Uuid
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Int
+  paidOn    DateTime @db.Date
+  /// How it arrived: "Transfer BCA", "Tunai", "OVO".
+  method    String   @default("")
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
 }

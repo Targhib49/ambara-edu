@@ -7,7 +7,7 @@ import { createCollapsibleStore } from "@/lib/ui/collapsibleStore";
 import { useT } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { mobileNav } from "@/lib/ui/mobileNavStore";
-import { BeakerIcon, BookIcon, CalendarIcon, ChevronLeftIcon, ClipboardIcon, HomeIcon, CloseIcon } from "@/components/ui/icons";
+import { BeakerIcon, BookIcon, CalendarIcon, ChevronLeftIcon, ClipboardIcon, HomeIcon, ReceiptIcon, CloseIcon } from "@/components/ui/icons";
 
 const { useOpen, setOpen } = createCollapsibleStore("lms:studentNavOpen");
 
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: "/courses", label: "nav.myCourses" as MessageKey, icon: BookIcon },
   { href: "/quizzes", label: "nav.quizzes" as MessageKey, icon: ClipboardIcon },
   { href: "/sessions", label: "nav.mySessions" as MessageKey, icon: CalendarIcon },
+  { href: "/billing", label: "nav.billing" as MessageKey, icon: ReceiptIcon },
 ] as const;
 
 const PLAYGROUND_ITEM = { href: "/playground", label: "nav.playground" as MessageKey, icon: BeakerIcon } as const;

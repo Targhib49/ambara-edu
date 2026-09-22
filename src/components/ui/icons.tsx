@@ -102,6 +102,15 @@ export function DownloadIcon({ className }: IconProps) {
   );
 }
 
+export function ReceiptIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M5 3.5v17l2.5-1.5 2.5 1.5 2-1.5 2 1.5 2.5-1.5 2.5 1.5v-17l-2.5 1.5-2.5-1.5-2 1.5-2-1.5L7.5 5 5 3.5Z" />
+      <path d="M9 9.5h6M9 13.5h6" />
+    </svg>
+  );
+}
+
 export function PlusIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={`${base} ${className ?? ""}`} strokeWidth={2}>
