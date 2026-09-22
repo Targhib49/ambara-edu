@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { requireTutor } from "@/lib/auth";
 import { getT } from "@/lib/i18n/server";
 import { makeT } from "@/lib/i18n/translate";
-import { BILLING_KINDS, planCharges, planOn } from "@/lib/billing/plan";
+import { BILLING_KINDS, planCharges } from "@/lib/billing/plan";
+import { buildInvoiceDraft } from "@/lib/billing/draft";
 import { invoiceNumber, invoiceTotal, paidTotal } from "@/lib/billing/invoice";
 import { monthDates, monthInstants, parseDate, parseMonth, sessionLineLabel, todayDate } from "@/lib/billing/period";
 import { parseIDR } from "@/lib/billing/money";
@@ -119,69 +120,30 @@ export async function createInvoice(_prev: BillingResult, formData: FormData): P
     et("billing.line.session", { when: sessionLineLabel(s.startTime, student.language), minutes: s.durationMinutes }) +
     (s.attendance === "NO_SHOW" ? ` (${et("billing.line.noShow")})` : "");
 
-  // Every subject that either had a session this month or has a monthly fee
-  // to charge. `null` is the student's any-subject arrangement.
-  const subjects = new Set<string | null>(sessions.map((s) => s.courseId));
-  for (const plan of plans) {
-    if (plan.kind === "MONTHLY" && planOn(plans.filter((p) => p.courseId === plan.courseId), end)?.id === plan.id) {
-      subjects.add(plan.courseId);
-    }
-  }
-
   // Titles for every subject in play, whether or not it has its own arrangement.
   const courseIds = [...new Set(sessions.map((s) => s.courseId).filter((id): id is string => id !== null))];
   const courses = courseIds.length ? await db.course.findMany({ where: { id: { in: courseIds } }, select: { id: true, title: true } }) : [];
   const titleOf = new Map<string | null, string | null>(courses.map((c) => [c.id, c.title]));
   for (const plan of plans) if (plan.courseId && plan.course) titleOf.set(plan.courseId, plan.course.title);
 
-  type NewItem = { sessionId?: string; courseId: string | null; description: string; quantity: number; unitAmount: number; order: number };
-  const items: NewItem[] = [];
-  const allowances: { courseId: string | null; granted: number; used: number; carryIn: number; carryOut: number }[] = [];
-  let order = 0;
+  // What each monthly subject carries in from the invoice before this one.
+  const earlier = await db.invoiceAllowance.findMany({
+    where: { invoice: { studentId, status: { not: "VOID" }, periodStart: { lt: start } } },
+    orderBy: { invoice: { periodStart: "desc" } },
+    select: { courseId: true, carryOut: true },
+  });
+  const carry = new Map<string | null, number>();
+  for (const row of earlier) if (!carry.has(row.courseId)) carry.set(row.courseId, row.carryOut);
 
-  for (const courseId of subjects) {
-    const forSubject = plans.filter((p) => p.courseId === courseId);
-    // A subject with no arrangement of its own falls back to the any-subject one.
-    const plan = planOn(forSubject.length ? forSubject : plans.filter((p) => p.courseId === null), end);
-    const mine = sessions.filter((s) => s.courseId === courseId);
-    if (!plan) {
-      // Sessions with no arrangement at all are listed at no charge rather
-      // than silently dropped, so they stop showing as "not invoiced".
-      items.push(...mine.map((s) => ({ sessionId: s.id, courseId, description: sessionLine(s), quantity: 1, unitAmount: 0, order: order++ })));
-      continue;
-    }
-    const subjectTitle = titleOf.get(courseId) ?? null;
-    // The fee belongs to the arrangement's own subject. A subject that merely
-    // falls back to a monthly any-subject plan is covered by that one fee.
-    const ownsMonthlyFee = plan.courseId === courseId;
-    const label = (text: string) => (subjectTitle ? `${subjectTitle} — ${text}` : text);
-
-    if (plan.kind === "PER_SESSION") {
-      items.push(...mine.map((s) => ({ sessionId: s.id, courseId, description: label(sessionLine(s)), quantity: 1, unitAmount: plan.amount, order: order++ })));
-      continue;
-    }
-    if (plan.kind === "MONTHLY") {
-      if (ownsMonthlyFee) {
-        items.push({ courseId, description: label(et("billing.line.monthly")), quantity: 1, unitAmount: plan.amount, order: order++ });
-      }
-      // The sessions the fee covered, at no charge, so the student can see them.
-      items.push(...mine.map((s) => ({ sessionId: s.id, courseId, description: sessionLine(s), quantity: 1, unitAmount: 0, order: order++ })));
-      if (plan.includedSessions && ownsMonthlyFee) {
-        const previous = await db.invoiceAllowance.findFirst({
-          where: { courseId, invoice: { studentId, status: { not: "VOID" }, periodStart: { lt: start } } },
-          orderBy: { invoice: { periodStart: "desc" } },
-          select: { carryOut: true },
-        });
-        const carryIn = previous?.carryOut ?? 0;
-        const carryOut = Math.max(0, mine.length + carryIn - plan.includedSessions);
-        allowances.push({ courseId, granted: plan.includedSessions, used: mine.length, carryIn, carryOut });
-      }
-      continue;
-    }
-    // EXTERNAL or FREE: recorded on the invoice at no charge, with who pays.
-    const note = plan.kind === "EXTERNAL" && plan.payer ? ` (${plan.payer})` : "";
-    items.push(...mine.map((s) => ({ sessionId: s.id, courseId, description: label(sessionLine(s)) + note, quantity: 1, unitAmount: 0, order: order++ })));
-  }
+  const { items, allowances } = buildInvoiceDraft({
+    plans,
+    sessions,
+    billedOn: end,
+    titleOf: (courseId) => titleOf.get(courseId) ?? null,
+    sessionLine,
+    monthlyLine: et("billing.line.monthly"),
+    carriedIn: (courseId) => carry.get(courseId) ?? 0,
+  });
 
   if (!items.length) return { error: t("billing.error.noSessions") };
 
