@@ -21,10 +21,8 @@ export type BillingRow = {
   id: string;
   name: string;
   email: string;
-  /** Server-formatted: the plan in force today, or null when none is set. */
-  planLabel: string | null;
-  planKind: BillingKind | null;
-  payer: string;
+  /** Server-formatted: every arrangement in force today, one per subject. */
+  plans: { subject: string; label: string }[];
   /** Sessions marked done that no invoice covers yet. */
   uninvoiced: number;
   /** Sessions in the past still sitting at confirmed — they can't be invoiced until closed out. */
@@ -59,7 +57,15 @@ const makeStudentColumns = (t: Translate): Column<BillingRow>[] => [
           <Link href={`/tutor/students/${r.id}`} className="block truncate font-medium text-zinc-900 hover:text-blue-700">
             {r.name}
           </Link>
-          <span className="block truncate text-xs text-zinc-500">{r.planLabel ?? t("billing.plan.none")}</span>
+          {r.plans.length === 0 ? (
+            <span className="block truncate text-xs text-zinc-500">{t("billing.plan.none")}</span>
+          ) : (
+            r.plans.map((p) => (
+              <span key={p.subject} className="block truncate text-xs text-zinc-500">
+                <span className="text-zinc-400">{p.subject}:</span> {p.label}
+              </span>
+            ))
+          )}
         </span>
       </div>
     ),
@@ -240,10 +246,13 @@ export function NewInvoiceForm({ students, defaultMonth }: { students: ComboOpti
 /** A new arrangement from a given day; the old one still prices older invoices. */
 export function BillingPlanForm({
   students,
+  courses,
   studentId,
   defaultDate,
 }: {
   students?: ComboOption[];
+  /** The subject the arrangement covers; blank means every subject. */
+  courses: ComboOption[];
   studentId?: string;
   defaultDate: string;
 }) {
@@ -266,6 +275,21 @@ export function BillingPlanForm({
           <Combobox name="studentId" options={students ?? []} placeholder={t("action.pickStudent")} />
         </div>
       )}
+
+      <div>
+        <label className={labelCls} htmlFor="plan-course">
+          {t("billing.plan.subject")}
+        </label>
+        <select id="plan-course" name="courseId" defaultValue="" className={inputCls}>
+          <option value="">{t("billing.plan.anySubject")}</option>
+          {courses.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <p className={hintCls}>{t("billing.plan.subjectHint")}</p>
+      </div>
 
       <fieldset>
         <legend className={labelCls}>{t("billing.plan")}</legend>

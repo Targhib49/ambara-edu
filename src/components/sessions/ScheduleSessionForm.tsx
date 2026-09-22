@@ -18,10 +18,13 @@ const DURATIONS = [30, 45, 60, 90, 120];
  */
 export function ScheduleSessionForm({
   students,
+  courses,
   today,
   defaultStudentId,
 }: {
   students: ComboOption[];
+  /** Subjects a session can be for; it decides how the session is billed. */
+  courses: ComboOption[];
   /** YYYY-MM-DD in app time, for the date fields' defaults. */
   today: string;
   defaultStudentId?: string;
@@ -141,6 +144,21 @@ export function ScheduleSessionForm({
           <p className={`${hintCls} col-span-2`}>{t("schedule.seriesHint")}</p>
         </div>
       )}
+
+      <div>
+        <label className={labelCls} htmlFor="session-course">
+          {t("schedule.subject")}
+        </label>
+        <select id="session-course" name="courseId" defaultValue="" className={inputCls}>
+          <option value="">{t("schedule.noSubject")}</option>
+          {courses.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <p className={hintCls}>{t("schedule.subjectHint")}</p>
+      </div>
 
       <div>
         <label className={labelCls} htmlFor="session-length">

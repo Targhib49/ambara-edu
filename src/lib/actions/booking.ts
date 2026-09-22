@@ -140,8 +140,9 @@ export async function createSeries(
   const free = instants.filter((d) => !clashes(d));
   if (free.length === 0) return { error: t("action.allClash") };
 
+  const courseId = String(formData.get("courseId") ?? "").trim() || null;
   const series = await db.sessionSeries.create({
-    data: { tutorId: tutor.id, studentId, weekday, startMinute, durationMinutes, occurrences, startsOn },
+    data: { tutorId: tutor.id, studentId, weekday, startMinute, durationMinutes, occurrences, startsOn, courseId },
   });
   await db.session.createMany({
     data: free.map((startTime) => ({
@@ -151,6 +152,7 @@ export async function createSeries(
       durationMinutes,
       status: "CONFIRMED" as const,
       seriesId: series.id,
+      courseId,
     })),
   });
 

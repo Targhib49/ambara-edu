@@ -170,6 +170,11 @@ model Course {
   updatedAt   DateTime     @updatedAt
 
   @@map("Track")
+  sessions      Session[]
+  sessionSeries SessionSeries[]
+  billingPlans  BillingPlan[]
+  invoiceItems  InvoiceItem[]
+  allowances    InvoiceAllowance[]
 }
 
 model Enrollment {
@@ -270,6 +275,11 @@ model Session {
   // siblings — so this is a provenance link, not a source of truth for timing.
   seriesId        String?       @db.Uuid
   series          SessionSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  // Which subject this session was for. Null means it predates subjects on
+  // sessions, or the tutor teaches this student one thing only; billing then
+  // falls back to the student's any-subject arrangement.
+  courseId        String?       @db.Uuid
+  course          Course?       @relation(fields: [courseId], references: [id], onDelete: SetNull)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   // The invoice line this session was billed on, if it has been.
@@ -313,6 +323,9 @@ model SessionSeries {
   durationMinutes Int
   occurrences     Int
   startsOn        DateTime  @db.Timestamptz(3)
+  // The subject the occurrences are for; each session copies it when created.
+  courseId        String?   @db.Uuid
+  course          Course?   @relation(fields: [courseId], references: [id], onDelete: SetNull)
   sessions        Session[]
   createdAt       DateTime  @default(now())
 
@@ -527,10 +540,17 @@ model BillingPlan {
   id               String      @id @default(uuid()) @db.Uuid
   studentId        String      @db.Uuid
   student          User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// The subject this arrangement covers. Null covers every subject that
+  /// hasn't one of its own — a student can be monthly for maths and
+  /// per-session for coding at the same time.
+  courseId         String?     @db.Uuid
+  course           Course?     @relation(fields: [courseId], references: [id], onDelete: Cascade)
   kind             BillingKind
   /// Whole rupiah: per session, or per month. Zero for EXTERNAL and FREE.
   amount           Int         @default(0)
-  /// MONTHLY only: sessions the fee covers, for spotting a month that ran over. Null = unlimited.
+  /// MONTHLY only: sessions the fee covers each month. Sessions beyond it
+  /// aren't charged extra — they come out of the next month's allowance.
+  /// Null = unlimited.
   includedSessions Int?
   /// EXTERNAL: who pays, e.g. "Superprof". Shown wherever the plan is.
   payer            String      @default("")
@@ -540,6 +560,7 @@ model BillingPlan {
   createdAt        DateTime    @default(now())
 
   @@index([studentId, startsOn])
+  @@index([courseId])
 }
 
 enum InvoiceStatus {
@@ -566,6 +587,7 @@ model Invoice {
   note        String        @default("")
   items       InvoiceItem[]
   payments    Payment[]
+  allowances  InvoiceAllowance[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -581,6 +603,9 @@ model InvoiceItem {
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   sessionId   String?  @unique @db.Uuid
   session     Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  /// The subject the line belongs to, so an invoice can group two subjects.
+  courseId    String?  @db.Uuid
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
   description String
   quantity    Int      @default(1)
   /// Whole rupiah; negative for a discount.
@@ -588,6 +613,32 @@ model InvoiceItem {
   order       Int      @default(0)
 
   @@index([invoiceId])
+}
+
+/**
+ * A monthly arrangement's session allowance for the month this invoice bills.
+ * Sessions beyond the allowance aren't charged: they come out of the next
+ * month, which reads `carryOut` from here as its own `carryIn`. Written once
+ * when the invoice is raised, so the arithmetic that produced a past invoice
+ * stays readable.
+ */
+model InvoiceAllowance {
+  id        String   @id @default(uuid()) @db.Uuid
+  invoiceId String   @db.Uuid
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  courseId  String?  @db.Uuid
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  /// Sessions the monthly fee covers.
+  granted   Int
+  /// Sessions held in the month itself.
+  used      Int
+  /// Sessions carried in from earlier months, already held and still to be covered.
+  carryIn   Int      @default(0)
+  /// What this month passes on: max(0, used + carryIn - granted).
+  carryOut  Int      @default(0)
+
+  @@unique([invoiceId, courseId])
+  @@index([courseId])
 }
 
 /// Money received, recorded by hand — a transfer, cash, whatever. Always

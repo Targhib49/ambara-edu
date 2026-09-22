@@ -43,7 +43,15 @@ export async function createSession(
   const student = await db.user.findUnique({ where: { id: studentId } });
   if (!student) return { error: t("action.studentGone") };
   await db.session.create({
-    data: { studentId, tutorId: tutor.id, startTime, durationMinutes, status: "CONFIRMED" },
+    data: {
+      studentId,
+      tutorId: tutor.id,
+      startTime,
+      durationMinutes,
+      status: "CONFIRMED",
+      // What the session is for, so billing can price it by subject.
+      courseId: String(formData.get("courseId") ?? "").trim() || null,
+    },
   });
 
   // Email copy follows the recipient's language, not the tutor's.

@@ -13,6 +13,7 @@ import { PageHeader, PageTabs } from "@/components/ui/PageHeader";
 import { cardCls } from "@/components/ui/styles";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { studentOptions } from "@/lib/students/options";
+import { courseOptions } from "@/lib/courses/options";
 import { getLanguage, getT } from "@/lib/i18n/server";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -29,13 +30,14 @@ export default async function TutorSessionsPage({ searchParams }: { searchParams
   const t = await getT();
   const language = await getLanguage();
 
-  const [sessions, students, activeWindows] = await Promise.all([
+  const [sessions, students, courses, activeWindows] = await Promise.all([
     db.session.findMany({
       where: { tutorId: tutor.id },
       include: { student: { select: { name: true } } },
       orderBy: { startTime: "asc" },
     }),
     studentOptions(),
+    courseOptions(),
     db.availability.count({ where: { tutorId: tutor.id, active: true } }),
   ]);
 
@@ -83,7 +85,7 @@ export default async function TutorSessionsPage({ searchParams }: { searchParams
               title={t("tutorSessions.scheduleTitle")}
               description={t("tutorSessions.allTimesWib")}
             >
-              <ScheduleSessionForm students={students} today={localDate(new Date(now))} />
+              <ScheduleSessionForm students={students} courses={courses} today={localDate(new Date(now))} />
             </SlideOverButton>
           ) : null
         }

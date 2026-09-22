@@ -249,7 +249,7 @@ export default async function StudentDetailPage({
               title={t("studentPage.scheduleSessionTitle", { name: student.name })}
               description={t("studentPage.wibNote")}
             >
-              <ScheduleSessionForm students={students} today={localDate(new Date(now))} defaultStudentId={student.id} />
+              <ScheduleSessionForm students={students} courses={courses} today={localDate(new Date(now))} defaultStudentId={student.id} />
             </SlideOverButton>
           </>
         }

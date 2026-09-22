@@ -36,6 +36,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
       student: { select: { id: true, name: true, email: true } },
       items: { orderBy: { order: "asc" } },
       payments: { orderBy: { paidOn: "asc" } },
+      allowances: { include: { course: { select: { title: true } } } },
     },
   });
   if (!invoice) notFound();
@@ -128,6 +129,19 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
           </tfoot>
         </table>
       </section>
+
+      {invoice.allowances.length > 0 && (
+        <section className={`${cardCls} space-y-1 p-4 text-sm`}>
+          {invoice.allowances.map((a) => (
+            <p key={a.id} className="text-zinc-600">
+              <span className="font-medium text-zinc-800">{a.course?.title ?? t("billing.plan.anySubject")}</span>{" "}
+              {t("billing.carry.used", { used: a.used + a.carryIn, granted: a.granted })}
+              {a.carryIn > 0 && ` · ${t("billing.carry.in", { n: a.carryIn })}`}
+              {a.carryOut > 0 && ` · ${t("billing.carry.out", { n: a.carryOut })}`}
+            </p>
+          ))}
+        </section>
+      )}
 
       {editable && <AddItemForm invoiceId={invoice.id} />}
 

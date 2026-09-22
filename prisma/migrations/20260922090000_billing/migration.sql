@@ -4,10 +4,17 @@ CREATE TYPE "BillingKind" AS ENUM ('PER_SESSION', 'MONTHLY', 'EXTERNAL', 'FREE')
 -- CreateEnum
 CREATE TYPE "InvoiceStatus" AS ENUM ('DRAFT', 'SENT', 'PAID', 'VOID');
 
+-- AlterTable
+ALTER TABLE "Session" ADD COLUMN     "courseId" UUID;
+
+-- AlterTable
+ALTER TABLE "SessionSeries" ADD COLUMN     "courseId" UUID;
+
 -- CreateTable
 CREATE TABLE "BillingPlan" (
     "id" UUID NOT NULL,
     "studentId" UUID NOT NULL,
+    "courseId" UUID,
     "kind" "BillingKind" NOT NULL,
     "amount" INTEGER NOT NULL DEFAULT 0,
     "includedSessions" INTEGER,
@@ -41,12 +48,26 @@ CREATE TABLE "InvoiceItem" (
     "id" UUID NOT NULL,
     "invoiceId" UUID NOT NULL,
     "sessionId" UUID,
+    "courseId" UUID,
     "description" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,
     "unitAmount" INTEGER NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "InvoiceItem_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "InvoiceAllowance" (
+    "id" UUID NOT NULL,
+    "invoiceId" UUID NOT NULL,
+    "courseId" UUID,
+    "granted" INTEGER NOT NULL,
+    "used" INTEGER NOT NULL,
+    "carryIn" INTEGER NOT NULL DEFAULT 0,
+    "carryOut" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "InvoiceAllowance_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -66,6 +87,9 @@ CREATE TABLE "Payment" (
 CREATE INDEX "BillingPlan_studentId_startsOn_idx" ON "BillingPlan"("studentId", "startsOn");
 
 -- CreateIndex
+CREATE INDEX "BillingPlan_courseId_idx" ON "BillingPlan"("courseId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Invoice_number_key" ON "Invoice"("number");
 
 -- CreateIndex
@@ -81,10 +105,25 @@ CREATE UNIQUE INDEX "InvoiceItem_sessionId_key" ON "InvoiceItem"("sessionId");
 CREATE INDEX "InvoiceItem_invoiceId_idx" ON "InvoiceItem"("invoiceId");
 
 -- CreateIndex
+CREATE INDEX "InvoiceAllowance_courseId_idx" ON "InvoiceAllowance"("courseId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "InvoiceAllowance_invoiceId_courseId_key" ON "InvoiceAllowance"("invoiceId", "courseId");
+
+-- CreateIndex
 CREATE INDEX "Payment_invoiceId_idx" ON "Payment"("invoiceId");
 
 -- AddForeignKey
+ALTER TABLE "Session" ADD CONSTRAINT "Session_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Track"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SessionSeries" ADD CONSTRAINT "SessionSeries_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Track"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "BillingPlan" ADD CONSTRAINT "BillingPlan_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BillingPlan" ADD CONSTRAINT "BillingPlan_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Track"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -94,6 +133,15 @@ ALTER TABLE "InvoiceItem" ADD CONSTRAINT "InvoiceItem_invoiceId_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "InvoiceItem" ADD CONSTRAINT "InvoiceItem_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InvoiceItem" ADD CONSTRAINT "InvoiceItem_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Track"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InvoiceAllowance" ADD CONSTRAINT "InvoiceAllowance_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InvoiceAllowance" ADD CONSTRAINT "InvoiceAllowance_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Track"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;

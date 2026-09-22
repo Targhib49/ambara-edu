@@ -6,6 +6,7 @@ import { cardCls } from "@/components/ui/styles";
 import { getLanguage, getT } from "@/lib/i18n/server";
 import { nowMs } from "@/lib/sessions/format";
 import { studentOptions } from "@/lib/students/options";
+import { courseOptions } from "@/lib/courses/options";
 import { formatIDR } from "@/lib/billing/money";
 import { planOn } from "@/lib/billing/plan";
 import { invoiceTotal, isOwed, outstanding, paidTotal } from "@/lib/billing/invoice";
@@ -25,7 +26,7 @@ export default async function TutorBillingPage() {
   const today = todayDate();
   const now = new Date(nowMs());
 
-  const [students, invoices, options] = await Promise.all([
+  const [students, invoices, options, courses] = await Promise.all([
     db.user.findMany({
       where: { role: "STUDENT" },
       orderBy: { name: "asc" },
@@ -33,7 +34,7 @@ export default async function TutorBillingPage() {
         id: true,
         name: true,
         email: true,
-        billingPlans: { orderBy: { startsOn: "asc" } },
+        billingPlans: { orderBy: { startsOn: "asc" }, include: { course: { select: { title: true } } } },
         sessionsAsStudent: {
           where: { OR: [{ status: "COMPLETED", invoiceItem: null }, { status: "CONFIRMED", startTime: { lt: now } }] },
           select: { status: true },
@@ -57,20 +58,27 @@ export default async function TutorBillingPage() {
       },
     }),
     studentOptions(),
+    courseOptions(),
   ]);
 
+  const describePlan = (plan: { kind: string; amount: number; includedSessions: number | null; payer: string }) =>
+    plan.kind === "PER_SESSION"
+      ? t("billing.plan.perSession", { amount: formatIDR(plan.amount, language) })
+      : plan.kind === "MONTHLY"
+        ? t("billing.plan.perMonth", { amount: formatIDR(plan.amount, language) }) +
+          (plan.includedSessions ? ` · ${t("billing.plan.includedCount", { n: plan.includedSessions })}` : "")
+        : plan.kind === "EXTERNAL"
+          ? `${t("billing.kind.EXTERNAL")}${plan.payer ? `: ${plan.payer}` : ""}`
+          : t("billing.kind.FREE");
+
   const rows: BillingRow[] = students.map((s) => {
-    const plan = planOn(s.billingPlans, today);
-    const planLabel = !plan
-      ? null
-      : plan.kind === "PER_SESSION"
-        ? t("billing.plan.perSession", { amount: formatIDR(plan.amount, language) })
-        : plan.kind === "MONTHLY"
-          ? t("billing.plan.perMonth", { amount: formatIDR(plan.amount, language) }) +
-            (plan.includedSessions ? ` · ${t("billing.plan.includedCount", { n: plan.includedSessions })}` : "")
-          : plan.kind === "EXTERNAL"
-            ? `${t("billing.kind.EXTERNAL")}${plan.payer ? `: ${plan.payer}` : ""}`
-            : t("billing.kind.FREE");
+    // One arrangement per subject, each the latest that has started.
+    const subjects = [...new Set(s.billingPlans.map((p) => p.courseId))];
+    const plans = subjects.flatMap((courseId) => {
+      const plan = planOn(s.billingPlans.filter((p) => p.courseId === courseId), today);
+      if (!plan) return [];
+      return [{ subject: plan.course?.title ?? t("billing.plan.anySubject"), label: describePlan(plan) }];
+    });
     const owed = s.invoices
       .filter((i) => isOwed(i.status))
       .reduce((sum, i) => sum + Math.max(0, outstanding(i.items, i.payments)), 0);
@@ -79,9 +87,7 @@ export default async function TutorBillingPage() {
       id: s.id,
       name: s.name,
       email: s.email,
-      planLabel,
-      planKind: plan?.kind ?? null,
-      payer: plan?.payer ?? "",
+      plans,
       uninvoiced: s.sessionsAsStudent.filter((x) => x.status === "COMPLETED").length,
       unmarked: s.sessionsAsStudent.filter((x) => x.status === "CONFIRMED").length,
       outstanding: owed,
@@ -110,8 +116,11 @@ export default async function TutorBillingPage() {
         meta={t("billing.subtitle")}
         actions={
           <div className="flex flex-wrap gap-2">
+            <a href="/tutor/sessions/subjects" className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+              {t("subjects.link")}
+            </a>
             <SlideOverButton label={t("billing.plan.set")} title={t("billing.plan.set")} variant="secondary" icon="none">
-              <BillingPlanForm students={options} defaultDate={dateInputValue(today)} />
+              <BillingPlanForm students={options} courses={courses} defaultDate={dateInputValue(today)} />
             </SlideOverButton>
             <SlideOverButton label={t("billing.newInvoice")} title={t("billing.newInvoice")}>
               <NewInvoiceForm students={options} defaultMonth={currentMonth()} />
