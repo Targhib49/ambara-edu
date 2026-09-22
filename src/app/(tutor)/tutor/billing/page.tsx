@@ -7,6 +7,7 @@ import { getLanguage, getT } from "@/lib/i18n/server";
 import { nowMs } from "@/lib/sessions/format";
 import { studentOptions } from "@/lib/students/options";
 import { courseOptions } from "@/lib/courses/options";
+import { sessionCredit } from "@/lib/billing/credit";
 import { formatIDR } from "@/lib/billing/money";
 import { planOn } from "@/lib/billing/plan";
 import { invoiceTotal, isOwed, outstanding, paidTotal } from "@/lib/billing/invoice";
@@ -71,6 +72,8 @@ export default async function TutorBillingPage() {
           ? `${t("billing.kind.EXTERNAL")}${plan.payer ? `: ${plan.payer}` : ""}`
           : t("billing.kind.FREE");
 
+  const credits = new Map(await Promise.all(students.map(async (s) => [s.id, await sessionCredit(s.id)] as const)));
+
   const rows: BillingRow[] = students.map((s) => {
     // One arrangement per subject, each the latest that has started.
     const subjects = [...new Set(s.billingPlans.map((p) => p.courseId))];
@@ -91,6 +94,7 @@ export default async function TutorBillingPage() {
       uninvoiced: s.sessionsAsStudent.filter((x) => x.status === "COMPLETED").length,
       unmarked: s.sessionsAsStudent.filter((x) => x.status === "CONFIRMED").length,
       outstanding: owed,
+      owedSessions: (credits.get(s.id) ?? []).map((c) => ({ subject: c.subject, sessions: c.sessions })),
       lastInvoiceLabel: last ? `${monthLabel(last.periodStart, language)} · ${t(`invoice.status.${last.status}` as never)}` : null,
     };
   });

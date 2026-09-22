@@ -138,6 +138,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
               {t("billing.carry.used", { used: a.used + a.carryIn, granted: a.granted })}
               {a.carryIn > 0 && ` · ${t("billing.carry.in", { n: a.carryIn })}`}
               {a.carryOut > 0 && ` · ${t("billing.carry.out", { n: a.carryOut })}`}
+              {a.carryOut < 0 && ` · ${t("billing.carry.owed", { n: -a.carryOut })}`}
             </p>
           ))}
         </section>

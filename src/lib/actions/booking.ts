@@ -54,6 +54,8 @@ export async function bookSlot(
   ).some((s) => s.start.getTime() === start.getTime());
   if (!open) return { error: t("action.justBooked") };
 
+  // What the student booked it for; it decides how the session is billed.
+  const courseId = String(formData.get("courseId") ?? "").trim() || null;
   await db.session.create({
     data: {
       studentId: student.id,
@@ -61,6 +63,7 @@ export async function bookSlot(
       startTime: start,
       durationMinutes: window.durationMinutes,
       status: "CONFIRMED",
+      courseId,
     },
   });
 

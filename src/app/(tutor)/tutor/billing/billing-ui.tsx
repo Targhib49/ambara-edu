@@ -28,6 +28,8 @@ export type BillingRow = {
   /** Sessions in the past still sitting at confirmed — they can't be invoiced until closed out. */
   unmarked: number;
   outstanding: number;
+  /** Sessions they've paid for and not yet had, by subject. */
+  owedSessions: { subject: string | null; sessions: number }[];
   lastInvoiceLabel: string | null;
 };
 
@@ -81,7 +83,12 @@ const makeStudentColumns = (t: Translate): Column<BillingRow>[] => [
       <span className="block space-y-0.5">
         {r.uninvoiced > 0 && <span className="block text-zinc-700">{t("billing.uninvoiced", { n: r.uninvoiced })}</span>}
         {r.unmarked > 0 && <span className="block text-amber-700">{t("billing.unmarked", { n: r.unmarked })}</span>}
-        {r.uninvoiced === 0 && r.unmarked === 0 && <span className="block text-zinc-400">—</span>}
+        {r.owedSessions.map((c, i) => (
+          <span key={i} className="block text-blue-700">
+            {c.subject ? t("billing.owesSubject", { subject: c.subject, n: c.sessions }) : t("billing.owes", { n: c.sessions })}
+          </span>
+        ))}
+        {r.uninvoiced === 0 && r.unmarked === 0 && r.owedSessions.length === 0 && <span className="block text-zinc-400">—</span>}
       </span>
     ),
   },

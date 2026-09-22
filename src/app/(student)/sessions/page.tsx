@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { getLanguage, getT } from "@/lib/i18n/server";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { nowMs } from "@/lib/sessions/format";
-import { BookingPanel } from "@/components/sessions/BookingPanel";
+import { BookingPanel, type BookingSubject } from "@/components/sessions/BookingPanel";
+import { sessionCredit } from "@/lib/billing/credit";
 import { CalendarFeedCard } from "@/components/sessions/CalendarFeedCard";
 import { ensureCalendarToken } from "@/lib/actions/booking";
 import { formatSlotDay, formatSlotTime, generateSlots } from "@/lib/scheduling";
@@ -48,6 +49,17 @@ export default async function StudentSessionsPage() {
       timeLabel: formatSlotTime(slot.start),
       tutorId: slot.tutorId,
     }));
+
+  // The subjects this student can book, with any sessions already paid for.
+  const [enrollments, credits] = await Promise.all([
+    db.enrollment.findMany({ where: { studentId: student.id }, select: { course: { select: { id: true, title: true } } } }),
+    sessionCredit(student.id),
+  ]);
+  const subjects: BookingSubject[] = enrollments.map((e) => ({
+    value: e.course.id,
+    label: e.course.title,
+    credit: credits.find((c) => c.courseId === e.course.id)?.sessions ?? 0,
+  }));
 
   const feedUrl = await feedUrlFor(await ensureCalendarToken());
 
@@ -101,7 +113,7 @@ export default async function StudentSessionsPage() {
                 title={t("sessions.book")}
                 description={t("sessions.bookDescription")}
               >
-            <BookingPanel slots={openSlots} />
+            <BookingPanel slots={openSlots} subjects={subjects} />
           </SlideOverButton>
           </>
         }

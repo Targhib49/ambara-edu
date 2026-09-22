@@ -632,9 +632,11 @@ model InvoiceAllowance {
   granted   Int
   /// Sessions held in the month itself.
   used      Int
-  /// Sessions carried in from earlier months, already held and still to be covered.
+  /// The balance brought in: positive for sessions already taken against
+  /// this allowance, negative for sessions the student is still owed.
   carryIn   Int      @default(0)
-  /// What this month passes on: max(0, used + carryIn - granted).
+  /// What this month passes on: used + carryIn - granted. Negative means the
+  /// fee paid for sessions that haven't happened yet — the student keeps them.
   carryOut  Int      @default(0)
 
   @@unique([invoiceId, courseId])

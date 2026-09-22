@@ -8,6 +8,7 @@ import { formatIDR } from "@/lib/billing/money";
 import { INVOICE_STATUS_BADGE, invoiceStatusKey, invoiceTotal, isOwed, paidTotal } from "@/lib/billing/invoice";
 import { dateLabel, monthLabel, todayDate } from "@/lib/billing/period";
 import { planOn } from "@/lib/billing/plan";
+import { creditTotal, sessionCredit } from "@/lib/billing/credit";
 
 /**
  * What the student owes and what they've paid. Drafts are the tutor's own
@@ -18,13 +19,14 @@ export default async function StudentBillingPage() {
   const t = await getT();
   const language = await getLanguage();
 
-  const [invoices, plans] = await Promise.all([
+  const [invoices, plans, credits] = await Promise.all([
     db.invoice.findMany({
       where: { studentId: student.id, status: { not: "DRAFT" } },
       orderBy: { periodStart: "desc" },
       include: { items: { orderBy: { order: "asc" } }, payments: { orderBy: { paidOn: "asc" } } },
     }),
     db.billingPlan.findMany({ where: { studentId: student.id }, orderBy: { startsOn: "asc" } }),
+    sessionCredit(student.id),
   ]);
 
   const plan = planOn(plans, todayDate());
@@ -44,6 +46,19 @@ export default async function StudentBillingPage() {
         <p className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
           {t("studentBilling.external", { payer: plan.payer || t("billing.kind.EXTERNAL") })}
         </p>
+      )}
+
+      {credits.length > 0 && (
+        <div className={`${cardCls} border-blue-200 bg-blue-50/60 p-4`}>
+          <p className="font-medium text-blue-900">{t("studentBilling.credit", { n: creditTotal(credits) })}</p>
+          <p className="mt-0.5 text-sm text-blue-900/80">
+            {credits.map((c) => (c.subject ? t("billing.owesSubject", { subject: c.subject, n: c.sessions }) : t("billing.owes", { n: c.sessions }))).join(" · ")}
+          </p>
+          <p className="mt-1 text-sm text-blue-900/80">{t("studentBilling.creditHint")}</p>
+          <Link href="/sessions" className="mt-1 inline-block text-sm font-medium text-blue-700 hover:underline">
+            {t("studentBilling.book")}
+          </Link>
+        </div>
       )}
 
       <div className={`${cardCls} p-4`}>

@@ -34,7 +34,10 @@ export type DraftInput<S extends DraftSession> = {
   sessionLine: (session: S) => string;
   /** What a monthly fee's line says. */
   monthlyLine: string;
-  /** Sessions already carried into this month from earlier ones, by subject. */
+  /**
+   * The balance carried into this month, by subject: positive for sessions
+   * already taken against it, negative for sessions still owed.
+   */
   carriedIn: (courseId: string | null) => number;
 };
 
@@ -49,8 +52,11 @@ export type DraftInput<S extends DraftSession> = {
  * - A monthly fee is charged once, by the subject the arrangement names, and
  *   whether or not the month had sessions.
  * - Sessions a monthly fee covers appear at no charge, so the student sees
- *   what they got; sessions past the allowance aren't charged either — they
- *   come out of next month, which is what `carryOut` passes on.
+ *   what they got. The allowance carries **both ways**: sessions past it
+ *   aren't charged again, they come out of next month; and a month that used
+ *   fewer than it paid for leaves sessions the student is still owed. That is
+ *   `carryOut` — positive means sessions taken in advance, negative means
+ *   sessions still owed.
  * - Sessions with no arrangement, or on one that isn't billed here, are
  *   listed at no charge rather than dropped: they stay visible, and they
  *   stop counting as waiting to be invoiced.
@@ -111,7 +117,7 @@ export function buildInvoiceDraft<S extends DraftSession>(input: DraftInput<S>):
           granted: plan.includedSessions,
           used: mine.length,
           carryIn,
-          carryOut: Math.max(0, mine.length + carryIn - plan.includedSessions),
+          carryOut: mine.length + carryIn - plan.includedSessions,
         });
       }
       continue;
