@@ -58,6 +58,12 @@ enum Language {
   EN
 }
 
+/** Who can open a course without the tutor putting them on it. */
+enum CourseAccess {
+  ENROLLED // only students the tutor enrolled, or a syllabus let in
+  OPEN // any signed-in student — the free course
+}
+
 enum CourseStatus {
   DRAFT
   PUBLISHED
@@ -126,6 +132,7 @@ model User {
   practiceProgress  PracticeProgress[]
   projectProgress   ProjectProgress[]
   verificationTokens EmailVerificationToken[]
+  syllabusRequests  SyllabusRequest[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 }
@@ -162,6 +169,8 @@ model Course {
   curriculum  String?
   level       String?
   status      CourseStatus @default(PUBLISHED)
+  /// OPEN lets any signed-in student in; they're enrolled the moment they open it.
+  access      CourseAccess @default(ENROLLED)
   ownerId     String       @db.Uuid
   owner       User         @relation("CourseOwner", fields: [ownerId], references: [id])
   chapters    Chapter[]
@@ -175,6 +184,14 @@ model Course {
   billingPlans  BillingPlan[]
   invoiceItems  InvoiceItem[]
   allowances    InvoiceAllowance[]
+  syllabusCourses SyllabusCourse[]
+}
+
+/** How a student came to have access — for the record, never for the check. */
+enum EnrollmentSource {
+  TUTOR // the tutor put them on it
+  OPEN // they opened a course that's open to everyone
+  SYLLABUS // they joined, or were approved for, a syllabus holding this course
 }
 
 model Enrollment {
@@ -182,6 +199,12 @@ model Enrollment {
   courseId  String   @map("trackId") @db.Uuid
   student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  source    EnrollmentSource @default(TUTOR)
+  /// The syllabus that granted it, if one did.
+  syllabusId String? @db.Uuid
+  syllabus  Syllabus? @relation(fields: [syllabusId], references: [id], onDelete: SetNull)
+  /// Null means forever. Timed access needs no migration when it arrives.
+  expiresAt DateTime? @db.Timestamptz(3)
   createdAt DateTime @default(now())
 
   @@id([studentId, courseId])
@@ -588,6 +611,7 @@ model Invoice {
   items       InvoiceItem[]
   payments    Payment[]
   allowances  InvoiceAllowance[]
+  syllabusRequests SyllabusRequest[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -657,4 +681,85 @@ model Payment {
   createdAt DateTime @default(now())
 
   @@index([invoiceId])
+}
+
+
+// ---------------------------------------------------------------- syllabi
+//
+// A syllabus is a course of study: several courses in order, where a later
+// one opens only once the one before it has been passed. Access to a course
+// is still an Enrollment and nothing else — joining a syllabus, or being
+// approved for one, writes those rows. One way in, so no screen can forget
+// to check a second one.
+
+enum SyllabusAccess {
+  OPEN // any signed-in student can join it themselves
+  REQUEST // they ask, the tutor approves, and it opens once the invoice is paid
+}
+
+model Syllabus {
+  id             String         @id @default(uuid()) @db.Uuid
+  title          String
+  description    String         @default("")
+  /// Storage path of the cover in the attachments bucket, like a course's.
+  coverImagePath String?
+  status         CourseStatus   @default(DRAFT)
+  access         SyllabusAccess @default(REQUEST)
+  /// Whole rupiah, for a syllabus that has to be asked for. Zero means free.
+  price          Int            @default(0)
+  courses        SyllabusCourse[]
+  requests       SyllabusRequest[]
+  enrollments    Enrollment[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status])
+}
+
+/// One course's place in a syllabus, and what passing it takes.
+model SyllabusCourse {
+  id         String   @id @default(uuid()) @db.Uuid
+  syllabusId String   @db.Uuid
+  syllabus   Syllabus @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+  courseId   String   @db.Uuid
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order      Int
+  /// Percentage across the course's graded quizzes that counts as passed.
+  passScore  Int      @default(75)
+  /// Whether the course before this one has to be passed first. The first
+  /// course is never gated; a later one can be opened up deliberately.
+  requiresPrevious Boolean @default(true)
+
+  @@unique([syllabusId, courseId])
+  @@index([syllabusId, order])
+}
+
+enum RequestStatus {
+  PENDING // waiting for the tutor
+  AWAITING_PAYMENT // approved; the invoice is out and access waits on it
+  GRANTED // paid (or free) — the courses are enrolled
+  DECLINED
+  WITHDRAWN // the student changed their mind
+}
+
+/// A student asking for a syllabus they can't just join.
+model SyllabusRequest {
+  id         String        @id @default(uuid()) @db.Uuid
+  studentId  String        @db.Uuid
+  student    User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  syllabusId String        @db.Uuid
+  syllabus   Syllabus      @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+  status     RequestStatus @default(PENDING)
+  /// What the student said when asking, and what the tutor said back.
+  message    String        @default("")
+  reply      String        @default("")
+  /// The invoice raised on approval; access opens when it is paid.
+  invoiceId  String?       @db.Uuid
+  invoice    Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  decidedAt  DateTime?     @db.Timestamptz(3)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([studentId, syllabusId])
+  @@index([status])
 }

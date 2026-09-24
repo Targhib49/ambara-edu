@@ -79,6 +79,7 @@ async function loadCourse(courseId: string) {
       level: true,
       status: true,
       coverImagePath: true,
+      access: true,
       _count: { select: { enrollments: true } },
       chapters: {
         orderBy: { order: "asc" },
@@ -472,6 +473,23 @@ async function SettingsTab({ course, quizCount }: { course: Course; quizCount: n
                 <input type="radio" name="status" value={value} defaultChecked={course.status === value} className="sr-only" />
                 <span className="block text-sm font-medium text-zinc-900">{label}</span>
                 <span className="block text-xs text-zinc-500">{sub}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend className={labelCls}>{t("courseEditor.access")}</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(["ENROLLED", "OPEN"] as const).map((value) => (
+              <label
+                key={value}
+                className="cursor-pointer rounded-lg border border-zinc-200 px-3 py-2.5 hover:border-zinc-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/60 has-[:checked]:ring-1 has-[:checked]:ring-blue-500"
+              >
+                <input type="radio" name="access" value={value} defaultChecked={course.access === value} className="sr-only" />
+                <span className="block text-sm font-medium text-zinc-900">{t(`course.access.${value}` as const)}</span>
+                <span className="block text-xs text-zinc-500">
+                  {value === "OPEN" ? t("course.access.OPEN.hint") : t("courseEditor.accessEnrolledHint")}
+                </span>
               </label>
             ))}
           </div>

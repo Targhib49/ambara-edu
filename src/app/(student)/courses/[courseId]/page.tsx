@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { courseAdmission } from "@/lib/syllabus/access";
+import { StartOpenCourseButton } from "@/app/(student)/explore/explore-ui";
 import { db } from "@/lib/db";
 import { requireStudent } from "@/lib/auth";
 import { nowMs, formatSessionTime } from "@/lib/sessions/format";
@@ -63,7 +65,40 @@ export default async function StudentTrackPage({
       },
     },
   });
-  if (!course) notFound();
+  // Not enrolled isn't always "no such course": it can be behind a gate they
+  // haven't passed, or open to everyone and simply not started yet.
+  if (!course) {
+    const admission = await courseAdmission(student.id, courseId);
+    if (admission.allowed === false && admission.reason === "locked") {
+      return (
+        <div className="mx-auto w-full max-w-lg px-4 py-16 text-center">
+          <p aria-hidden className="text-3xl">🔒</p>
+          <h1 className="mt-3 text-xl font-semibold text-zinc-900">{t("course.locked")}</h1>
+          <p className="mt-2 text-sm text-zinc-600">
+            {t("syllabus.locked", { course: admission.afterTitle, needed: admission.needed })} ·{" "}
+            {t("syllabus.lockedNow", { have: admission.have })}
+          </p>
+          <Link href="/explore" className="mt-4 inline-block text-sm font-medium text-blue-700 hover:underline">
+            {admission.syllabusTitle} →
+          </Link>
+        </div>
+      );
+    }
+    if (admission.allowed === false && admission.reason === "enroll-open") {
+      const open = await db.course.findUniqueOrThrow({ where: { id: courseId }, select: { title: true, description: true } });
+      return (
+        <div className="mx-auto w-full max-w-lg px-4 py-16 text-center">
+          <h1 className="text-xl font-semibold text-zinc-900">{open.title}</h1>
+          {open.description && <p className="mt-2 text-sm text-zinc-600">{open.description}</p>}
+          <p className="mt-2 text-sm text-zinc-500">{t("course.access.OPEN.hint")}</p>
+          <div className="mt-4 flex justify-center">
+            <StartOpenCourseButton courseId={courseId} />
+          </div>
+        </div>
+      );
+    }
+    notFound();
+  }
 
   // The chapters' own tests — quizzes not tied to one lesson — shown after each
   // chapter's last lesson.

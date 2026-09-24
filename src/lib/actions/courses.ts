@@ -41,6 +41,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return;
   const statusRaw = String(formData.get("status") ?? "");
+  const accessRaw = String(formData.get("access") ?? "");
   await db.course.update({
     where: { id: courseId },
     data: {
@@ -50,6 +51,8 @@ export async function updateCourse(courseId: string, formData: FormData) {
       curriculum: facet(formData, "curriculum"),
       level: facet(formData, "level"),
       ...((COURSE_STATUSES as string[]).includes(statusRaw) ? { status: statusRaw as CourseStatus } : {}),
+      // OPEN makes it the free course anyone signed in can start.
+      ...(accessRaw === "OPEN" || accessRaw === "ENROLLED" ? { access: accessRaw } : {}),
     },
   });
   revalidateCourse(courseId);
