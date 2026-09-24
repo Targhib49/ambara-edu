@@ -8,7 +8,7 @@ import { makeT } from "@/lib/i18n/translate";
 import { parseIDR } from "@/lib/billing/money";
 import { invoiceNumber } from "@/lib/billing/invoice";
 import { monthDates, todayDate } from "@/lib/billing/period";
-import { syllabusSteps } from "@/lib/syllabus/access";
+import { grantSyllabus } from "@/lib/syllabus/grant";
 import type { CourseStatus, SyllabusAccess } from "@/generated/prisma/enums";
 
 export type SyllabusResult = { error?: string; ok?: true; id?: string };
@@ -137,32 +137,6 @@ export async function moveSyllabusCourse(id: string, direction: "up" | "down"): 
 
 // ---------------------------------------------------------------- access
 
-/**
- * Enrols a student in the courses of a syllabus. Courses behind a gate they
- * haven't passed are left out: the syllabus page shows them locked, and the
- * enrollment is written the moment the gate opens.
- */
-async function grantSyllabus(studentId: string, syllabusId: string) {
-  const steps = await syllabusSteps(studentId, syllabusId);
-  const open = steps.filter((s) => s.unlocked).map((s) => s.courseId);
-  if (!open.length) return;
-  await db.enrollment.createMany({
-    data: open.map((courseId) => ({ studentId, courseId, source: "SYLLABUS" as const, syllabusId })),
-    skipDuplicates: true,
-  });
-}
-
-/**
- * Opens the next course when its gate is passed. Called when a student looks
- * at the syllabus, so a course they've just earned is there when they go for
- * it, rather than waiting for the tutor to notice.
- */
-export async function refreshSyllabusAccess(studentId: string, syllabusId: string) {
-  const joined = await db.enrollment.findFirst({ where: { studentId, syllabusId }, select: { studentId: true } });
-  if (!joined) return;
-  await grantSyllabus(studentId, syllabusId);
-}
-
 /** A student joining a syllabus that's open to everyone. */
 export async function joinSyllabus(syllabusId: string): Promise<SyllabusResult> {
   const t = await getT();
@@ -284,21 +258,4 @@ export async function declineRequest(_prev: SyllabusResult, formData: FormData):
   });
   revalidateSyllabi();
   return { ok: true };
-}
-
-/**
- * Opens the syllabi whose invoice has just been paid. Called wherever an
- * invoice becomes PAID, so access follows the money without the tutor having
- * to remember a second step.
- */
-export async function grantPaidSyllabusRequests(invoiceId: string) {
-  const requests = await db.syllabusRequest.findMany({
-    where: { invoiceId, status: "AWAITING_PAYMENT" },
-    select: { id: true, studentId: true, syllabusId: true },
-  });
-  for (const request of requests) {
-    await grantSyllabus(request.studentId, request.syllabusId);
-    await db.syllabusRequest.update({ where: { id: request.id }, data: { status: "GRANTED" } });
-    revalidateSyllabi(request.syllabusId);
-  }
 }

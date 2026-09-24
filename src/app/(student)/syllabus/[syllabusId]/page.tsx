@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { cardCls } from "@/components/ui/styles";
 import { getT } from "@/lib/i18n/server";
 import { syllabusSteps } from "@/lib/syllabus/access";
-import { refreshSyllabusAccess } from "@/lib/actions/syllabi";
+import { refreshSyllabusAccess } from "@/lib/syllabus/grant";
 
 /**
  * A syllabus as the student walks it: the courses in order, what they've

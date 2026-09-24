@@ -7,7 +7,7 @@ import { getT } from "@/lib/i18n/server";
 import { makeT } from "@/lib/i18n/translate";
 import { BILLING_KINDS, planCharges } from "@/lib/billing/plan";
 import { buildInvoiceDraft } from "@/lib/billing/draft";
-import { grantPaidSyllabusRequests } from "@/lib/actions/syllabi";
+import { grantPaidSyllabusRequests } from "@/lib/syllabus/grant";
 import { invoiceNumber, invoiceTotal, paidTotal } from "@/lib/billing/invoice";
 import { monthDates, monthInstants, parseDate, parseMonth, sessionLineLabel, todayDate } from "@/lib/billing/period";
 import { parseIDR } from "@/lib/billing/money";
@@ -237,7 +237,10 @@ export async function setInvoiceStatus(invoiceId: string, status: InvoiceStatus)
     where: { id: invoiceId },
     data: { status, issuedAt: status === "SENT" && !invoice.issuedAt ? new Date() : invoice.issuedAt },
   });
-  if (status === "PAID") await grantPaidSyllabusRequests(invoiceId);
+  if (status === "PAID") {
+    for (const syllabusId of await grantPaidSyllabusRequests(invoiceId)) revalidatePath(`/syllabus/${syllabusId}`);
+    revalidatePath("/explore");
+  }
   revalidateBilling(invoiceId, invoice.studentId);
   return { ok: true };
 }
@@ -273,7 +276,10 @@ export async function recordPayment(_prev: BillingResult, formData: FormData): P
     }),
   ]);
   // Access follows the money: a syllabus bought on this invoice opens now.
-  if (settled) await grantPaidSyllabusRequests(invoiceId);
+  if (settled) {
+    for (const syllabusId of await grantPaidSyllabusRequests(invoiceId)) revalidatePath(`/syllabus/${syllabusId}`);
+    revalidatePath("/explore");
+  }
   revalidateBilling(invoiceId, invoice.studentId);
   return { ok: true };
 }
