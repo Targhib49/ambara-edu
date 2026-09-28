@@ -29,17 +29,18 @@ import { blockDataSchemas } from "../src/lib/blocks/schema";
 import { questionRow, type BabContent, type Block, type ChapterContent } from "./content/math-types";
 import { OLIM_TEORI_BILANGAN } from "./content/olim-teori-bilangan";
 import { OLIM_ALJABAR } from "./content/olim-aljabar";
-import { OLIM_ALJABAR_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER } from "./content/olim-chapters";
+import { OLIM_KOMBINATORIKA } from "./content/olim-kombinatorika";
+import { OLIM_ALJABAR_CHAPTER, OLIM_KOMBINATORIKA_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER } from "./content/olim-chapters";
 
 const COURSE_TITLE = "Persiapan Olimpiade Matematika (MS²C)";
 const COURSE_DESCRIPTION =
   "Persiapan kompetisi MS²C: aljabar, geometri, teori bilangan, dan kombinatorika. Setiap sesi berisi materi ringkas dan satu set soal, termasuk soal uraian yang dinilai dari prosesnya.";
 
 /** Chapter order in the course; a chapter not yet written is simply absent. */
-const CHAPTERS: BabContent[] = [OLIM_ALJABAR, OLIM_TEORI_BILANGAN];
+const CHAPTERS: BabContent[] = [OLIM_ALJABAR, OLIM_TEORI_BILANGAN, OLIM_KOMBINATORIKA];
 
 /** Each chapter's closing sequence: mastery, try-out, final simulation. */
-const CHAPTER_QUIZZES: ChapterContent[] = [OLIM_ALJABAR_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER];
+const CHAPTER_QUIZZES: ChapterContent[] = [OLIM_ALJABAR_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER, OLIM_KOMBINATORIKA_CHAPTER];
 
 const BOOK_DIR = path.resolve(__dirname, "../../Elementary Maths and Python/Mid Math/Buku");
 const BACKUP_DIR = path.join(BOOK_DIR, "backups");

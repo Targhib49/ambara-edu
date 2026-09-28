@@ -349,3 +349,156 @@ export const OLIM_ALJABAR_CHAPTER: ChapterContent = {
     },
   ],
 };
+
+export const OLIM_KOMBINATORIKA_CHAPTER: ChapterContent = {
+  chapterTitle: "Kombinatorika",
+  archiveOnPublish: [],
+  quizzes: [
+    {
+      title: "Latihan Penguasaan — Kombinatorika",
+      style: "MASTERY",
+      questions: [
+        { type: "NUMERIC", points: 1, prompt: "Berapa nilai $\\binom72$?", answer: 21, explanation: "$\\frac{7\\cdot6}{2} = 21$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa nilai $P(6,2)$?", answer: 30, explanation: "$6\\cdot5 = 30$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa nilai $\\binom97$?", answer: 36, explanation: "$\\binom97 = \\binom92 = 36$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa banyak susunan huruf berbeda dari kata BALON?", answer: 120, explanation: "Semua hurufnya berbeda: $5! = 120$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa banyak himpunan bagian dari himpunan beranggota 4?", answer: 16, explanation: "$2^4 = 16$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa banyak cara menyusun 5 orang mengelilingi meja bundar?", answer: 24, explanation: "$(5-1)! = 24$." },
+        { type: "NUMERIC", points: 1, prompt: "Ada berapa bilangan dari 1 sampai 50 yang habis dibagi 3 atau 4?", answer: 24, explanation: "$16 + 12 - 4 = 24$." },
+        { type: "NUMERIC", points: 1, prompt: "Laci berisi kaus kaki 3 warna. Paling sedikit berapa yang diambil agar dijamin ada sepasang sewarna?", answer: 4, explanation: "3 warna sebagai sarang, jadi kaus kaki ke-4 memaksa pasangan." },
+        { type: "NUMERIC", points: 1, prompt: "Enam permen identik dibagikan kepada 3 anak (boleh ada yang tidak kebagian). Ada berapa cara?", answer: 28, explanation: "$\\binom{8}{2} = 28$." },
+        { type: "NUMERIC", points: 1, prompt: "Lima buku berbeda dibagikan kepada 3 anak, tiap buku boleh ke siapa saja. Ada berapa cara?", answer: 243, explanation: "Buku berbeda: $3^5 = 243$ — aturan perkalian, bukan stars and bars." },
+        { type: "NUMERIC", points: 1, prompt: "Sepuluh orang saling berjabat tangan sekali. Ada berapa jabat tangan?", answer: 45, explanation: "$\\binom{10}{2} = 45$." },
+        { type: "FRACTION", points: 1, prompt: `Dua koin dilempar. Berapa peluang keduanya gambar? ${FRAC}`, answer: "1/4", explanation: "Satu dari empat hasil." },
+        { type: "FRACTION", points: 1, prompt: `Sebuah dadu dilempar. Berapa peluang muncul mata dadu genap? ${FRAC}`, answer: "1/2", explanation: "Tiga dari enam." },
+        {
+          type: "MULTIPLE_CHOICE",
+          points: 1,
+          prompt: "Banyaknya solusi bulat tak negatif $x_1+x_2+x_3 = n$ adalah…",
+          options: ["$\\binom{n+2}{2}$", "$\\binom{n}{2}$", "$\\binom{n+2}{3}$", "$3^n$"],
+          answer: "A",
+          explanation: "$\\binom{n+k-1}{k-1}$ dengan $k = 3$.",
+        },
+        {
+          type: "MULTIPLE_CHOICE",
+          points: 1,
+          prompt: "Peluang “paling sedikit satu” paling mudah dihitung dengan…",
+          options: ["komplemen", "aturan penjumlahan", "permutasi", "mendaftar semua kasus"],
+          answer: "A",
+          explanation: "Komplemennya biasanya satu kasus saja.",
+        },
+        {
+          type: "MULTIPLE_CHOICE",
+          points: 1,
+          prompt: "Dengan $N$ benda di $n$ kotak, pasti ada kotak berisi paling sedikit…",
+          options: ["$\\lceil N/n \\rceil$", "$\\lfloor N/n \\rfloor$", "$N-n$", "2"],
+          answer: "A",
+          explanation: "Bentuk umum prinsip sarang merpati.",
+        },
+      ],
+    },
+
+    {
+      title: "Try Out Penyisihan — Kombinatorika",
+      style: "TRYOUT",
+      settings: { timeLimitMinutes: 60, maxAttempts: 2, randomizeQuestionOrder: true },
+      questions: [
+        { type: "NUMERIC", points: 5, prompt: "Berapa nilai $\\binom{15}{13}$?", answer: 105, explanation: "$\\binom{15}{13} = \\binom{15}{2} = 105$." },
+        { type: "NUMERIC", points: 5, prompt: "Berapa banyak susunan huruf berbeda dari kata KOMBINATORIKA?", answer: 389188800, explanation: "13 huruf dengan K, O, I, A masing-masing dua kali: $\\frac{13!}{2!\\,2!\\,2!\\,2!} = 389.188.800$." },
+        { type: "NUMERIC", points: 5, prompt: "Berapa banyak bilangan empat angka berbeda yang dapat disusun dari angka 1, 2, 3, 4, 5?", answer: 120, explanation: "$P(5,4) = 5\\cdot4\\cdot3\\cdot2 = 120$." },
+        { type: "NUMERIC", points: 5, prompt: "Ada berapa bilangan dari 1 sampai 200 yang habis dibagi 4, 6, atau 9?", answer: 78, explanation: "Inklusi–eksklusi: $50+33+22-16-11-5+5 = 78$." },
+        { type: "NUMERIC", points: 5, prompt: "Ada berapa solusi bilangan bulat tak negatif dari $x+y+z+w = 12$?", answer: 455, explanation: "$\\binom{15}{3} = 455$." },
+        { type: "NUMERIC", points: 5, prompt: "Ada berapa solusi bilangan bulat positif dari $x+y+z = 12$?", answer: 55, explanation: "$\\binom{11}{2} = 55$." },
+        { type: "NUMERIC", points: 5, prompt: "Sembilan permen identik dibagikan kepada 4 anak, tiap anak paling sedikit satu. Ada berapa cara?", answer: 56, explanation: "$\\binom{8}{3} = 56$." },
+        { type: "NUMERIC", points: 5, prompt: "Dari 5 putra dan 4 putri dipilih tim 3 orang dengan paling sedikit satu putri. Ada berapa cara?", answer: 74, explanation: "$\\binom93 - \\binom53 = 84 - 10 = 74$." },
+        { type: "NUMERIC", points: 5, prompt: "Diketahui $|A| = 30$, $|B| = 25$, dan $|A\\cup B| = 45$. Berapa $|A\\cap B|$?", answer: 10, explanation: "$30+25-45 = 10$." },
+        { type: "NUMERIC", points: 5, prompt: "Berapa banyak himpunan bagian beranggota genap (termasuk himpunan kosong) dari himpunan beranggota 7?", answer: 64, explanation: "Separuh dari $2^7$, yaitu 64." },
+        { type: "NUMERIC", points: 5, prompt: "Paling sedikit berapa kartu harus diambil dari satu set kartu (4 jenis) agar dijamin ada 3 kartu berjenis sama?", answer: 9, explanation: "Kasus terburuk 2 tiap jenis: 8 kartu; kartu ke-9 memaksa." },
+        { type: "NUMERIC", points: 5, prompt: "Paling sedikit berapa bilangan bulat harus dipilih agar dijamin ada dua yang selisihnya habis dibagi 9?", answer: 10, explanation: "Sisa modulo 9 ada 9 macam." },
+        { type: "NUMERIC", points: 5, prompt: "Tiga buku matematika dan tiga buku fisika disusun berjajar. Berapa banyak susunan jika ketiga buku matematika harus berdampingan?", answer: 144, explanation: "Blok matematika + 3 buku lain = 4 objek: $4!\\cdot3! = 24\\cdot6 = 144$." },
+        { type: "FRACTION", points: 5, prompt: `Dua dadu dilempar. Berapa peluang jumlahnya paling sedikit 10? ${FRAC}`, answer: "1/6", explanation: "Jumlah 10, 11, 12: $3+2+1 = 6$ dari 36." },
+        { type: "FRACTION", points: 5, prompt: `Tiga dadu dilempar. Berapa peluang ketiganya menunjukkan angka berbeda? ${FRAC}`, answer: "5/9", explanation: "$\\frac{6\\cdot5\\cdot4}{216} = \\frac{120}{216} = \\frac59$." },
+        { type: "FRACTION", points: 5, prompt: `Tiga dadu dilempar. Berapa peluang muncul paling sedikit satu angka 6? ${FRAC}`, answer: "91/216", explanation: "$1 - \\left(\\frac56\\right)^3 = 1 - \\frac{125}{216}$." },
+        { type: "FRACTION", points: 5, prompt: `Empat koin dilempar. Berapa peluang muncul tepat dua gambar? ${FRAC}`, answer: "3/8", explanation: "$\\frac{\\binom42}{16} = \\frac{6}{16} = \\frac38$." },
+        { type: "FRACTION", points: 5, prompt: `Dua kartu diambil sekaligus dari 52 kartu. Berapa peluang keduanya berwarna sama? ${FRAC}`, answer: "25/51", explanation: "$\\frac{2\\binom{26}{2}}{\\binom{52}{2}} = \\frac{650}{1326} = \\frac{25}{51}$." },
+        {
+          type: "MULTIPLE_CHOICE",
+          points: 5,
+          prompt: "Sepuluh bola identik dimasukkan ke 4 kotak berbeda sehingga tidak ada kotak yang kosong. Banyak caranya adalah…",
+          options: ["$\\binom93$", "$\\binom{13}{3}$", "$\\binom{10}{4}$", "$4^{10}$"],
+          answer: "A",
+          explanation: "Bagikan 1 dulu ke tiap kotak: $\\binom{10-1}{4-1} = \\binom93 = 84$.",
+        },
+        {
+          type: "MULTIPLE_CHOICE",
+          points: 5,
+          prompt: "Lima titik di dalam persegi bersisi 2 dijamin memuat dua titik berjarak paling jauh…",
+          options: ["$\\sqrt2$", "$1$", "$2$", "$\\sqrt5$"],
+          answer: "A",
+          explanation: "Bagi menjadi empat petak $1\\times1$; diagonal petaknya $\\sqrt2$.",
+        },
+      ],
+    },
+
+    {
+      title: "Simulasi Babak Final — Kombinatorika",
+      style: "EXAM",
+      settings: { timeLimitMinutes: 60, maxAttempts: 1, randomizeQuestionOrder: false },
+      questions: [
+        { type: "NUMERIC", points: 10, prompt: "Berapa nilai $\\binom{12}{3}$?", answer: 220, explanation: "$\\frac{12\\cdot11\\cdot10}{6} = 220$." },
+        { type: "NUMERIC", points: 10, prompt: "Tujuh orang duduk mengelilingi meja bundar. Berapa banyak susunan jika dua orang tertentu tidak boleh berdampingan?", answer: 480, explanation: "Seluruhnya $6! = 720$; yang berdampingan $5!\\cdot2 = 240$; jadi $720-240 = 480$." },
+        {
+          type: "WORKED",
+          points: 25,
+          prompt:
+            "Tentukan banyaknya solusi bilangan bulat dari $x + y + z = 12$ dengan $0 \\le x, y, z \\le 5$. Tulis prosesnya, lalu tulis banyaknya solusi di kotak jawaban akhir.",
+          answer: "10",
+          answerMarks: 5,
+          rubric: [
+            { point: "Menghitung solusi tanpa batas atas, $\\binom{14}{2} = 91$", marks: 6 },
+            { point: "Menghitung pelanggaran satu peubah $\\ge 6$ dengan substitusi, $3\\times\\binom82 = 84$", marks: 7 },
+            { point: "Menyadari dua peubah bisa melanggar bersamaan dan menambahkannya kembali, $3\\times\\binom22 = 3$", marks: 7 },
+          ],
+          solution:
+            "**Tanpa batas.** $\\binom{12+2}{2} = \\binom{14}{2} = 91$.\n\n**Satu peubah melanggar.** Misalkan $x \\ge 6$; tulis $x = x'+6$, sehingga $x'+y+z = 6$ dengan $\\binom82 = 28$ solusi. Untuk tiga peubah: $3\\times28 = 84$.\n\n**Dua peubah melanggar.** Jika $x \\ge 6$ dan $y \\ge 6$, maka $x'+y'+z = 0$, yang punya $\\binom22 = 1$ solusi. Ada 3 pasangan peubah, jadi 3 kasus — dan kasus ini sempat dikurangi dua kali, sehingga harus ditambahkan kembali.\n\n$$91 - 84 + 3 = \\mathbf{10}.$$",
+          explanation:
+            "Berbeda dari contoh di sesi, di sini pelanggaran ganda **mungkin** terjadi. Melewatkannya memberi jawaban 7, bukan 10 — inilah inklusi–eksklusi yang sesungguhnya.",
+        },
+        {
+          type: "WORKED",
+          points: 25,
+          prompt:
+            "Sebuah kotak berisi bola dengan 5 warna berbeda. Tentukan paling sedikit berapa bola yang harus diambil agar dijamin terdapat 4 bola berwarna sama, dan jelaskan mengapa jumlah satu bola lebih sedikit belum menjamin. Tulis prosesnya, lalu tulis jawabannya di kotak jawaban akhir.",
+          answer: "16",
+          answerMarks: 5,
+          rubric: [
+            { point: "Menyebut kasus terburuk: 3 bola untuk setiap warna", marks: 7 },
+            { point: "Menghitung $5\\times3 = 15$ bola tanpa ada warna yang mencapai 4", marks: 6 },
+            { point: "Menjelaskan mengapa bola ke-16 pasti memaksa satu warna mencapai 4", marks: 7 },
+          ],
+          solution:
+            "**Kasus terburuk.** Bola terambil seimbang: 3 bola untuk tiap warna, tanpa ada warna yang mencapai 4.\n\nDengan 5 warna, itu $5 \\times 3 = 15$ bola — jadi 15 bola **belum** menjamin apa pun, karena susunan itu benar-benar mungkin terjadi.\n\n**Satu bola lagi.** Bola ke-16 pasti berwarna salah satu dari kelima warna itu, dan warna mana pun yang muncul, warna tersebut menjadi $3+1 = 4$ bola.\n\nJadi paling sedikit $\\mathbf{16}$ bola. Bentuk umumnya: $n(k-1)+1$ untuk menjamin $k$ benda sewarna dari $n$ warna.",
+          explanation: "Soal “dijamin” menuntut dua hal: sebuah contoh yang menunjukkan jumlah kurang satu masih gagal, dan alasan mengapa jumlah itu berhasil.",
+        },
+        {
+          type: "WORKED",
+          points: 30,
+          prompt:
+            "Buktikan bahwa di antara sembilan bilangan bulat sembarang, pasti ada dua bilangan yang selisihnya habis dibagi 8. Lalu jelaskan mengapa pernyataan itu gagal jika hanya ada delapan bilangan. (Soal pembuktian.)",
+          answer: "",
+          answerMarks: 0,
+          rubric: [
+            { point: "Menyebut sarangnya: delapan kemungkinan sisa pembagian oleh 8", marks: 8 },
+            { point: "Menerapkan prinsip sarang merpati pada sembilan bilangan", marks: 7 },
+            { point: "Menunjukkan selisih dua bilangan bersisa sama habis dibagi 8", marks: 8 },
+            { point: "Memberi contoh delapan bilangan yang selisihnya tidak ada yang habis dibagi 8", marks: 7 },
+          ],
+          solution:
+            "**Sarang.** Sisa pembagian oleh 8 hanya ada delapan: $0, 1, \\ldots, 7$.\n\n**Merpati.** Sembilan bilangan yang diberikan. Karena $9 > 8$, ada dua bilangan — sebut $a$ dan $b$ — dengan sisa sama.\n\n**Artinya.** Tulis $a = 8p + r$ dan $b = 8q + r$. Maka $a - b = 8(p - q)$, sehingga $8 \\mid (a-b)$. $\\blacksquare$\n\n**Mengapa delapan tidak cukup.** Ambil $1, 2, 3, 4, 5, 6, 7, 8$: sisanya berturut-turut $1,2,3,4,5,6,7,0$ — semuanya berbeda, jadi tidak ada dua bilangan yang bersisa sama, dan tidak ada selisih yang habis dibagi 8. Dengan delapan bilangan, sarangnya pas terisi satu-satu.",
+          explanation:
+            "Bagian terakhir yang membedakan pemahaman dari hafalan: prinsip ini ketat, dan satu benda lebih sedikit benar-benar membuatnya gagal.",
+        },
+      ],
+    },
+  ],
+};
