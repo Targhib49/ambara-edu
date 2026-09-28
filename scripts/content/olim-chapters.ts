@@ -18,6 +18,7 @@ import type { ChapterContent } from "./math-types";
 
 const NEG = "Tulis bilangan negatif dengan tanda minus, misalnya -7.";
 const FRAC = "Tulis pecahan sebagai a/b, misalnya 21/4.";
+const DEG = "Tulis jawabannya dalam derajat, tanpa satuan.";
 
 export const OLIM_TEORI_BILANGAN_CHAPTER: ChapterContent = {
   chapterTitle: "Teori Bilangan",
@@ -497,6 +498,148 @@ export const OLIM_KOMBINATORIKA_CHAPTER: ChapterContent = {
             "**Sarang.** Sisa pembagian oleh 8 hanya ada delapan: $0, 1, \\ldots, 7$.\n\n**Merpati.** Sembilan bilangan yang diberikan. Karena $9 > 8$, ada dua bilangan — sebut $a$ dan $b$ — dengan sisa sama.\n\n**Artinya.** Tulis $a = 8p + r$ dan $b = 8q + r$. Maka $a - b = 8(p - q)$, sehingga $8 \\mid (a-b)$. $\\blacksquare$\n\n**Mengapa delapan tidak cukup.** Ambil $1, 2, 3, 4, 5, 6, 7, 8$: sisanya berturut-turut $1,2,3,4,5,6,7,0$ — semuanya berbeda, jadi tidak ada dua bilangan yang bersisa sama, dan tidak ada selisih yang habis dibagi 8. Dengan delapan bilangan, sarangnya pas terisi satu-satu.",
           explanation:
             "Bagian terakhir yang membedakan pemahaman dari hafalan: prinsip ini ketat, dan satu benda lebih sedikit benar-benar membuatnya gagal.",
+        },
+      ],
+    },
+  ],
+};
+
+export const OLIM_GEOMETRI_CHAPTER: ChapterContent = {
+  chapterTitle: "Geometri",
+  archiveOnPublish: [],
+  quizzes: [
+    {
+      title: "Latihan Penguasaan — Geometri",
+      style: "MASTERY",
+      questions: [
+        { type: "NUMERIC", points: 1, prompt: `Berapa besar satu sudut dalam segi enam beraturan? ${DEG}`, answer: 120, explanation: "Sudut luarnya $\\frac{360^\\circ}{6} = 60^\\circ$, jadi sudut dalamnya $120^\\circ$." },
+        { type: "NUMERIC", points: 1, prompt: `Berapa besar satu sudut luar segi dua puluh beraturan? ${DEG}`, answer: 18, explanation: "$\\frac{360^\\circ}{20} = 18^\\circ$." },
+        { type: "NUMERIC", points: 1, prompt: `Berapa jumlah sudut dalam segi sepuluh? ${DEG}`, answer: 1440, explanation: "$(10-2)\\cdot180^\\circ = 1440^\\circ$." },
+        { type: "NUMERIC", points: 1, prompt: `Segitiga sama kaki dengan sudut puncak $50^\\circ$. Berapa besar satu sudut alasnya? ${DEG}`, answer: 65, explanation: "$\\frac{180^\\circ-50^\\circ}{2} = 65^\\circ$." },
+        { type: "NUMERIC", points: 1, prompt: "Dua segitiga sebangun dengan perbandingan sisi $3:4$. Jika luas yang kecil $27$, berapa luas yang besar?", answer: 48, explanation: "$27\\cdot\\frac{16}{9} = 48$ — luas berbanding $k^2$." },
+        { type: "NUMERIC", points: 1, prompt: "Garis tinggi dari sudut siku-siku membagi sisi miring menjadi $9$ dan $16$. Berapa panjang garis tinggi itu?", answer: 12, explanation: "$h^2 = 9\\cdot16 = 144$, jadi $h = 12$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa luas segitiga bersisi $3$, $4$, $5$?", answer: 6, explanation: "Siku-siku: $\\frac{3\\cdot4}{2} = 6$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa jari-jari lingkaran dalam segitiga bersisi $3$, $4$, $5$?", answer: 1, explanation: "$r = \\frac Ls = \\frac{6}{6} = 1$." },
+        { type: "NUMERIC", points: 1, prompt: `Sudut pusat menghadap sebuah busur besarnya $120^\\circ$. Berapa sudut keliling yang menghadap busur yang sama? ${DEG}`, answer: 60, explanation: "Separuh sudut pusat." },
+        { type: "NUMERIC", points: 1, prompt: `Pada segi empat tali busur $ABCD$, $\\angle A = 88^\\circ$. Berapa besar $\\angle C$? ${DEG}`, answer: 92, explanation: "Sudut berhadapan berjumlah $180^\\circ$." },
+        { type: "NUMERIC", points: 1, prompt: "Jari-jari sebuah lingkaran $5$ dan jarak pusat ke titik $P$ di luarnya $13$. Berapa panjang garis singgung dari $P$?", answer: 12, explanation: "$\\sqrt{169-25} = 12$." },
+        { type: "FRACTION", points: 1, prompt: `Diketahui $\\sin\\theta = \\frac{5}{13}$ dengan $\\theta$ lancip. Berapa $\\cos\\theta$? ${FRAC}`, answer: "12/13", explanation: "Segitiga $5$–$12$–$13$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa luas segitiga dengan dua sisi $4$ dan $6$ yang mengapit sudut $30^\\circ$?", answer: 6, explanation: "$\\frac12\\cdot4\\cdot6\\cdot\\frac12 = 6$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa panjang diagonal ruang balok berukuran $6 \\times 8 \\times 24$?", answer: 26, explanation: "$\\sqrt{36+64+576} = \\sqrt{676} = 26$." },
+        { type: "NUMERIC", points: 1, prompt: "Berapa luas trapesium dengan sisi sejajar $6$ dan $10$ serta tinggi $4$?", answer: 32, explanation: "$\\frac{(6+10)\\cdot4}{2} = 32$." },
+        { type: "NUMERIC", points: 1, prompt: "Sebuah kerucut berjari-jari $9$ dengan garis pelukis $15$. Berapa tingginya?", answer: 12, explanation: "$\\sqrt{225-81} = 12$." },
+        {
+          type: "MULTIPLE_CHOICE",
+          points: 1,
+          prompt: "Luas juring dengan sudut pusat $\\theta$ pada lingkaran berjari-jari $r$ adalah…",
+          options: ["$\\frac{\\theta}{360^\\circ}\\pi r^2$", "$\\frac{\\theta}{360^\\circ}\\cdot2\\pi r$", "$\\frac{\\theta}{180^\\circ}\\pi r^2$", "$\\theta \\pi r^2$"],
+          answer: "A",
+          explanation: "Bagian sudut terhadap satu putaran penuh, dikalikan luas seluruh lingkaran.",
+        },
+        {
+          type: "MULTIPLE_CHOICE",
+          points: 1,
+          prompt: "Data yang **tidak** menjamin dua segitiga kongruen adalah…",
+          options: ["dua sisi dan sudut di luar keduanya", "ketiga sisi", "dua sudut dan sisi di antaranya", "dua sisi dan sudut di antaranya"],
+          answer: "A",
+          explanation: "“SSA” bisa dipenuhi dua segitiga yang berbeda.",
+        },
+      ],
+    },
+
+    {
+      title: "Try Out Penyisihan — Geometri",
+      style: "TRYOUT",
+      settings: { timeLimitMinutes: 60, maxAttempts: 2, randomizeQuestionOrder: true },
+      questions: [
+        { type: "NUMERIC", points: 5, prompt: "Sebuah segi-$n$ beraturan mempunyai sudut dalam $162^\\circ$. Berapa $n$?", answer: 20, explanation: "Sudut luarnya $18^\\circ$, jadi $n = \\frac{360}{18} = 20$." },
+        { type: "NUMERIC", points: 5, prompt: `Berapa jumlah seluruh sudut luar sebuah segi dua belas konveks? ${DEG}`, answer: 360, explanation: "Jumlah sudut luar segi banyak konveks selalu $360^\\circ$, berapa pun sisinya." },
+        { type: "NUMERIC", points: 5, prompt: `Sudut-sudut sebuah segitiga berbanding $2 : 3 : 7$. Berapa besar sudut terbesarnya? ${DEG}`, answer: 105, explanation: "$12x = 180^\\circ$, $x = 15^\\circ$, jadi $7x = 105^\\circ$." },
+        { type: "NUMERIC", points: 5, prompt: `Pada segitiga $ABC$, sudut luar di $C$ besarnya $130^\\circ$ dan $\\angle A = 55^\\circ$. Berapa $\\angle B$? ${DEG}`, answer: 75, explanation: "Sudut luar sama dengan jumlah dua sudut jauh: $130^\\circ - 55^\\circ = 75^\\circ$." },
+        { type: "NUMERIC", points: 5, prompt: "Berapa luas segitiga bersisi $10$, $17$, dan $21$?", answer: 84, explanation: "$s = 24$: $\\sqrt{24\\cdot14\\cdot7\\cdot3} = \\sqrt{7056} = 84$." },
+        { type: "FRACTION", points: 5, prompt: `Berapa jari-jari lingkaran dalam segitiga bersisi $10$, $17$, $21$? ${FRAC}`, answer: "7/2", explanation: "$r = \\frac{84}{24} = \\frac72$." },
+        { type: "FRACTION", points: 5, prompt: `Berapa jari-jari lingkaran luar segitiga bersisi $13$, $14$, $15$? ${FRAC}`, answer: "65/8", explanation: "$R = \\frac{abc}{4L} = \\frac{2730}{336} = \\frac{65}{8}$." },
+        { type: "NUMERIC", points: 5, prompt: "Dua sisi sebuah segitiga adalah $6$ dan $9$. Ada berapa kemungkinan panjang sisi ketiga yang berupa bilangan bulat?", answer: 11, explanation: "$3 < x < 15$, jadi $x \\in \\{4, \\ldots, 14\\}$ — ada 11." },
+        { type: "NUMERIC", points: 5, prompt: "Dua segitiga sebangun mempunyai luas berbanding $16 : 49$. Jika keliling yang kecil $24$, berapa keliling yang besar?", answer: 42, explanation: "$k = \\sqrt{\\frac{49}{16}} = \\frac74$, dan keliling berbanding $k$: $24\\cdot\\frac74 = 42$." },
+        { type: "NUMERIC", points: 5, prompt: "Pada peta berskala $1 : 25.000$, dua kota berjarak $6$ cm. Berapa jarak sebenarnya dalam meter?", answer: 1500, explanation: "$6 \\times 25.000 = 150.000$ cm $= 1500$ m." },
+        { type: "NUMERIC", points: 5, prompt: `Pada segi empat tali busur, dua sudut yang berhadapan berbanding $3 : 2$. Berapa besar sudut yang lebih besar? ${DEG}`, answer: 108, explanation: "Keduanya berjumlah $180^\\circ$: $\\frac35\\cdot180^\\circ = 108^\\circ$." },
+        { type: "NUMERIC", points: 5, prompt: "Panjang garis singgung dari titik $P$ ke sebuah lingkaran berjari-jari $7$ adalah $24$. Berapa jarak $P$ ke pusat lingkaran?", answer: 25, explanation: "$\\sqrt{49+576} = \\sqrt{625} = 25$." },
+        { type: "NUMERIC", points: 5, prompt: "Sebuah tali busur berjarak $8$ dari pusat lingkaran yang berjari-jari $17$. Berapa panjang tali busur itu?", answer: 30, explanation: "Setengahnya $\\sqrt{289-64} = 15$, jadi talinya $30$." },
+        { type: "NUMERIC", points: 5, prompt: "Luas juring dengan sudut pusat $135^\\circ$ pada lingkaran berjari-jari $8$ dapat ditulis $k\\pi$. Berapa nilai $k$?", answer: 24, explanation: "$\\frac{135}{360}\\cdot64 = \\frac38\\cdot64 = 24$." },
+        { type: "NUMERIC", points: 5, prompt: "Dua sisi sebuah segitiga adalah $7$ dan $8$ dengan sudut apit $120^\\circ$. Berapa panjang sisi ketiganya?", answer: 13, explanation: "$c^2 = 49+64+56 = 169$, jadi $c = 13$." },
+        { type: "NUMERIC", points: 5, prompt: "Berapa luas segitiga dengan dua sisi $8$ dan $9$ yang mengapit sudut $150^\\circ$?", answer: 18, explanation: "$\\sin150^\\circ = \\frac12$: $\\frac12\\cdot8\\cdot9\\cdot\\frac12 = 18$." },
+        { type: "NUMERIC", points: 5, prompt: "Diagonal ruang sebuah kubus panjangnya $12\\sqrt3$. Berapa volumenya?", answer: 1728, explanation: "$s\\sqrt3 = 12\\sqrt3$ memberi $s = 12$, jadi $V = 1728$." },
+        { type: "NUMERIC", points: 5, prompt: "Luas permukaan kerucut berjari-jari $9$ dan bertinggi $12$ dapat ditulis $k\\pi$. Berapa nilai $k$?", answer: 216, explanation: "Garis pelukisnya $\\sqrt{81+144} = 15$, jadi $\\pi r(r+s) = \\pi\\cdot9\\cdot24 = 216\\pi$." },
+        { type: "NUMERIC", points: 5, prompt: "Sebuah limas beralas persegi bersisi $8$ dengan tinggi sisi tegak $5$. Berapa volumenya?", answer: 64, explanation: "Tinggi limasnya $\\sqrt{25-16} = 3$, jadi $V = \\frac13\\cdot64\\cdot3 = 64$." },
+        {
+          type: "MULTIPLE_CHOICE",
+          points: 5,
+          prompt: "Sebuah bola pas di dalam sebuah kubus bersisi $2r$. Perbandingan volume bola terhadap volume kubus adalah…",
+          options: ["$\\frac{\\pi}{6}$", "$\\frac23$", "$\\frac{\\pi}{3}$", "$\\frac{\\pi}{4}$"],
+          answer: "A",
+          explanation: "$\\frac{\\frac43\\pi r^3}{8r^3} = \\frac{\\pi}{6}$ — bandingkan dengan tabung, yang memberi $\\frac23$.",
+        },
+      ],
+    },
+
+    {
+      title: "Simulasi Babak Final — Geometri",
+      style: "EXAM",
+      settings: { timeLimitMinutes: 60, maxAttempts: 1, randomizeQuestionOrder: false },
+      questions: [
+        { type: "NUMERIC", points: 10, prompt: "Berapa luas segitiga bersisi $9$, $10$, dan $17$?", answer: 36, explanation: "$s = 18$: $\\sqrt{18\\cdot9\\cdot8\\cdot1} = \\sqrt{1296} = 36$." },
+        { type: "NUMERIC", points: 10, prompt: "Lingkaran berjari-jari $8$ dan jarak pusat ke titik $P$ di luarnya $17$. Berapa panjang garis singgung dari $P$?", answer: 15, explanation: "$\\sqrt{289-64} = \\sqrt{225} = 15$." },
+        {
+          type: "WORKED",
+          points: 25,
+          prompt:
+            "Sebuah segitiga mempunyai sisi $13$, $14$, dan $15$. Tentukan luasnya, jari-jari lingkaran dalamnya, dan jari-jari lingkaran luarnya. Tulis prosesnya, lalu tulis **luasnya** di kotak jawaban akhir.",
+          answer: "84",
+          answerMarks: 5,
+          rubric: [
+            { point: "Menghitung $s = 21$ lalu memakai Heron untuk mendapat $L = 84$", marks: 7 },
+            { point: "Memakai $L = rs$ untuk mendapat $r = 4$", marks: 6 },
+            { point: "Memakai $L = \\frac{abc}{4R}$ untuk mendapat $R = \\frac{65}{8}$", marks: 7 },
+          ],
+          solution:
+            "**Luas — Heron.**\n\n$$s = \\frac{13+14+15}{2} = 21, \\qquad L = \\sqrt{21\\cdot8\\cdot7\\cdot6} = \\sqrt{7056} = \\mathbf{84}.$$\n\n**Lingkaran dalam.** Dari $L = rs$:\n\n$$r = \\frac{84}{21} = 4.$$\n\n**Lingkaran luar.** Dari $L = \\dfrac{abc}{4R}$:\n\n$$R = \\frac{abc}{4L} = \\frac{13\\cdot14\\cdot15}{4\\cdot84} = \\frac{2730}{336} = \\frac{65}{8} = 8{,}125.$$\n\nPeriksa kewajarannya: $R > \\frac{15}{2} = 7{,}5$, sebab sisi terpanjang adalah tali busur lingkaran luar yang panjangnya tidak melebihi diameter. ✓",
+          explanation:
+            "Ketiga rumus luas dipakai sekaligus: satu untuk mendapatkan $L$, dua lainnya untuk membaca $r$ dan $R$ dari $L$. Bagian pemeriksaan $R > \\frac{15}{2}$ adalah kebiasaan yang membedakan jawaban yang diperiksa dari jawaban yang hanya dihitung.",
+        },
+        {
+          type: "WORKED",
+          points: 25,
+          prompt:
+            "Segi empat tali busur $ABCD$ mempunyai $AC$ sebagai diameter lingkarannya. Diketahui $\\angle BAC = 35^\\circ$ dan $\\angle CAD = 40^\\circ$. Tentukan $\\angle ABC$, $\\angle BCA$, $\\angle DCA$, dan $\\angle BCD$. Tulis prosesnya, lalu tulis besar $\\angle BCD$ (dalam derajat, tanpa satuan) di kotak jawaban akhir.",
+          answer: "105",
+          answerMarks: 5,
+          rubric: [
+            { point: "Menyebut $AC$ diameter, sehingga $\\angle ABC = \\angle ADC = 90^\\circ$", marks: 7 },
+            { point: "Menghitung $\\angle BCA = 55^\\circ$ dan $\\angle DCA = 50^\\circ$ dari jumlah sudut kedua segitiga", marks: 7 },
+            { point: "Menjumlahkan keduanya menjadi $\\angle BCD = 105^\\circ$, dan memeriksanya dengan $\\angle BAD + \\angle BCD = 180^\\circ$", marks: 6 },
+          ],
+          solution:
+            "**Sudut pada diameter.** $B$ dan $D$ terletak pada lingkaran dan $AC$ diameter, jadi\n\n$$\\angle ABC = \\angle ADC = 90^\\circ.$$\n\n**Segitiga $ABC$.** Sudutnya $35^\\circ$, $90^\\circ$, dan $\\angle BCA$, jadi\n\n$$\\angle BCA = 180^\\circ - 90^\\circ - 35^\\circ = 55^\\circ.$$\n\n**Segitiga $ACD$.** Sudutnya $40^\\circ$, $90^\\circ$, dan $\\angle DCA$, jadi\n\n$$\\angle DCA = 180^\\circ - 90^\\circ - 40^\\circ = 50^\\circ.$$\n\n**Menggabungkan.** Karena $B$ dan $D$ berada pada sisi yang berlawanan terhadap $AC$, diagonal $AC$ terletak di dalam sudut $BCD$:\n\n$$\\angle BCD = \\angle BCA + \\angle DCA = 55^\\circ + 50^\\circ = \\mathbf{105^\\circ}.$$\n\n**Periksa.** $\\angle BAD = 35^\\circ + 40^\\circ = 75^\\circ$, dan $75^\\circ + 105^\\circ = 180^\\circ$ — sesuai sifat segi empat tali busur. ✓",
+          explanation:
+            "Diagonal $AC$ memecah soal menjadi dua segitiga siku-siku, masing-masing selesai dengan jumlah sudut. Pemeriksaan di akhir bukan hiasan: itu satu-satunya cara memastikan kedua bagian dijumlahkan, bukan dikurangkan.",
+        },
+        {
+          type: "WORKED",
+          points: 30,
+          prompt:
+            "Buktikan bahwa pada sebuah lingkaran, sudut pusat yang menghadap sebuah busur besarnya dua kali sudut keliling yang menghadap busur yang sama — untuk kasus ketika pusat lingkaran terletak di dalam sudut kelilingnya. Lalu jelaskan mengapa akibatnya semua sudut keliling yang menghadap busur yang sama besarnya sama. (Soal pembuktian.)",
+          answer: "",
+          answerMarks: 0,
+          rubric: [
+            { point: "Menarik jari-jari dari pusat ke titik sudut kelilingnya, sehingga terbentuk dua segitiga sama kaki", marks: 8 },
+            { point: "Memakai sifat segitiga sama kaki dan sudut luar pada masing-masing bagian", marks: 8 },
+            { point: "Menjumlahkan kedua bagian menjadi $\\angle AOB = 2\\angle ACB$", marks: 7 },
+            { point: "Menyimpulkan bahwa sudut pusatnya tetap, sehingga semua sudut keliling pada busur itu sama besar", marks: 7 },
+          ],
+          solution:
+            "Misalkan $O$ pusat lingkaran, $A$ dan $B$ ujung busurnya, dan $C$ titik pada busur yang lain, dengan $O$ di dalam $\\angle ACB$.\n\n**Membelah dengan satu jari-jari.** Tarik $CO$ dan perpanjang sampai memotong lingkaran di $D$. Garis $CD$ membelah $\\angle ACB$ menjadi $\\angle ACD$ dan $\\angle DCB$, serta membelah $\\angle AOB$ menjadi $\\angle AOD$ dan $\\angle DOB$.\n\n**Bagian pertama.** $OA = OC = r$, jadi $\\triangle OAC$ sama kaki dan $\\angle OAC = \\angle OCA = \\alpha$. Sudut $\\angle AOD$ adalah sudut luar $\\triangle OAC$ di $O$, sehingga\n\n$$\\angle AOD = \\alpha + \\alpha = 2\\alpha.$$\n\n**Bagian kedua.** Dengan cara yang sama, $OB = OC = r$ memberi $\\angle OBC = \\angle OCB = \\beta$ dan\n\n$$\\angle DOB = 2\\beta.$$\n\n**Menjumlahkan.**\n\n$$\\angle AOB = \\angle AOD + \\angle DOB = 2\\alpha + 2\\beta = 2(\\alpha+\\beta) = 2\\,\\angle ACB. \\qquad \\blacksquare$$\n\n**Akibatnya.** Sudut pusat $\\angle AOB$ ditentukan hanya oleh busur $AB$ — titik $C$ tidak muncul di dalamnya. Jadi untuk setiap pilihan $C$ pada busur yang sama,\n\n$$\\angle ACB = \\tfrac12\\angle AOB$$\n\nbernilai sama. Karena itulah semua sudut keliling yang menghadap busur yang sama besarnya sama, dan itulah alat angle chasing yang paling sering dipakai pada soal lingkaran.",
+          explanation:
+            "Kalimat “untuk kasus ketika pusat terletak di dalam sudutnya” sengaja disebut: masih ada dua kasus lain (pusat pada salah satu sisi, dan pusat di luar sudutnya), yang dikerjakan dengan bagian yang sama tetapi dikurangkan, bukan dijumlahkan. Menyadari adanya kasus lain sudah bernilai, walaupun di sini hanya satu yang diminta.",
         },
       ],
     },

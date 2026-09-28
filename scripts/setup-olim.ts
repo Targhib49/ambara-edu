@@ -26,21 +26,22 @@ import { createClient } from "@supabase/supabase-js";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { blockDataSchemas } from "../src/lib/blocks/schema";
-import { questionRow, type BabContent, type Block, type ChapterContent } from "./content/math-types";
+import { questionRow, type BabContent, type Block, type ChapterContent, type Question } from "./content/math-types";
 import { OLIM_TEORI_BILANGAN } from "./content/olim-teori-bilangan";
 import { OLIM_ALJABAR } from "./content/olim-aljabar";
 import { OLIM_KOMBINATORIKA } from "./content/olim-kombinatorika";
-import { OLIM_ALJABAR_CHAPTER, OLIM_KOMBINATORIKA_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER } from "./content/olim-chapters";
+import { OLIM_GEOMETRI } from "./content/olim-geometri";
+import { OLIM_ALJABAR_CHAPTER, OLIM_GEOMETRI_CHAPTER, OLIM_KOMBINATORIKA_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER } from "./content/olim-chapters";
 
 const COURSE_TITLE = "Persiapan Olimpiade Matematika (MS²C)";
 const COURSE_DESCRIPTION =
   "Persiapan kompetisi MS²C: aljabar, geometri, teori bilangan, dan kombinatorika. Setiap sesi berisi materi ringkas dan satu set soal, termasuk soal uraian yang dinilai dari prosesnya.";
 
 /** Chapter order in the course; a chapter not yet written is simply absent. */
-const CHAPTERS: BabContent[] = [OLIM_ALJABAR, OLIM_TEORI_BILANGAN, OLIM_KOMBINATORIKA];
+const CHAPTERS: BabContent[] = [OLIM_ALJABAR, OLIM_TEORI_BILANGAN, OLIM_KOMBINATORIKA, OLIM_GEOMETRI];
 
 /** Each chapter's closing sequence: mastery, try-out, final simulation. */
-const CHAPTER_QUIZZES: ChapterContent[] = [OLIM_ALJABAR_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER, OLIM_KOMBINATORIKA_CHAPTER];
+const CHAPTER_QUIZZES: ChapterContent[] = [OLIM_ALJABAR_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER, OLIM_KOMBINATORIKA_CHAPTER, OLIM_GEOMETRI_CHAPTER];
 
 const BOOK_DIR = path.resolve(__dirname, "../../Elementary Maths and Python/Mid Math/Buku");
 const BACKUP_DIR = path.join(BOOK_DIR, "backups");
@@ -77,6 +78,22 @@ function blockData(b: Block, uploaded?: { storagePath: string; sizeBytes: number
  * between dollars — MathText renders it — so what's checked is that the
  * dollars are balanced, not that they're absent.
  */
+/**
+ * WORKED-only checks. The auto-award and the rubric together are what the
+ * question is worth, so they have to add up to `points` — otherwise the
+ * marking screen suggests a total the question cannot hold.
+ */
+function checkWorked(q: Question, at: string, problems: string[]) {
+  if (q.type !== "WORKED") return;
+  const marks = q.answerMarks ?? 1;
+  if (marks === 0 && q.answer.trim() !== "") problems.push(`${at}: a stated answer with no marks for it`);
+  if (marks > 0 && q.answer.trim() === "") problems.push(`${at}: marks for an answer the question never asks for`);
+  if (!q.rubric.length) problems.push(`${at}: WORKED needs a marking scheme`);
+  if (!q.solution.trim()) problems.push(`${at}: WORKED needs a model solution`);
+  const scheme = marks + q.rubric.reduce((n, r) => n + r.marks, 0);
+  if (scheme !== q.points) problems.push(`${at}: marking scheme totals ${scheme}, question is worth ${q.points}`);
+}
+
 function validate() {
   const problems: string[] = [];
   for (const chapter of CHAPTERS) {
@@ -111,13 +128,7 @@ function validate() {
           const letters = q.type === "MULTIPLE_CHOICE" ? [q.answer] : q.answer;
           for (const l of letters) if ("ABCD".indexOf(l) >= q.options.length) problems.push(`${at}: answer ${l} out of range`);
         }
-        if (q.type === "WORKED") {
-          const marks = q.answerMarks ?? 1;
-          if (marks === 0 && q.answer.trim() !== "") problems.push(`${at}: a stated answer with no marks for it`);
-          if (marks > 0 && q.answer.trim() === "") problems.push(`${at}: marks for an answer the question never asks for`);
-          if (!q.rubric.length) problems.push(`${at}: WORKED needs a marking scheme`);
-          if (!q.solution.trim()) problems.push(`${at}: WORKED needs a model solution`);
-        }
+        checkWorked(q, at, problems);
       });
       const pts = s.quiz.questions.reduce((n, q) => n + q.points, 0);
       const worked = s.quiz.questions.filter((q) => q.type === "WORKED").length;
@@ -149,6 +160,7 @@ function validate() {
           const dollars = (text.match(/(?<!\\)\$/g) ?? []).length;
           if (dollars % 2 !== 0) problems.push(`${at}: unbalanced $ in "${text.slice(0, 50)}…"`);
         }
+        checkWorked(q, at, problems);
       }
       console.log(`  ${quiz.style.padEnd(8)} ${quiz.title.padEnd(44)} ${String(quiz.questions.length).padStart(2)} soal / ${String(total).padStart(3)} poin · ${worked} uraian`);
     }
