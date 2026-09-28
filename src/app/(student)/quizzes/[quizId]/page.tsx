@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MathText } from "@/components/quiz/MathText";
 import { DrillPlayer } from "./DrillPlayer";
 import { DRILL_DEFAULTS, parseDrillSkill } from "@/lib/drills/registry";
 import { isGradedStyle, isTimedStyle } from "@/lib/quiz/styles";
@@ -324,7 +325,7 @@ async function QuizResults({
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
               {t(q.points === 1 ? "quizPage.questionLabel" : "quizPage.questionLabelPlural", { i: i + 1, p: q.points })}
             </p>
-            <p className="mt-1 text-sm font-medium text-zinc-900">{q.prompt}</p>
+            <p className="mt-1 text-sm font-medium text-zinc-900"><MathText text={q.prompt} /></p>
             {q.type === "WORKED" ? (
               <WorkedResult
                 correctAnswer={q.correctAnswer}
@@ -375,7 +376,7 @@ async function QuizResults({
               )}
             </div>
             {(grade.status === "AUTO_GRADED" || submission.status === "REVIEWED") && q.explanation && (
-              <p className="mt-2 text-sm text-zinc-500">{q.explanation}</p>
+              <p className="mt-2 text-sm text-zinc-500"><MathText text={q.explanation} /></p>
             )}
           </div>
         );

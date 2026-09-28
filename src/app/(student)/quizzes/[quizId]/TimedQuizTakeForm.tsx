@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { MathText } from "@/components/quiz/MathText";
 import { useRouter } from "next/navigation";
 import { submitQuizAnswers } from "@/lib/actions/quizzes";
 import { runTestCases } from "@/lib/quiz/codeRunner";
@@ -140,7 +141,7 @@ export function TimedQuizTakeForm({
               p: question.points,
             })}
           </p>
-          <p className="mt-1 text-sm font-medium text-zinc-900">{question.prompt}</p>
+          <p className="mt-1 text-sm font-medium text-zinc-900"><MathText text={question.prompt} /></p>
           <div className="mt-3">
             <QuestionAnswerInput
               question={question}

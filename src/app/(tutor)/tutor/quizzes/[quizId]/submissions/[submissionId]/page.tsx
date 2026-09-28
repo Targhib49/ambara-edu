@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { MathText } from "@/components/quiz/MathText";
 import { getT } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { gradeQuestion } from "@/lib/quiz/grading";
@@ -152,7 +153,7 @@ export default async function SubmissionReviewPage({
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
               {t(question.points === 1 ? "quizPage.questionLabel" : "quizPage.questionLabelPlural", { i: i + 1, p: question.points })}
             </p>
-            <p className="mt-1 text-sm text-zinc-900">{question.prompt}</p>
+            <p className="mt-1 text-sm text-zinc-900"><MathText text={question.prompt} /></p>
 
             {question.type === "WORKED" ? (
               <WorkedReview

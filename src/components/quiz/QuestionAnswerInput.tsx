@@ -1,6 +1,7 @@
 "use client";
 
 import { CodeAnswer } from "@/components/quiz/CodeAnswer";
+import { MathText } from "@/components/quiz/MathText";
 import { WorkedAnswer } from "@/components/quiz/WorkedAnswer";
 import type { TestCase } from "@/lib/quiz/schema";
 import type { QuestionStructure } from "@/lib/quiz/forms";
@@ -73,7 +74,7 @@ export function QuestionAnswerInput({
               >
                 {selected ? "✓" : LETTERS[position]}
               </span>
-              {opt}
+              <MathText text={opt} />
             </button>
           );
         })}
@@ -112,7 +113,7 @@ export function QuestionAnswerInput({
               >
                 {selected ? "✓" : LETTERS[position]}
               </span>
-              {opt}
+              <MathText text={opt} />
             </button>
           );
         })}

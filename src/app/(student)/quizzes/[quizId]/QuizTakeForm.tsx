@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { MathText } from "@/components/quiz/MathText";
 import { useRouter } from "next/navigation";
 import { submitQuizAnswers } from "@/lib/actions/quizzes";
 import { runTestCases } from "@/lib/quiz/codeRunner";
@@ -68,7 +69,7 @@ export function QuizTakeForm({ quizId, questions }: { quizId: string; questions:
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
             {t(q.points === 1 ? "quizPage.questionLabel" : "quizPage.questionLabelPlural", { i: i + 1, p: q.points })}
           </p>
-          <p className="mt-1 text-sm font-medium text-zinc-900">{q.prompt}</p>
+          <p className="mt-1 text-sm font-medium text-zinc-900"><MathText text={q.prompt} /></p>
           <div className="mt-3">
             <QuestionAnswerInput
               question={q}

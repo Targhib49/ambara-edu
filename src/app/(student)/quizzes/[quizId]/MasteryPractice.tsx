@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { MathText } from "@/components/quiz/MathText";
 import { QuestionAnswerInput, type QuestionForForm } from "@/components/quiz/QuestionAnswerInput";
 import { checkPracticeAnswer, restartPractice, revealPracticeSolution } from "@/lib/actions/practice";
 import { runTestCases } from "@/lib/quiz/codeRunner";
@@ -135,7 +136,7 @@ export function MasteryPractice({
       {current ? (
         <div className={`${cardCls} space-y-4 p-5`}>
           <div>
-            <p className="text-sm font-medium text-zinc-900">{current.prompt}</p>
+            <p className="text-sm font-medium text-zinc-900"><MathText text={current.prompt} /></p>
             <div className="mt-3">
               <fieldset disabled={phase.kind !== "answering" || pending} className="contents">
                 <QuestionAnswerInput
@@ -151,7 +152,11 @@ export function MasteryPractice({
           {phase.kind === "correct" && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
               <p className="font-semibold">{t("practice.correct")}</p>
-              {phase.explanation && <p className="mt-1 whitespace-pre-line text-emerald-800">{phase.explanation}</p>}
+              {phase.explanation && (
+                <p className="mt-1 whitespace-pre-line text-emerald-800">
+                  <MathText text={phase.explanation} />
+                </p>
+              )}
             </div>
           )}
           {phase.kind === "wrong" && (
@@ -162,7 +167,11 @@ export function MasteryPractice({
           {phase.kind === "revealed" && (
             <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <p className="font-semibold">{t("practice.answer", { answer: phase.answer })}</p>
-              {phase.explanation && <p className="whitespace-pre-line">{phase.explanation}</p>}
+              {phase.explanation && (
+                <p className="whitespace-pre-line">
+                  <MathText text={phase.explanation} />
+                </p>
+              )}
               <p className="text-xs text-amber-700">{t("practice.comesBack")}</p>
             </div>
           )}
