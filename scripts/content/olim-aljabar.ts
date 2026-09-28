@@ -12,7 +12,6 @@
  */
 import type { BabContent } from "./math-types";
 
-const NEG = "Tulis bilangan negatif dengan tanda minus, misalnya -7.";
 const FRAC = "Tulis pecahan sebagai a/b, misalnya 21/4.";
 
 export const OLIM_ALJABAR: BabContent = {
