@@ -26,9 +26,10 @@ import { createClient } from "@supabase/supabase-js";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { blockDataSchemas } from "../src/lib/blocks/schema";
-import { questionRow, type BabContent, type Block } from "./content/math-types";
+import { questionRow, type BabContent, type Block, type ChapterContent } from "./content/math-types";
 import { OLIM_TEORI_BILANGAN } from "./content/olim-teori-bilangan";
 import { OLIM_ALJABAR } from "./content/olim-aljabar";
+import { OLIM_ALJABAR_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER } from "./content/olim-chapters";
 
 const COURSE_TITLE = "Persiapan Olimpiade Matematika (MS²C)";
 const COURSE_DESCRIPTION =
@@ -36,6 +37,9 @@ const COURSE_DESCRIPTION =
 
 /** Chapter order in the course; a chapter not yet written is simply absent. */
 const CHAPTERS: BabContent[] = [OLIM_ALJABAR, OLIM_TEORI_BILANGAN];
+
+/** Each chapter's closing sequence: mastery, try-out, final simulation. */
+const CHAPTER_QUIZZES: ChapterContent[] = [OLIM_ALJABAR_CHAPTER, OLIM_TEORI_BILANGAN_CHAPTER];
 
 const BOOK_DIR = path.resolve(__dirname, "../../Elementary Maths and Python/Mid Math/Buku");
 const BACKUP_DIR = path.join(BOOK_DIR, "backups");
@@ -121,6 +125,34 @@ function validate() {
       console.log(`  ${s.title.padEnd(48)} PDF ${size.padStart(7)} · ${String(s.quiz.questions.length).padStart(2)} soal / ${String(pts).padStart(3)} poin · ${worked} uraian`);
     }
   }
+  for (const chapter of CHAPTER_QUIZZES) {
+    console.log(`\n${chapter.chapterTitle} — kuis bab`);
+    for (const quiz of chapter.quizzes) {
+      const total = quiz.questions.reduce((n, q) => n + q.points, 0);
+      const worked = quiz.questions.filter((q) => q.type === "WORKED").length;
+      // The Kelas VII convention: a timed graded paper is out of 100.
+      if ((quiz.style === "TRYOUT" || quiz.style === "EXAM") && total !== 100) problems.push(`${quiz.title}: worth ${total} points, not 100`);
+      if ((quiz.style === "TRYOUT" || quiz.style === "EXAM") && !quiz.settings?.timeLimitMinutes) problems.push(`${quiz.title}: needs a time limit`);
+      if (quiz.style === "EXAM" && quiz.settings?.maxAttempts !== 1) problems.push(`${quiz.title}: an exam is one attempt`);
+      // Practice checks an answer on the spot; a written solution has none.
+      if (quiz.style === "MASTERY" && worked > 0) problems.push(`${quiz.title}: practice can't hold WORKED questions`);
+      for (const [i, q] of quiz.questions.entries()) {
+        const at = `${quiz.title} #${i + 1}`;
+        try {
+          questionRow(q);
+        } catch (e) {
+          problems.push(`${at}: ${(e as Error).message}`);
+        }
+        const texts = [q.prompt, q.explanation, ...(q.type === "MULTIPLE_CHOICE" || q.type === "MULTI_SELECT" ? q.options : [])];
+        for (const text of texts) {
+          const dollars = (text.match(/(?<!\\)\$/g) ?? []).length;
+          if (dollars % 2 !== 0) problems.push(`${at}: unbalanced $ in "${text.slice(0, 50)}…"`);
+        }
+      }
+      console.log(`  ${quiz.style.padEnd(8)} ${quiz.title.padEnd(44)} ${String(quiz.questions.length).padStart(2)} soal / ${String(total).padStart(3)} poin · ${worked} uraian`);
+    }
+  }
+
   if (problems.length) {
     console.error(`\n✗ ${problems.length} problem(s):\n  ` + problems.join("\n  "));
     process.exit(1);
@@ -239,6 +271,35 @@ async function main() {
               style: "CLASSIC",
               questions: {
                 create: s.quiz.questions.map((q, order) => ({
+                  order,
+                  prompt: q.prompt,
+                  points: q.points,
+                  explanation: q.explanation,
+                  ...questionRow(q),
+                })),
+              },
+            },
+          });
+          created.quizzes++;
+        }
+      }
+
+      // The chapter's own quizzes sit beside the sessions, not inside one.
+      const closing = CHAPTER_QUIZZES.find((c) => c.chapterTitle === spec.chapterTitle);
+      if (closing) {
+        const live = await db.quiz.findMany({ where: { chapterId: chapter.id, lessonId: null }, select: { title: true } });
+        for (const quiz of closing.quizzes) {
+          if (live.some((q) => q.title === quiz.title)) continue;
+          await db.quiz.create({
+            data: {
+              chapterId: chapter.id,
+              lessonId: null,
+              title: quiz.title,
+              status: "PUBLISHED",
+              style: quiz.style,
+              ...quiz.settings,
+              questions: {
+                create: quiz.questions.map((q, order) => ({
                   order,
                   prompt: q.prompt,
                   points: q.points,
