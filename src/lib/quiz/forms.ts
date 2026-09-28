@@ -10,7 +10,9 @@ import type { QuestionType } from "@/generated/prisma/enums";
 export type QuestionStructure =
   | { kind: "steps"; steps: string[] }
   | { kind: "parts"; parts: { prompt: string; marks: number }[] }
-  | { kind: "lines"; lines: string[]; wantsCorrection: boolean };
+  | { kind: "lines"; lines: string[]; wantsCorrection: boolean }
+  /** A competition problem: whether it wants a stated answer as well as the working. */
+  | { kind: "worked"; wantsFinalAnswer: boolean };
 
 type QuestionRow = {
   id: string;
@@ -31,6 +33,8 @@ export function questionStructure(question: QuestionRow): QuestionStructure | un
           kind: "parts",
           parts: parseCorrectAnswer("MULTI_PART", question.correctAnswer).parts.map((p) => ({ prompt: p.prompt, marks: p.marks })),
         };
+      case "WORKED":
+        return { kind: "worked", wantsFinalAnswer: parseCorrectAnswer("WORKED", question.correctAnswer).finalAnswer.trim() !== "" };
       case "FIND_MISTAKE": {
         const answer = parseCorrectAnswer("FIND_MISTAKE", question.correctAnswer);
         return { kind: "lines", lines: answer.lines, wantsCorrection: answer.correction.trim() !== "" };

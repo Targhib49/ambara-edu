@@ -38,6 +38,7 @@ const QUESTION_TYPE_BUTTONS: { type: QuestionType; labelKey: MessageKey }[] = [
   { type: "STEPS", labelKey: "questionType.STEPS" },
   { type: "MULTI_PART", labelKey: "questionType.MULTI_PART" },
   { type: "FIND_MISTAKE", labelKey: "questionType.FIND_MISTAKE" },
+  { type: "WORKED", labelKey: "questionType.WORKED" },
 ];
 
 export default async function TutorQuizDetailPage({ params }: { params: Promise<{ quizId: string }> }) {

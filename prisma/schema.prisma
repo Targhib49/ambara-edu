@@ -82,6 +82,7 @@ enum QuestionType {
   MULTI_PART   // one stem with parts (a)(b)(c), each carrying its own marks
   FIND_MISTAKE // a worked solution with one wrong step, for the student to spot
   PROJECT_STEP // one step of a guided project: an instruction plus the runs that check it
+  WORKED // competition style: the student writes the working, the tutor marks it against a scheme
 }
 
 enum QuizStatus {

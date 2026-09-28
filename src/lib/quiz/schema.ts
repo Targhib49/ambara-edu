@@ -47,6 +47,21 @@ export const correctAnswerSchemas = {
     .refine((a) => a.wrongIndex < a.lines.length, { message: "wrongIndex must point at one of the lines", path: ["wrongIndex"] }),
   // One step of a guided project — see src/lib/projects/schema.ts.
   PROJECT_STEP: projectStepSchema,
+  /**
+   * A competition problem written out: the student shows the working and,
+   * usually, states a final answer. The answer is checked on the spot; the
+   * working is marked by the tutor against `rubric`, the way an olympiad
+   * script is marked. `finalAnswer` empty means the problem is a proof, with
+   * nothing to check automatically.
+   */
+  WORKED: z.object({
+    finalAnswer: z.string().default(""),
+    /** Marks for stating the right answer; the rest of the question's points ride on the working. */
+    answerMarks: z.number().min(0).default(1),
+    rubric: z.array(z.object({ point: z.string().min(1), marks: z.number().positive() })).max(10).default([]),
+    /** The model solution, shown once the work has been marked. */
+    solution: z.string().default(""),
+  }),
 } as const satisfies Record<QuestionType, z.ZodType>;
 
 export type CorrectAnswerMap = {
@@ -82,6 +97,7 @@ export const responseSchemas = {
     correction: z.string().default(""),
   }),
   PROJECT_STEP: projectStepResponseSchema,
+  WORKED: z.object({ working: z.string().default(""), finalAnswer: z.string().default("") }),
 } as const satisfies Record<QuestionType, z.ZodType>;
 
 export type ResponseMap = {

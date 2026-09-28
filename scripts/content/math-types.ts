@@ -23,7 +23,23 @@ export type Question =
   | { type: "STEPS"; prompt: string; points: number; steps: { prompt: string; answer: string }[]; explanation: string }
   | { type: "MULTI_PART"; prompt: string; points: number; parts: { prompt: string; marks: number; answer: string }[]; explanation: string }
   | { type: "FIND_MISTAKE"; prompt: string; points: number; lines: string[]; wrongIndex: number; correction: string; explanation: string }
-  | { type: "CODE"; prompt: string; points: number; tests: { input: string; expectedOutput: string }[]; explanation: string };
+  | { type: "CODE"; prompt: string; points: number; tests: { input: string; expectedOutput: string }[]; explanation: string }
+  /**
+   * Competition style: the student writes the working out. The stated answer
+   * is checked on submission and earns `answerMarks`; the rest of the points
+   * ride on the `rubric`, which the tutor marks. `answer: ""` makes it a
+   * proof, with nothing checked automatically.
+   */
+  | {
+      type: "WORKED";
+      prompt: string;
+      points: number;
+      answer: string;
+      answerMarks?: number;
+      rubric: { point: string; marks: number }[];
+      solution: string;
+      explanation: string;
+    };
 
 export type Block =
   | { type: "MARKDOWN"; markdown: string }
@@ -73,6 +89,17 @@ export function questionRow(q: Question) {
     case "FRACTION":
       if (!/^-?\d+\/\d+$/.test(q.answer)) throw new Error(`fraction answer "${q.answer}" is not a/b`);
       return { type: "SHORT_TEXT" as const, options: [], correctAnswer: parseCorrectAnswer("SHORT_TEXT", { kind: "exact", value: q.answer }) };
+    case "WORKED":
+      return {
+        type: q.type,
+        options: [],
+        correctAnswer: parseCorrectAnswer(q.type, {
+          finalAnswer: q.answer,
+          answerMarks: q.answerMarks ?? 1,
+          rubric: q.rubric,
+          solution: q.solution,
+        }),
+      };
     case "STEPS":
       return { type: q.type, options: [], correctAnswer: parseCorrectAnswer(q.type, { steps: q.steps }) };
     case "MULTI_PART":

@@ -57,6 +57,10 @@ export function formatCorrectAnswer(type: QuestionType, correctAnswer: unknown, 
       const a = parseCorrectAnswer(type, correctAnswer);
       return a.parts.map((part, i) => `(${PART_LETTERS[i] ?? i + 1}) ${part.answer}`).join(" · ");
     }
+    case "WORKED": {
+      const a = parseCorrectAnswer(type, correctAnswer);
+      return a.finalAnswer.trim() || "—";
+    }
     case "FIND_MISTAKE": {
       const a = parseCorrectAnswer(type, correctAnswer);
       const line = `#${a.wrongIndex + 1}`;
@@ -108,6 +112,13 @@ export function formatResponse(
       const r = safeParse(type, response);
       const filled = r?.parts.filter((part) => part.trim() !== "") ?? [];
       return filled.length > 0 ? r!.parts.map((part, i) => `(${PART_LETTERS[i] ?? i + 1}) ${part || "—"}`).join(" · ") : noAnswer;
+    }
+    case "WORKED": {
+      const r = safeParse(type, response);
+      const answer = r?.finalAnswer.trim();
+      const working = r?.working.trim();
+      if (!answer && !working) return noAnswer;
+      return answer || working!.slice(0, 80);
     }
     case "FIND_MISTAKE": {
       const r = safeParse(type, response);

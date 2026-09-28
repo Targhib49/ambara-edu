@@ -1,6 +1,7 @@
 "use client";
 
 import { CodeAnswer } from "@/components/quiz/CodeAnswer";
+import { WorkedAnswer } from "@/components/quiz/WorkedAnswer";
 import type { TestCase } from "@/lib/quiz/schema";
 import type { QuestionStructure } from "@/lib/quiz/forms";
 import { PART_LETTERS } from "@/lib/quiz/format";
@@ -190,6 +191,21 @@ export function QuestionAnswerInput({
           </li>
         ))}
       </ol>
+    );
+  }
+
+  if (question.type === "WORKED" && question.structure?.kind === "worked") {
+    const given = response as { working?: string; finalAnswer?: string } | undefined;
+    const { wantsFinalAnswer } = question.structure;
+    return (
+      <WorkedAnswer
+        working={given?.working ?? ""}
+        finalAnswer={given?.finalAnswer ?? ""}
+        wantsFinalAnswer={wantsFinalAnswer}
+        onChange={(patch: { working?: string; finalAnswer?: string }) =>
+          onChange({ working: given?.working ?? "", finalAnswer: given?.finalAnswer ?? "", ...patch })
+        }
+      />
     );
   }
 

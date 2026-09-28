@@ -146,3 +146,35 @@ Don't write questions for `DRILL` or `REVIEW` quizzes; they're never shown.
 Practice styles ignore `points` in the student's view, but it still has to
 be positive. A `REVIEW` quiz draws from published quizzes in **earlier
 chapters of the same course**, so published questions there feed it.
+
+### WORKED — a competition problem, written out
+
+The student writes their working; the tutor marks it. The stated answer is
+checked on submission and earns `answerMarks`; everything else rides on the
+`rubric`, which is the marking scheme. A question with `finalAnswer: ""` is a
+proof — nothing is checked automatically, and the whole thing waits for the
+tutor.
+
+```json
+{
+  "finalAnswer": "42",
+  "answerMarks": 1,
+  "rubric": [
+    { "point": "Menyatakan kongruensi 7x ≡ 1 (mod 12)", "marks": 2 },
+    { "point": "Menemukan invers 7 modulo 12", "marks": 2 }
+  ],
+  "solution": "Karena $7 \\cdot 7 = 49 \\equiv 1 \\pmod{12}$ …"
+}
+```
+
+- The question's points are split by `answerMarks + Σ rubric.marks`, so a
+  5-point question with 1 answer mark and 4 rubric marks gives 1 point for
+  the answer and 4 for the working.
+- **It never auto-grades to done.** The grade comes back `PENDING_REVIEW`
+  with the answer's share already earned, so a student sees straight away
+  whether their answer was right while the working waits to be marked.
+- `solution` is shown to the student **after** their submission is reviewed,
+  never before — otherwise a resubmission hands back the answer.
+- Working and solution are Markdown with `$…$` maths, rendered with KaTeX.
+- It's excluded from mastery, drills and mixed review, which check an answer
+  on the spot and have nothing to check here.

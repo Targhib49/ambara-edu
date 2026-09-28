@@ -12,6 +12,9 @@ export function isPracticable(question: PracticeQuestion): boolean {
   // A project step only makes sense inside its project, so it never turns up
   // in mastery practice or a mixed review.
   if (question.type === "PROJECT_STEP") return false;
+  // A worked solution is marked by the tutor, so practice — which checks an
+  // answer on the spot — has nothing to check.
+  if (question.type === "WORKED") return false;
   if (question.type !== "CODE") return true;
   try {
     return parseCorrectAnswer("CODE", question.correctAnswer).testCases.length > 0;

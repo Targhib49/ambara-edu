@@ -9,6 +9,7 @@ import type { QuestionType } from "@/generated/prisma/enums";
 const inputCls =
   "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none";
 const labelCls = "mb-1 block text-xs font-medium text-zinc-500";
+const hintCls = "mt-1 text-xs text-zinc-500";
 const smallBtn =
   "rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-40";
 
@@ -701,6 +702,8 @@ export function QuestionEditor({ question }: { question: QuestionForEdit }) {
       return <MultiPartEditor question={question} />;
     case "FIND_MISTAKE":
       return <FindMistakeEditor question={question} />;
+    case "WORKED":
+      return <WorkedEditor question={question} />;
     case "PROJECT_STEP":
       // A step belongs to its project and is written with it, not one by one here.
       return <ProjectStepNotice />;
@@ -709,6 +712,139 @@ export function QuestionEditor({ question }: { question: QuestionForEdit }) {
       return _exhaustive;
     }
   }
+}
+
+type RubricItem = { point: string; marks: number };
+
+/**
+ * A competition problem: the answer to check, the scheme the working is
+ * marked against, and the model solution the student reads afterwards.
+ */
+function WorkedEditor({ question }: { question: QuestionForEdit }) {
+  const t = useT();
+  const stored = question.correctAnswer as { finalAnswer?: string; answerMarks?: number; rubric?: RubricItem[]; solution?: string } | null;
+  const [prompt, setPrompt] = useState(question.prompt);
+  const [points, setPoints] = useState(question.points);
+  const [explanation, setExplanation] = useState(question.explanation);
+  const [finalAnswer, setFinalAnswer] = useState(stored?.finalAnswer ?? "");
+  const [answerMarks, setAnswerMarks] = useState(stored?.answerMarks ?? 1);
+  const [rubric, setRubric] = useState<RubricItem[]>(stored?.rubric?.length ? stored.rubric : [{ point: "", marks: 1 }]);
+  const [solution, setSolution] = useState(stored?.solution ?? "");
+  const { pending, saved, error, save } = useSave(question.id);
+
+  const update = (i: number, patch: Partial<RubricItem>) => setRubric((prev) => prev.map((item, j) => (j === i ? { ...item, ...patch } : item)));
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        // An empty marking point would be a mark nobody can award.
+        save({
+          prompt,
+          points,
+          explanation,
+          options: [],
+          correctAnswer: { finalAnswer, answerMarks, rubric: rubric.filter((r) => r.point.trim() !== ""), solution },
+        });
+      }}
+      className="space-y-3"
+    >
+      <MetaFields
+        prompt={prompt}
+        setPrompt={setPrompt}
+        points={points}
+        setPoints={setPoints}
+        explanation={explanation}
+        setExplanation={setExplanation}
+      />
+      <div className="flex flex-wrap gap-3">
+        <div className="min-w-[12rem] flex-1">
+          <label className={labelCls} htmlFor={`final-${question.id}`}>
+            {t("worked.finalAnswer")}
+          </label>
+          <input
+            id={`final-${question.id}`}
+            value={finalAnswer}
+            onChange={(e) => setFinalAnswer(e.target.value)}
+            placeholder="42"
+            className={inputCls}
+          />
+        </div>
+        <div className="w-28">
+          <label className={labelCls} htmlFor={`amarks-${question.id}`}>
+            {t("worked.answerMarks")}
+          </label>
+          <input
+            id={`amarks-${question.id}`}
+            type="number"
+            min="0"
+            step="0.5"
+            value={answerMarks}
+            onChange={(e) => setAnswerMarks(Math.max(0, Number(e.target.value)))}
+            className={inputCls}
+          />
+        </div>
+      </div>
+      <p className={hintCls}>{t("worked.answerMarksHint")}</p>
+
+      <div>
+        <label className={labelCls}>{t("worked.rubric")}</label>
+        <p className={hintCls}>{t("worked.rubricHint")}</p>
+        <div className="mt-1.5 space-y-2">
+          {rubric.map((item, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={item.point}
+                onChange={(e) => update(i, { point: e.target.value })}
+                placeholder={t("worked.rubricPoint")}
+                className={`${inputCls} flex-1`}
+              />
+              <input
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={item.marks}
+                onChange={(e) => update(i, { marks: Math.max(0.5, Number(e.target.value)) })}
+                aria-label={t("worked.marks")}
+                className={`${inputCls} w-20`}
+              />
+              <button
+                type="button"
+                onClick={() => setRubric((prev) => prev.filter((_, j) => j !== i))}
+                disabled={rubric.length <= 1}
+                aria-label={t("qEditor.removePart")}
+                className="text-xs text-red-500 disabled:opacity-30"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        {rubric.length < 10 && (
+          <button type="button" onClick={() => setRubric((prev) => [...prev, { point: "", marks: 1 }])} className={`${smallBtn} mt-1.5`}>
+            {t("worked.addRubric")}
+          </button>
+        )}
+      </div>
+
+      <div>
+        <label className={labelCls} htmlFor={`sol-${question.id}`}>
+          {t("worked.solution")}
+        </label>
+        <textarea
+          id={`sol-${question.id}`}
+          value={solution}
+          onChange={(e) => setSolution(e.target.value)}
+          rows={5}
+          className={inputCls}
+        />
+        <p className={hintCls}>{t("worked.solutionHint")}</p>
+      </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <SaveButton pending={pending} saved={saved} />
+    </form>
+  );
 }
 
 function ProjectStepNotice() {

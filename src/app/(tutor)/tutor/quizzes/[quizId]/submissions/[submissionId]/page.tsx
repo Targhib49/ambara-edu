@@ -5,6 +5,7 @@ import { gradeQuestion } from "@/lib/quiz/grading";
 import { formatCorrectAnswer, formatResponse } from "@/lib/quiz/format";
 import { submissionAnswersSchema } from "@/lib/quiz/schema";
 import { CodeSubmissionView } from "@/components/quiz/CodeSubmissionView";
+import { WorkedReview } from "@/components/quiz/WorkedReview";
 import { ReviewForm } from "./ReviewForm";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ProjectFilesViewer } from "@/components/projects/ProjectFilesViewer";
@@ -153,7 +154,14 @@ export default async function SubmissionReviewPage({
             </p>
             <p className="mt-1 text-sm text-zinc-900">{question.prompt}</p>
 
-            {question.type === "CODE" ? (
+            {question.type === "WORKED" ? (
+              <WorkedReview
+                correctAnswer={question.correctAnswer}
+                response={response}
+                points={question.points}
+                autoAwarded={grade.earnedPoints}
+              />
+            ) : question.type === "CODE" ? (
               <div className="mt-3">
                 <CodeSubmissionView correctAnswer={question.correctAnswer} response={response} />
                 {grade.earnedPoints > 0 && (

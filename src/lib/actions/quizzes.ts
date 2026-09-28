@@ -382,7 +382,12 @@ function defaultQuestionData(
       options: [],
       correctAnswer: { lines: [1, 2].map((n) => t("qEditor.lineN", { n })), wrongIndex: 1, correction: "" },
     },
-    PROJECT_STEP: {
+    WORKED: {
+    prompt: "",
+    options: [],
+    correctAnswer: { finalAnswer: "", answerMarks: 1, rubric: [{ point: "", marks: 1 }], solution: "" },
+  },
+  PROJECT_STEP: {
       prompt,
       options: [],
       correctAnswer: {

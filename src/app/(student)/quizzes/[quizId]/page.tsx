@@ -17,6 +17,7 @@ import { seededPermutation } from "@/lib/quiz/shuffle";
 import { submissionAnswersSchema } from "@/lib/quiz/schema";
 import { startTimedAttempt } from "@/lib/actions/quizzes";
 import { CodeSubmissionView } from "@/components/quiz/CodeSubmissionView";
+import { WorkedResult } from "@/components/quiz/WorkedResult";
 import { ScoreHistory } from "@/components/quiz/ScoreHistory";
 import { ScoreRing } from "@/components/quiz/ScoreRing";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -324,7 +325,13 @@ async function QuizResults({
               {t(q.points === 1 ? "quizPage.questionLabel" : "quizPage.questionLabelPlural", { i: i + 1, p: q.points })}
             </p>
             <p className="mt-1 text-sm font-medium text-zinc-900">{q.prompt}</p>
-            {q.type === "CODE" ? (
+            {q.type === "WORKED" ? (
+              <WorkedResult
+                correctAnswer={q.correctAnswer}
+                response={answer?.response}
+                reviewed={submission?.status === "REVIEWED"}
+              />
+            ) : q.type === "CODE" ? (
               <div className="mt-2">
                 <CodeSubmissionView correctAnswer={q.correctAnswer} response={answer?.response} />
               </div>

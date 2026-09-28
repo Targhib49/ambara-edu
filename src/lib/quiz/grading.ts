@@ -159,6 +159,19 @@ export function gradeQuestion(
       };
     }
 
+    case "WORKED": {
+      // Competition marking: a right final answer earns its share straight
+      // away, and the working always goes to the tutor — which is the point
+      // of the format, so this never auto-grades to "done".
+      const correctAnswer = parseCorrectAnswer(type, question.correctAnswer);
+      const parsed = tryParseResponse(type, response);
+      const rubricMarks = correctAnswer.rubric.reduce((sum, item) => sum + item.marks, 0);
+      const totalMarks = correctAnswer.answerMarks + rubricMarks;
+      const answered = correctAnswer.finalAnswer.trim() !== "" && matchesWrittenAnswer(correctAnswer.finalAnswer, parsed?.finalAnswer ?? "");
+      const earnedPoints = answered && totalMarks > 0 ? round2((points * correctAnswer.answerMarks) / totalMarks) : 0;
+      return { status: "PENDING_REVIEW", correct: null, earnedPoints };
+    }
+
     case "FIND_MISTAKE": {
       const correctAnswer = parseCorrectAnswer(type, question.correctAnswer);
       const parsed = tryParseResponse(type, response);
