@@ -1,17 +1,20 @@
 /**
  * Adds the materials book to the Kelas 7 competition course: one lesson per
  * syllabus chapter, holding a short intro and that chapter's PDF (shown inline
- * in the flip-book reader). The PDFs come from the book folder:
+ * in the flip-book reader), plus a "Buku Lengkap" lesson at the top of the
+ * first chapter with the whole book as a download. The PDFs come from the book folder:
  *
  *   cd "../Elementary Maths and Python/Mid Math/Buku/komp7-buku"
- *   xelatex komp7-buku.tex (×2), then python3 split-komp7-buku.py  → bab/komp7-bab-NN.pdf
+ *   xelatex komp7-buku.tex (×2)                → komp7-buku.pdf (the full book)
+ *   python3 split-komp7-buku.py                → bab/komp7-bab-NN.pdf
  *
  *   npx tsx scripts/attach-komp7-book.ts plan    read-only: what apply would add
  *   npx tsx scripts/attach-komp7-book.ts apply   uploads the PDFs and creates the lessons
  *
  * The database is shared with production. apply only adds: a chapter that
  * already has its book lesson is skipped, quizzes are not touched, and nothing
- * is deleted. If a lesson fails to save, its uploaded PDF is removed again.
+ * is deleted. The only existing rows it changes are the first chapter's lesson
+ * order numbers, shifted down by one to make room for the full-book lesson. If a lesson fails to save, its uploaded PDF is removed again.
  */
 import "dotenv/config";
 import fs from "fs";
@@ -27,6 +30,14 @@ const COURSE_TITLE = "Persiapan Kompetisi Matematika SMP — Kelas 7";
 const BOOK_DIR = path.resolve(__dirname, "../../Elementary Maths and Python/Mid Math/Buku/komp7-buku/bab");
 const BUCKET = "attachments";
 const FILE_PREFIX = "komp7-bab-";
+const FULL_PATH = path.resolve(BOOK_DIR, "../komp7-buku.pdf");
+const FULL_NAME = "Matematika-Kompetisi-SMP-Kelas-7.pdf";
+const FULL_TITLE = "Buku Lengkap: Matematika Kompetisi SMP Kelas 7";
+const FULL_INTRO = [
+  "Seluruh buku materi — 12 bab, 126 halaman — dalam satu file PDF. Unduh untuk dibaca offline atau dicetak.",
+  "",
+  "Isinya sama dengan PDF di setiap bab, ditambah bagian depan: cara memakai buku, format dan strategi tiap babak kompetisi, cara menulis jawaban uraian, dan rencana belajar 14 hari.",
+].join("\n");
 
 // Chapter titles as printed in the book (the course's chapter titles are slightly shorter).
 const BOOK_TITLES = [
@@ -83,6 +94,7 @@ function validate() {
       problems.push(`Bab ${s.bab}: intro invalid: ${(e as Error).message}`);
     }
   }
+  if (!fs.existsSync(FULL_PATH)) problems.push(`missing ${FULL_PATH} — build komp7-buku.tex`);
   if (problems.length) {
     console.error(`✗ ${problems.length} problem(s):\n  ` + problems.join("\n  "));
     process.exit(1);
@@ -116,8 +128,15 @@ async function main() {
       if (!has) todo.push({ spec, chapterId: chapter.id, order: chapter.lessons.length });
     }
 
+    const first = course.chapters.find((c) => c.title === specs[0].chapterTitle)!;
+    const hasFull = first.lessons.some((l) =>
+      l.blocks.some((b) => b.type === "FILE_ATTACHMENT" && (b.data as { fileName?: string }).fileName === FULL_NAME)
+    );
+    const fullKb = Math.round(fs.statSync(FULL_PATH).size / 1024);
+    console.log(`  full book: ${hasFull ? "already attached — skip" : `add "${FULL_TITLE}" (${fullKb} KB, download) at the top of "${first.title}"`}`);
+
     if (mode === "plan") {
-      console.log(`\nplan only — nothing changed. ${todo.length} lesson(s) to add. Run with \`apply\` to execute.`);
+      console.log(`\nplan only — nothing changed. ${todo.length + (hasFull ? 0 : 1)} lesson(s) to add. Run with \`apply\` to execute.`);
       return;
     }
 
@@ -163,7 +182,51 @@ async function main() {
       }
       console.log(`✓ Bab ${spec.bab}: ${spec.lessonTitle}`);
     }
-    console.log(`\n✓ ${todo.length} lesson(s) added. The course is still a DRAFT.`);
+
+    if (!hasFull) {
+      const lessonId = randomUUID();
+      const bytes = fs.readFileSync(FULL_PATH);
+      const storagePath = `${lessonId}/${randomUUID()}-${FULL_NAME}`;
+      const { error } = await supabase.storage.from(BUCKET).upload(storagePath, bytes, { contentType: "application/pdf" });
+      if (error) throw new Error(`upload ${FULL_NAME}: ${error.message}`);
+      try {
+        // Re-read the chapter's lessons so the Bab lesson added above is shifted too.
+        const existing = await db.lesson.findMany({ where: { chapterId: first.id }, select: { id: true, order: true } });
+        await db.$transaction([
+          ...existing.map((l) => db.lesson.update({ where: { id: l.id }, data: { order: l.order + 1 } })),
+          db.lesson.create({
+            data: {
+              id: lessonId,
+              chapterId: first.id,
+              title: FULL_TITLE,
+              order: 0,
+              status: "PUBLISHED",
+              blocks: {
+                create: [
+                  { order: 0, type: "MARKDOWN", data: blockDataSchemas.MARKDOWN.parse({ markdown: FULL_INTRO }) },
+                  {
+                    order: 1,
+                    type: "FILE_ATTACHMENT",
+                    data: blockDataSchemas.FILE_ATTACHMENT.parse({
+                      storagePath,
+                      fileName: FULL_NAME,
+                      mimeType: "application/pdf",
+                      sizeBytes: bytes.length,
+                      display: "download",
+                    }),
+                  },
+                ],
+              },
+            },
+          }),
+        ]);
+      } catch (e) {
+        await supabase.storage.from(BUCKET).remove([storagePath]);
+        throw e;
+      }
+      console.log(`✓ ${FULL_TITLE}`);
+    }
+    console.log(`\n✓ ${todo.length + (hasFull ? 0 : 1)} lesson(s) added. Course status: ${course.status}.`);
   } finally {
     await db.$disconnect();
   }
