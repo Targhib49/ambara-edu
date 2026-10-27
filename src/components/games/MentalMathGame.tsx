@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { LEVELS, displayAnswer, isCorrect, makeQuestion, type Level, type Question } from "@/lib/games/mentalMath";
+import { LEVELS, displayAnswer, isCorrect, makeFreshQuestion, type Level, type Question } from "@/lib/games/mentalMath";
 import { btnPrimary, btnSecondary, cardCls } from "@/components/ui/styles";
 import { nowMs } from "@/lib/sessions/format";
 import { useT } from "@/lib/i18n/client";
@@ -54,6 +54,10 @@ export function MentalMathGame() {
   const [bestBefore, setBestBefore] = useState(0);
   const [flash, setFlash] = useState<"right" | "wrong" | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Questions already asked, per level. Kept across rounds while the page is
+  // open, so "Play again" doesn't start with the same sums.
+  const seenRef = useRef<Partial<Record<Level, Set<string>>>>({});
+  const nextQuestion = (lvl: Level) => makeFreshQuestion(lvl, Math.random, (seenRef.current[lvl] ??= new Set()));
 
   const playing = level !== null && endsAt > 0;
   const remaining = playing ? Math.max(0, endsAt - now) : 0;
@@ -78,7 +82,7 @@ export function MentalMathGame() {
     setAnswered([]);
     setInput("");
     setFlash(null);
-    setQuestion(makeQuestion(next, Math.random));
+    setQuestion(nextQuestion(next));
     setNow(t);
     setEndsAt(t + ROUND_MS);
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -97,7 +101,7 @@ export function MentalMathGame() {
     setFlash(correct ? "right" : "wrong");
     setTimeout(() => setFlash(null), 350);
     setInput("");
-    setQuestion(makeQuestion(level, Math.random));
+    setQuestion(nextQuestion(level));
     inputRef.current?.focus();
   };
 

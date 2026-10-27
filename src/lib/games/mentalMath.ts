@@ -113,6 +113,36 @@ export function makeQuestion(level: Level, rand: Rand): Question {
   }
 }
 
+/**
+ * Identifies a question for the no-repeat rule. Order doesn't matter for + and
+ * ×, so "3 × 7" and "7 × 3" count as the same fact. Prompts are always
+ * "<a> <op> <b>", with negatives bracketed and fractions unspaced.
+ */
+export function questionKey(question: Question): string {
+  const [a, op, b] = question.prompt.split(" ");
+  return op === "+" || op === "×" ? [a, b].sort().join(` ${op} `) : question.prompt;
+}
+
+/**
+ * A question whose key isn't in `seen`, which it then records. The tables and
+ * fractions levels have only a few hundred distinct questions, so once fresh
+ * ones get hard to find the memory is cleared and the cycle starts over.
+ */
+export function makeFreshQuestion(level: Level, rand: Rand, seen: Set<string>): Question {
+  for (let tries = 0; tries < 200; tries++) {
+    const question = makeQuestion(level, rand);
+    const key = questionKey(question);
+    if (!seen.has(key)) {
+      seen.add(key);
+      return question;
+    }
+  }
+  seen.clear();
+  const question = makeQuestion(level, rand);
+  seen.add(questionKey(question));
+  return question;
+}
+
 /** Typed answers accept a true minus sign, a hyphen, or spaces around it. */
 export function isCorrect(question: Question, given: string): boolean {
   const normalised = given.replace(/[−–]/g, "-").replace(/\s+/g, "");
