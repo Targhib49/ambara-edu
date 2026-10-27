@@ -157,7 +157,7 @@ export const OLIM_TEORI_BILANGAN_CHAPTER: ChapterContent = {
           points: 25,
           prompt:
             "Buktikan bahwa hasil kali tiga bilangan bulat berurutan ditambah bilangan tengahnya, yaitu $n(n+1)(n+2) + (n+1)$, selalu habis dibagi $(n+1)$. Lalu tentukan hasil bagi tersebut dalam bentuk paling sederhana, dan tulis nilainya untuk $n = 4$ di kotak jawaban akhir.",
-          answer: "21",
+          answer: "25",
           answerMarks: 5,
           rubric: [
             { point: "Memfaktorkan $(n+1)$ dari kedua suku", marks: 8 },
@@ -165,7 +165,7 @@ export const OLIM_TEORI_BILANGAN_CHAPTER: ChapterContent = {
             { point: "Menyadari bahwa $n(n+2)+1 = (n+1)^2$ dan memakainya", marks: 5 },
           ],
           solution:
-            "Faktorkan $(n+1)$:\n\n$$n(n+1)(n+2) + (n+1) = (n+1)\\bigl[n(n+2) + 1\\bigr].$$\n\nJadi jelas habis dibagi $(n+1)$, dengan hasil bagi $n(n+2)+1 = n^2 + 2n + 1 = (n+1)^2$.\n\nUntuk $n = 4$: hasil baginya $(4+1)^2 = \\mathbf{25}$… periksa ulang dengan angka: $4\\cdot5\\cdot6 + 5 = 125$, dan $125 : 5 = 25$. Jadi hasil baginya 25.\n\nCatatan: bila yang diminta nilai $n(n+2)+1$ pada $n=4$, hasilnya $4\\cdot6+1 = 25$ juga.",
+            "Faktorkan $(n+1)$:\n\n$$n(n+1)(n+2) + (n+1) = (n+1)\\bigl[n(n+2) + 1\\bigr].$$\n\nJadi jelas habis dibagi $(n+1)$, dengan hasil bagi $n(n+2)+1 = n^2 + 2n + 1 = (n+1)^2$.\n\nUntuk $n = 4$: hasil baginya $(4+1)^2 = \\mathbf{25}$. Cek dengan angka: $4\\cdot5\\cdot6 + 5 = 125$, dan $125 : 5 = 25$ ✓",
           explanation: "Inti soalnya memfaktorkan $(n+1)$, lalu mengenali bahwa sisanya kuadrat sempurna.",
         },
         {
