@@ -231,7 +231,8 @@ export function QuestionAnswerInput({
                   }`}
                 >
                   <span className="shrink-0 text-xs text-zinc-400">#{i + 1}</span>
-                  {line}
+                  {/* pre-wrap keeps the indentation when the lines are code */}
+                  <span className="min-w-0 whitespace-pre-wrap">{line}</span>
                 </button>
               </li>
             );

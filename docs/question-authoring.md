@@ -19,7 +19,11 @@ and please fix this page.
   throws on a bad shape. Nothing else stops a malformed row, and a malformed
   row breaks the quiz page for students.
 - **Prompts are plain text.** No Markdown, no LaTeX. Write maths with Unicode:
-  `−`, `×`, `÷`, `²`, `½`, `≤`.
+  `−`, `×`, `÷`, `²`, `½`, `≤`. The one exception is a **fenced code block**:
+  three backticks on their own line (a language may follow the opening ones),
+  the code, three backticks on their own line. It is shown as a block of code,
+  and the rest of that prompt keeps its line breaks. See `splitCode` in
+  `src/components/quiz/MathText.tsx`.
 - Every question has `prompt`, `points` (> 0), `explanation` (shown after
   grading; `""` is allowed) and `options` (only MC and multi-select use it;
   `[]` for everything else).

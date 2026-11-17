@@ -7,12 +7,60 @@ import katex from "katex";
  * that happens to contain underscores (`data_nilai`), asterisks and
  * backticks; running them through Markdown would italicise half a Python
  * identifier. So only `$…$` spans are touched, and everything outside them is
- * rendered as the text it is.
+ * rendered as the text it is. The one exception is a fenced code block (see
+ * `splitCode`), which is shown as a block of code.
  *
  * A span KaTeX can't parse is left as written, dollars and all, rather than
  * throwing — a mistyped formula should look wrong, not take down the page.
  */
 export function MathText({ text, className }: { text: string; className?: string }) {
+  const segments = splitCode(text);
+  if (segments.length === 1 && segments[0].kind === "text") return <InlineMath text={text} className={className} />;
+  return (
+    <span className={className}>
+      {segments.map((segment, i) =>
+        segment.kind === "code" ? (
+          // A <code> laid out as a block, not a <pre>: prompts are rendered inside <p>.
+          <code
+            key={i}
+            className="my-2 block overflow-x-auto whitespace-pre rounded-md bg-zinc-900 px-3 py-2.5 font-mono text-[13px] font-normal leading-relaxed text-zinc-100"
+          >
+            {segment.value}
+          </code>
+        ) : (
+          // A prompt long enough to carry code is usually laid out in lines — a list of
+          // requirements, say — so its line breaks are kept. Other prompts are untouched.
+          <InlineMath key={i} text={segment.value} className="block whitespace-pre-line" />
+        )
+      )}
+    </span>
+  );
+}
+
+type Segment = { kind: "text" | "code"; value: string };
+
+/**
+ * Pulls out fenced code blocks — three backticks on their own line, an
+ * optional language after the opening ones. It is the one piece of Markdown
+ * a prompt understands, because a program cannot be read with its line breaks
+ * and indentation collapsed. Single backticks stay literal, as before.
+ */
+export function splitCode(text: string): Segment[] {
+  const segments: Segment[] = [];
+  const fence = /(^|\n)```[^\n`]*\n([\s\S]*?)\n```(?=\n|$)/g;
+  let last = 0;
+  for (const match of text.matchAll(fence)) {
+    const before = text.slice(last, match.index).trim();
+    if (before) segments.push({ kind: "text", value: before });
+    segments.push({ kind: "code", value: match[2] });
+    last = match.index + match[0].length;
+  }
+  const rest = text.slice(last).trim();
+  if (rest || segments.length === 0) segments.push({ kind: "text", value: segments.length ? rest : text });
+  return segments;
+}
+
+function InlineMath({ text, className }: { text: string; className?: string }) {
   const parts = splitMath(text);
   if (parts.length === 1 && parts[0].kind === "text") {
     return className ? <span className={className}>{text}</span> : <>{text}</>;
