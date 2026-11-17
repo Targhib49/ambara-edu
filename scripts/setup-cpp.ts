@@ -363,7 +363,25 @@ async function main() {
   }
 }
 
+/** Prisma's message often stops at the code frame; the reason is further down the cause chain. */
+function describe(err: unknown): string {
+  const seen = new Set<unknown>();
+  const parts: string[] = [];
+  let current: unknown = err;
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    const e = current as { message?: unknown; code?: unknown; cause?: unknown; meta?: { driverAdapterError?: unknown } };
+    const line = [typeof e.code === "string" ? `[${e.code}]` : "", typeof e.message === "string" ? e.message.trim() : ""].filter(Boolean).join(" ");
+    if (line && !parts.includes(line)) parts.push(line);
+    current = e.meta?.driverAdapterError ?? e.cause;
+  }
+  const text = parts.join("\n  caused by: ") || String(err);
+  return /ETIMEDOUT|ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|NotReachable|timed out|timeout/i.test(text)
+    ? `${text}\n\nCould not connect to the database. If this is the live database, the network is probably blocking ports 5432/6543 — try another connection, such as a phone hotspot.`
+    : text;
+}
+
 main().catch((err) => {
-  console.error(`✗ ${err instanceof Error ? err.message : String(err)}`);
+  console.error(`✗ ${describe(err)}`);
   process.exit(1);
 });
