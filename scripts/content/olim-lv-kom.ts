@@ -84,6 +84,7 @@ export const LV_KOMBINATORIKA: LevelChapter = {
           num("Peta berskala $1 : 200\\,000$. Sebuah danau di peta luasnya $3$ cm². Berapa km² luas sebenarnya?", 12, "1 cm mewakili 2 km, jadi 1 cm² mewakili 4 km²."),
         ]),
         drill(L1, "Faktorial, Permutasi, Kombinasi", "counting"),
+        drill(L1, "Jabat Tangan dan Diagonal", "handshakes"),
         uji(L1, false, [
           num("Dari angka 1 sampai 7 disusun bilangan empat digit dengan digit berbeda yang lebih dari 5000. Ada berapa?", 360, "Ribuan 5, 6, atau 7: $3 \\cdot 6 \\cdot 5 \\cdot 4$.", 20),
           num("Tujuh orang, termasuk Ani, berbaris. Ada berapa susunan jika Ani tidak berdiri di ujung?", 3600, "Ani punya 5 posisi, sisanya $6!$: $5 \\cdot 720$.", 20),
@@ -168,6 +169,8 @@ export const LV_KOMBINATORIKA: LevelChapter = {
           frac(`Lima bola berbeda dimasukkan secara acak ke 3 kotak berbeda. Berapa peluang tidak ada kotak yang kosong? ${FRAC}`, "50/81", "Inklusi-eksklusi: $3^5 - 3 \\cdot 2^5 + 3 \\cdot 1 = 150$ dari $243$."),
         ]),
         drill(L2, "Inklusi-Eksklusi", "inclusion-exclusion"),
+        drill(L2, "Susunan Huruf Berulang", "word-arrangements"),
+        drill(L2, "Rute Terpendek di Grid", "grid-paths"),
         uji(L2, false, [
           num(`Ada berapa susunan huruf kata KALKULUS yang kedua huruf K-nya berdampingan? ${BIG}`, 1260, "Jadikan KK satu blok: 7 objek dengan L dan U masing-masing dua kali, $\\frac{7!}{2!\\,2!}$.", 20),
           num("Ada berapa solusi bilangan bulat tak negatif $a + b + c = 12$ dengan $a, b, c \\le 6$?", 28, "Semua $C(14, 2) = 91$. Satu variabel $\\ge 7$: $3 \\cdot C(7, 2) = 63$. Dua variabel $\\ge 7$ tidak mungkin.", 20),
@@ -248,6 +251,7 @@ export const LV_KOMBINATORIKA: LevelChapter = {
           num("Paling sedikit berapa orang diperlukan agar pasti ada 4 orang yang lahir pada hari yang sama dalam seminggu?", 22, "$kn + 1$ dengan $k = 3$, $n = 7$."),
           num("Paling sedikit berapa bilangan harus diambil dari $1, 2, \\ldots, 30$ agar pasti ada dua bilangan yang selisihnya 15?", 16, "Pasangan $(1, 16), (2, 17), \\ldots, (15, 30)$ ada 15. Bilangan ke-16 pasti melengkapi salah satunya."),
         ]),
+        drill(L3, "Bintang dan Sekat", "stars-bars"),
         uji(L3, true, [
           frac(`Tiga koin dilempar, dan diketahui muncul paling sedikit satu angka. Berapa peluang ketiganya angka? ${FRAC}`, "1/7", "Ruang sampel menyusut menjadi 7 hasil, dan hanya satu yang AAA.", 15),
           frac(`Andi dan Budi bergantian melempar dua koin sekaligus, dimulai Andi. Yang pertama mendapat dua angka menang. Berapa peluang Andi menang? ${FRAC}`, "4/7", "$p = \\frac14 + \\frac34 \\cdot \\frac34 \\cdot p$, jadi $\\frac7{16}p = \\frac14$.", 15),

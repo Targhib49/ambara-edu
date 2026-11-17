@@ -9,7 +9,14 @@ import {
   makeTrailingZerosQuestion,
 } from "@/lib/drills/numberTheory";
 import { makeLinearEquationQuestion, makeSymmetricSumsQuestion } from "@/lib/drills/olympiadAlgebra";
-import { makeCountingQuestion, makeInclusionExclusionQuestion } from "@/lib/drills/counting";
+import {
+  makeCountingQuestion,
+  makeGridPathsQuestion,
+  makeHandshakesQuestion,
+  makeInclusionExclusionQuestion,
+  makeStarsBarsQuestion,
+  makeWordArrangementsQuestion,
+} from "@/lib/drills/counting";
 import { makePolygonAnglesQuestion, makePythagorasQuestion } from "@/lib/drills/olympiadGeometry";
 import type { DrillQuestion, DrillSkillDefinition } from "@/lib/drills/types";
 
@@ -80,6 +87,26 @@ export const DRILL_SKILLS = {
     labelKey: "drill.skill.inclusionExclusion",
     instructionKey: "drill.instruction.inclusionExclusion",
     make: makeInclusionExclusionQuestion,
+  },
+  "handshakes": {
+    labelKey: "drill.skill.handshakes",
+    instructionKey: "drill.instruction.handshakes",
+    make: makeHandshakesQuestion,
+  },
+  "grid-paths": {
+    labelKey: "drill.skill.gridPaths",
+    instructionKey: "drill.instruction.gridPaths",
+    make: makeGridPathsQuestion,
+  },
+  "word-arrangements": {
+    labelKey: "drill.skill.wordArrangements",
+    instructionKey: "drill.instruction.wordArrangements",
+    make: makeWordArrangementsQuestion,
+  },
+  "stars-bars": {
+    labelKey: "drill.skill.starsBars",
+    instructionKey: "drill.instruction.starsBars",
+    make: makeStarsBarsQuestion,
   },
   "pythagoras": {
     labelKey: "drill.skill.pythagoras",
