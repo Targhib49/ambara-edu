@@ -10,7 +10,22 @@ Next.js (App Router) + TypeScript · Supabase (Postgres, Auth, Storage) · Prism
 
 ## Setup
 
-1. Copy `.env.example` to `.env` and fill in the Supabase values. Connection strings come from Dashboard → Connect: `DATABASE_URL` is the **transaction pooler** string (port 6543), `DIRECT_URL` the **session pooler** string (port 5432). API keys are the new-format ones (Settings → API Keys): `sb_publishable_...` and `sb_secret_...`.
+1. Local development runs against a Supabase stack on your own machine (database, sign-in and file storage), never the hosted project. It needs Docker and the Supabase CLI:
+
+   ```bash
+   npm run db:start   # first run downloads the images; prints the local URL and keys
+   ```
+
+   Copy `.env.example` to `.env` and fill it with the local values that command prints (`supabase status` shows them again). The database is `postgresql://postgres:postgres@127.0.0.1:54322/postgres` for both `DATABASE_URL` and `DIRECT_URL`.
+
+   The hosted project's values go in `.env.prod`, which nothing loads by itself. To run one command against production on purpose:
+
+   ```bash
+   npm run prod -- npx prisma migrate deploy
+   npm run prod -- npx tsx scripts/some-content-script.ts
+   ```
+
+   For `.env.prod`, connection strings come from Dashboard → Connect: `DATABASE_URL` is the **transaction pooler** string (port 6543), `DIRECT_URL` the **session pooler** string (port 5432). API keys are the new-format ones (Settings → API Keys): `sb_publishable_...` and `sb_secret_...`.
 2. Install and migrate:
 
    ```bash

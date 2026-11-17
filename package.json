@@ -10,7 +10,10 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "db:start": "supabase start -x realtime,edge-runtime,logflare,vector,imgproxy,supavisor",
+    "db:stop": "supabase stop",
+    "prod": "node scripts/with-prod-env.mjs"
   },
   "dependencies": {
     "@codemirror/lang-python": "^6.2.1",
