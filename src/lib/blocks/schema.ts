@@ -34,6 +34,11 @@ export const blockDataSchemas = {
   }),
   CODE_EDITOR: z.object({
     starterCode: z.string(),
+    // Absent means Python, which is every block made before C++ existed.
+    language: z.enum(["python", "cpp"]).optional(),
+    // C++ only: what the finished program should print. With it, the block
+    // checks each run and tells the student whether the output matches.
+    expectedOutput: z.string().optional(),
   }),
   VISUALIZATION: visualizationDataSchema,
   VIDEO_EMBED: z.object({

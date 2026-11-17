@@ -16,7 +16,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { spawnSync } from "child_process";
-import { CPP_EXERCISES, PRELUDE } from "./content/cpp-oop";
+import { CPP_EXERCISES, CPP_PRACTICE, PRELUDE } from "./content/cpp-oop";
 
 const CXX = process.env.CXX ?? "g++";
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "check-cpp-"));
@@ -85,6 +85,24 @@ for (const exercise of CPP_EXERCISES) {
   });
 }
 
+// Hands-on tasks: the hidden solution must print the expected output, line for
+// line, and the starter must not already do so — or there is nothing to do.
+const lines = (stdout: string) => stdout.replace(/\s+$/, "").split("\n").map((l) => l.trimEnd()).join("\n");
+let tasks = 0;
+for (const practice of CPP_PRACTICE) {
+  practice.tasks.forEach((task, i) => {
+    const where = `${practice.moduleFile} task ${i + 1} "${task.title}"`;
+    tasks++;
+    programs += 2;
+    const solved = build({ "main.cpp": task.solution });
+    if (!solved.compiled) problems.push(`${where}: the solution does not compile\n${solved.log}`);
+    else if (lines(solved.output) !== task.prints) problems.push(`${where}: the solution prints\n${lines(solved.output)}\nbut the task expects\n${task.prints}`);
+    const start = build({ "main.cpp": task.starter });
+    if (start.compiled && lines(start.output) === task.prints) problems.push(`${where}: the starter already prints the expected output`);
+    if (task.starter.includes(task.solution)) problems.push(`${where}: the starter contains the solution`);
+  });
+}
+
 fs.rmSync(work, { recursive: true, force: true });
 
 const count = CPP_EXERCISES.reduce((n, e) => n + e.questions.length, 0);
@@ -97,4 +115,5 @@ if (problems.length) {
   console.error(`\n✗ ${problems.length} problem(s):\n\n` + problems.join("\n\n"));
   process.exit(1);
 }
-console.log(`\n✓ ${count} questions, ${programs} programs compiled and run with ${CXX}; every answer key matches`);
+console.log(`  hands-on practice: ${tasks} tasks`);
+console.log(`\n✓ ${count} questions and ${tasks} tasks, ${programs} programs compiled and run with ${CXX}; every answer key matches`);

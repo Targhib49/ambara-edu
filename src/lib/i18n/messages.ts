@@ -1674,6 +1674,19 @@ export const MESSAGES = {
   "calendar.more": { ID: "+{n} lagi", EN: "+{n} more" },
   "table.rangeTo": { ID: "s.d.", EN: "to" },
 
+  // --- C++ editor -----------------------------------------------------------
+  "cpp.compiling": { ID: "Mengompilasi\u2026", EN: "Compiling\u2026" },
+  "cpp.inputToggle": { ID: "Input", EN: "Input" },
+  "cpp.inputLabel": { ID: "Input program (yang dibaca cin), satu nilai per baris", EN: "Program input (what cin reads), one value per line" },
+  "cpp.runsOnServer": { ID: "C++ dikompilasi di server", EN: "C++ is compiled on the server" },
+  "cpp.expected": { ID: "Output yang diharapkan", EN: "Expected output" },
+  "cpp.compileError": { ID: "Program tidak bisa dikompilasi:", EN: "The program did not compile:" },
+  "cpp.crashed": { ID: "Program berhenti tidak normal ({signal}).", EN: "The program stopped abnormally ({signal})." },
+  "cpp.match": { ID: "\u2713 Output sesuai dengan yang diharapkan.", EN: "\u2713 The output matches what was expected." },
+  "cpp.noMatch": { ID: "Output belum sesuai. Bandingkan dengan output yang diharapkan, lalu coba lagi.", EN: "The output doesn't match yet. Compare it with the expected output and try again." },
+  "cpp.cooldown": { ID: "Tunggu sebentar sebelum menjalankan lagi.", EN: "Wait a moment before running again." },
+  "cpp.unavailable": { ID: "Layanan kompilasi sedang tidak bisa dihubungi. Coba lagi sebentar lagi.", EN: "The compile service can't be reached right now. Try again in a moment." },
+
   // --- error and not-found pages -------------------------------------------
   "error.title": { ID: "Ada yang tidak beres", EN: "Something went wrong" },
   "error.body": {

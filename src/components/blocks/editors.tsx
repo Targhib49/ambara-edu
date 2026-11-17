@@ -135,26 +135,50 @@ function CodeSnippetEditor({ block }: { block: { id: string; data: BlockDataMap[
 
 function CodeEditorEditor({ block }: { block: { id: string; data: BlockDataMap["CODE_EDITOR"] } }) {
   const [starterCode, setStarterCode] = useState(block.data.starterCode);
+  const [language, setLanguage] = useState<"python" | "cpp">(block.data.language ?? "python");
+  const [expectedOutput, setExpectedOutput] = useState(block.data.expectedOutput ?? "");
   const { pending, saved, save } = useSave(block.id);
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        save({ starterCode });
+        // Python blocks keep their original shape; the extra fields only exist for C++.
+        save(language === "cpp" ? { starterCode, language, ...(expectedOutput.trim() ? { expectedOutput } : {}) } : { starterCode });
       }}
       className="space-y-2"
     >
       <label className={labelCls}>
-        Starter code (Python) — students edit and run it in their browser
+        Language
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value === "cpp" ? "cpp" : "python")}
+          className={`${inputCls} mt-1`}
+        >
+          <option value="python">Python — runs in the student&apos;s browser</option>
+          <option value="cpp">C++ — compiled on the server</option>
+        </select>
       </label>
+      <label className={labelCls}>Starter code — students edit and run it</label>
       <textarea
         value={starterCode}
         onChange={(e) => setStarterCode(e.target.value)}
         rows={8}
         className={`${inputCls} font-mono`}
         spellCheck={false}
-        placeholder={'print("Hello from Python!")'}
+        placeholder={language === "cpp" ? "#include <iostream>" : 'print("Hello from Python!")'}
       />
+      {language === "cpp" && (
+        <label className={labelCls}>
+          Expected output (optional) — with it, each run tells the student whether their output matches
+          <textarea
+            value={expectedOutput}
+            onChange={(e) => setExpectedOutput(e.target.value)}
+            rows={3}
+            className={`${inputCls} mt-1 font-mono`}
+            spellCheck={false}
+          />
+        </label>
+      )}
       <SaveButton pending={pending} saved={saved} />
     </form>
   );

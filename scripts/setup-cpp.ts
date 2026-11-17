@@ -31,7 +31,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { blockDataSchemas } from "../src/lib/blocks/schema";
 import { parseCorrectAnswer } from "../src/lib/quiz/schema";
-import { CPP_EXERCISES, PRELUDE, outputPrompt, type CppQuestion } from "./content/cpp-oop";
+import { CPP_EXERCISES, CPP_PRACTICE, PRELUDE, outputPrompt, type CppQuestion } from "./content/cpp-oop";
 
 const SOURCE_DIR = path.resolve(__dirname, "../../C++");
 const BUCKET = "attachments";
@@ -165,6 +165,12 @@ function questionRow(q: CppQuestion) {
   }
 }
 
+const PRACTICE_INTRO = [
+  "## Hands-on practice",
+  "",
+  "Now write some code. Each task below has an editor: finish the program, press **Run**, and compare what it prints with the expected output. You can run as often as you like — nothing here is graded.",
+].join("\n");
+
 const [mode = "plan", ...flags] = process.argv.slice(2);
 if (mode !== "plan" && mode !== "apply") {
   console.error("usage: npx tsx scripts/setup-cpp.ts <plan|apply> [--publish] [--enroll <email>]...");
@@ -250,6 +256,19 @@ async function main() {
         ? `already there (${quiz.status})${publish && quiz.status !== "PUBLISHED" ? " → PUBLISHED" : ""}`
         : `add as ${status}: ${exercise.questions.length} questions, ${points} points`;
       console.log(`  exercise "${exercise.title}": ${what}`);
+    }
+
+    // Hands-on practice: C++ editor blocks appended to each lesson that has none yet.
+    const lessonsWithEditors = new Set(
+      existingLessons.length
+        ? (await db.contentBlock.findMany({ where: { lessonId: { in: existingLessons.map((l) => l.id) }, type: "CODE_EDITOR" }, select: { lessonId: true } })).map((b) => b.lessonId)
+        : []
+    );
+    for (const practice of CPP_PRACTICE) {
+      const moduleTitle = MODULES.find((m) => m.file === practice.moduleFile)!.title;
+      const lesson = existingLessons.find((l) => l.title === moduleTitle);
+      const has = lesson ? lessonsWithEditors.has(lesson.id) : false;
+      console.log(`  hands-on practice in "${moduleTitle}": ${has ? "already there" : `add ${practice.tasks.length} tasks`}`);
     }
 
     if (mode === "plan") {
@@ -352,6 +371,40 @@ async function main() {
         },
       });
       console.log(`✓ added "${exercise.title}" (${status})`);
+    }
+
+    for (const practice of CPP_PRACTICE) {
+      const moduleTitle = MODULES.find((m) => m.file === practice.moduleFile)!.title;
+      const lesson = lessons.find((l) => l.title === moduleTitle);
+      if (!lesson) throw new Error(`lesson "${moduleTitle}" not found in the course — was it renamed?`);
+      const blocks = await db.contentBlock.findMany({ where: { lessonId: lesson.id }, select: { type: true, order: true } });
+      if (blocks.some((b) => b.type === "CODE_EDITOR")) continue;
+      let order = Math.max(-1, ...blocks.map((b) => b.order)) + 1;
+      await db.contentBlock.createMany({
+        data: [
+          {
+            lessonId: lesson.id,
+            order: order++,
+            type: "MARKDOWN" as const,
+            data: blockDataSchemas.MARKDOWN.parse({ markdown: PRACTICE_INTRO }),
+          },
+          ...practice.tasks.flatMap((task, i) => [
+            {
+              lessonId: lesson.id,
+              order: order++,
+              type: "MARKDOWN" as const,
+              data: blockDataSchemas.MARKDOWN.parse({ markdown: `### Task ${i + 1} — ${task.title}\n\n${task.instructions}` }),
+            },
+            {
+              lessonId: lesson.id,
+              order: order++,
+              type: "CODE_EDITOR" as const,
+              data: blockDataSchemas.CODE_EDITOR.parse({ starterCode: task.starter, language: "cpp", expectedOutput: task.prints }),
+            },
+          ]),
+        ],
+      });
+      console.log(`✓ added ${practice.tasks.length} hands-on tasks to "${moduleTitle}"`);
     }
 
     for (const s of toEnroll) {

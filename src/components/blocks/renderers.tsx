@@ -10,6 +10,7 @@ import { effectiveFileDisplay, isPdfFile, toAnyBlock } from "@/lib/blocks/schema
 import { parseVideoUrl } from "@/lib/blocks/video";
 import type { BlockType } from "@/generated/prisma/enums";
 import { CodeEditorBlock } from "./CodeEditorBlock";
+import { CppEditorBlock } from "./CppEditorBlock";
 import { VizBlock } from "@/components/viz/VizBlock";
 import { PdfFlipViewer } from "./PdfFlipViewer";
 
@@ -249,6 +250,15 @@ export async function BlockRenderer({
     case "CODE_EDITOR":
       // Keyed on the starter code so a tutor's save remounts the preview with
       // the fresh doc (the component itself ignores prop changes after mount).
+      if (parsed.data.language === "cpp") {
+        return (
+          <CppEditorBlock
+            key={parsed.data.starterCode + (parsed.data.expectedOutput ?? "")}
+            starterCode={parsed.data.starterCode}
+            expectedOutput={parsed.data.expectedOutput}
+          />
+        );
+      }
       return <CodeEditorBlock key={parsed.data.starterCode} starterCode={parsed.data.starterCode} />;
     case "VISUALIZATION":
       // Same remount-on-save pattern: viz components seed state from props.

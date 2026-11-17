@@ -1479,3 +1479,616 @@ int main() {
     ],
   },
 ];
+
+// ─────────────────────────────────────────────────────────── Hands-on practice
+//
+// Small programs to finish inside the lesson itself, in the C++ editor block.
+// Each has the output the finished program should print; the editor compares
+// every run with it. They are practice, not graded, and deliberately different
+// from the "write a program" questions in the exercises above.
+
+export type CppTask = {
+  title: string;
+  /** Markdown, shown above the editor. */
+  instructions: string;
+  /** What the student starts from. It may not compile until the TODOs are done. */
+  starter: string;
+  /** A finished version — never shown; check-cpp.ts runs it to confirm `prints`. */
+  solution: string;
+  prints: string;
+};
+
+export const CPP_PRACTICE: { moduleFile: string; tasks: CppTask[] }[] = [
+  {
+    moduleFile: "1_Intro to Classes.pdf",
+    tasks: [
+      {
+        title: "Finish the Counter class",
+        instructions: "The class has a data member but no member functions yet. Add a constructor that starts `count` at 0, `increment()` that adds 1, and `get()` that returns the count. Do not change `main`.",
+        starter: `#include <iostream>
+using namespace std;
+
+class Counter {
+public:
+    // TODO: a constructor that starts count at 0
+    // TODO: void increment() - adds 1 to count
+    // TODO: int get() - returns count
+
+private:
+    int count;
+};
+
+int main() {
+    Counter c;
+    c.increment();
+    c.increment();
+    c.increment();
+    cout << "Count: " << c.get() << endl;
+    return 0;
+}`,
+        solution: `#include <iostream>
+using namespace std;
+
+class Counter {
+public:
+    Counter() : count(0) {}
+    void increment() { count++; }
+    int get() { return count; }
+
+private:
+    int count;
+};
+
+int main() {
+    Counter c;
+    c.increment();
+    c.increment();
+    c.increment();
+    cout << "Count: " << c.get() << endl;
+    return 0;
+}`,
+        prints: "Count: 3",
+      },
+      {
+        title: "A Temperature class that protects its data",
+        instructions:
+          "Write the class `Temperature` so that `main` works. It stores a temperature in Celsius.\n\n- A constructor taking the temperature, with a default argument of 0.\n- `setCelsius(double)` stores the new value **only if** it is not below −273.15 (absolute zero); otherwise it leaves the old value alone.\n- `getCelsius()` returns the stored value.\n- `toFahrenheit()` returns `celsius * 9 / 5 + 32`.",
+        starter: `#include <iostream>
+using namespace std;
+
+// TODO: write class Temperature here
+
+int main() {
+    Temperature t(25);
+    cout << t.toFahrenheit() << endl;
+
+    t.setCelsius(-300);            // impossible: must be ignored
+    cout << t.getCelsius() << endl;
+
+    t.setCelsius(100);
+    cout << t.toFahrenheit() << endl;
+    return 0;
+}`,
+        solution: `#include <iostream>
+using namespace std;
+
+class Temperature {
+public:
+    Temperature(double c = 0) : celsius(c) {}
+    void setCelsius(double c) {
+        if (c >= -273.15) celsius = c;
+    }
+    double getCelsius() { return celsius; }
+    double toFahrenheit() { return celsius * 9 / 5 + 32; }
+
+private:
+    double celsius;
+};
+
+int main() {
+    Temperature t(25);
+    cout << t.toFahrenheit() << endl;
+
+    t.setCelsius(-300);            // impossible: must be ignored
+    cout << t.getCelsius() << endl;
+
+    t.setCelsius(100);
+    cout << t.toFahrenheit() << endl;
+    return 0;
+}`,
+        prints: "77\n25\n212",
+      },
+    ],
+  },
+  {
+    moduleFile: "2_Classes Interface and Implementation.pdf",
+    tasks: [
+      {
+        title: "Count the objects with a static member",
+        instructions:
+          "Make `Player` keep track of how many `Player` objects currently exist.\n\n- Add a `static int` data member and define it outside the class, starting at 0.\n- The constructor adds 1 to it; the destructor takes 1 away.\n- Add a `static` member function `getCount()` that returns it.",
+        starter: `#include <iostream>
+using namespace std;
+
+class Player {
+public:
+    Player() {
+        // TODO: one more player exists
+    }
+    ~Player() {
+        // TODO: one player fewer
+    }
+    // TODO: static int getCount()
+
+private:
+    // TODO: the static data member
+};
+
+// TODO: define the static data member here, starting at 0
+
+int main() {
+    Player a;
+    Player b;
+    cout << "Players: " << Player::getCount() << endl;
+    {
+        Player c;
+        cout << "Players: " << Player::getCount() << endl;
+    }
+    cout << "Players: " << Player::getCount() << endl;
+    return 0;
+}`,
+        solution: `#include <iostream>
+using namespace std;
+
+class Player {
+public:
+    Player() { count++; }
+    ~Player() { count--; }
+    static int getCount() { return count; }
+
+private:
+    static int count;
+};
+
+int Player::count = 0;
+
+int main() {
+    Player a;
+    Player b;
+    cout << "Players: " << Player::getCount() << endl;
+    {
+        Player c;
+        cout << "Players: " << Player::getCount() << endl;
+    }
+    cout << "Players: " << Player::getCount() << endl;
+    return 0;
+}`,
+        prints: "Players: 2\nPlayers: 3\nPlayers: 2",
+      },
+      {
+        title: "A class that owns a dynamic array",
+        instructions:
+          "`Scores` should allocate its own array and clean up after itself.\n\n- The constructor allocates `n` ints with `new` and sets them all to 0.\n- The destructor releases the array — with the right form of `delete`.\n- `highest()` is a `const` member function that returns the largest value.",
+        starter: `#include <iostream>
+using namespace std;
+
+class Scores {
+public:
+    Scores(int n) {
+        // TODO: remember the size, allocate the array, set every element to 0
+    }
+    ~Scores() {
+        // TODO: release the array
+    }
+    void set(int index, int value) {
+        if (index >= 0 && index < size) data[index] = value;
+    }
+    // TODO: int highest() const
+
+private:
+    int* data;
+    int size;
+};
+
+int main() {
+    Scores s(4);
+    s.set(0, 67);
+    s.set(1, 91);
+    s.set(2, 78);
+    cout << "Highest: " << s.highest() << endl;
+    return 0;
+}`,
+        solution: `#include <iostream>
+using namespace std;
+
+class Scores {
+public:
+    Scores(int n) : data(new int[n]), size(n) {
+        for (int i = 0; i < size; i++) data[i] = 0;
+    }
+    ~Scores() {
+        delete[] data;
+    }
+    void set(int index, int value) {
+        if (index >= 0 && index < size) data[index] = value;
+    }
+    int highest() const {
+        int best = data[0];
+        for (int i = 1; i < size; i++)
+            if (data[i] > best) best = data[i];
+        return best;
+    }
+
+private:
+    int* data;
+    int size;
+};
+
+int main() {
+    Scores s(4);
+    s.set(0, 67);
+    s.set(1, 91);
+    s.set(2, 78);
+    cout << "Highest: " << s.highest() << endl;
+    return 0;
+}`,
+        prints: "Highest: 91",
+      },
+    ],
+  },
+  {
+    moduleFile: "3_Composition.pdf",
+    tasks: [
+      {
+        title: "A Person has an Address",
+        instructions:
+          "`Address` is finished. Complete `Person`, which **has an** `Address` as a data member.\n\n- The constructor takes a name and a city and builds the `Address` member in the **member initializer list** (`Address` has no default constructor, so there is no other way).\n- `print()` writes `name lives in city`.",
+        starter: `#include <iostream>
+#include <string>
+using namespace std;
+
+class Address {
+public:
+    Address(string c) : city(c) {}
+    string getCity() const { return city; }
+
+private:
+    string city;
+};
+
+class Person {
+public:
+    // TODO: Person(string n, string c) with a member initializer list
+    // TODO: void print() const
+
+private:
+    string name;
+    Address home;
+};
+
+int main() {
+    Person p("Lina", "Johor");
+    p.print();
+    return 0;
+}`,
+        solution: `#include <iostream>
+#include <string>
+using namespace std;
+
+class Address {
+public:
+    Address(string c) : city(c) {}
+    string getCity() const { return city; }
+
+private:
+    string city;
+};
+
+class Person {
+public:
+    Person(string n, string c) : name(n), home(c) {}
+    void print() const { cout << name << " lives in " << home.getCity() << endl; }
+
+private:
+    string name;
+    Address home;
+};
+
+int main() {
+    Person p("Lina", "Johor");
+    p.print();
+    return 0;
+}`,
+        prints: "Lina lives in Johor",
+      },
+      {
+        title: "A friend function that compares two objects",
+        instructions:
+          "Write the function `sameArea`, which returns `true` when two rectangles have the same area. It is **not** a member of `Rectangle`, but it needs the private `width` and `height` — so declare it a `friend` inside the class, then define it below the class.",
+        starter: `#include <iostream>
+using namespace std;
+
+class Rectangle {
+    // TODO: declare sameArea as a friend
+
+public:
+    Rectangle(int w, int h) : width(w), height(h) {}
+
+private:
+    int width;
+    int height;
+};
+
+// TODO: define  bool sameArea(const Rectangle& a, const Rectangle& b)
+
+int main() {
+    Rectangle a(4, 6), b(3, 8), c(5, 5);
+    cout << sameArea(a, b) << endl;
+    cout << sameArea(a, c) << endl;
+    return 0;
+}`,
+        solution: `#include <iostream>
+using namespace std;
+
+class Rectangle {
+    friend bool sameArea(const Rectangle& a, const Rectangle& b);
+
+public:
+    Rectangle(int w, int h) : width(w), height(h) {}
+
+private:
+    int width;
+    int height;
+};
+
+bool sameArea(const Rectangle& a, const Rectangle& b) {
+    return a.width * a.height == b.width * b.height;
+}
+
+int main() {
+    Rectangle a(4, 6), b(3, 8), c(5, 5);
+    cout << sameArea(a, b) << endl;
+    cout << sameArea(a, c) << endl;
+    return 0;
+}`,
+        prints: "1\n0",
+      },
+    ],
+  },
+  {
+    moduleFile: "4_Operator Overloading.pdf",
+    tasks: [
+      {
+        title: "Add two Money objects with +",
+        instructions:
+          "Overload `operator+` as a member function so two `Money` objects can be added. When the sen reach 100 or more, carry into the ringgit. The operator must not change either of the objects being added.",
+        starter: `#include <iostream>
+using namespace std;
+
+class Money {
+public:
+    Money(int r, int s) : ringgit(r), sen(s) {}
+
+    // TODO: Money operator+(const Money& other) const
+
+    void print() const {
+        cout << "RM" << ringgit << "." << (sen < 10 ? "0" : "") << sen << endl;
+    }
+
+private:
+    int ringgit;
+    int sen;
+};
+
+int main() {
+    Money a(3, 80), b(2, 45);
+    Money total = a + b;
+    total.print();
+    a.print();
+    return 0;
+}`,
+        solution: `#include <iostream>
+using namespace std;
+
+class Money {
+public:
+    Money(int r, int s) : ringgit(r), sen(s) {}
+
+    Money operator+(const Money& other) const {
+        int totalSen = sen + other.sen;
+        return Money(ringgit + other.ringgit + totalSen / 100, totalSen % 100);
+    }
+
+    void print() const {
+        cout << "RM" << ringgit << "." << (sen < 10 ? "0" : "") << sen << endl;
+    }
+
+private:
+    int ringgit;
+    int sen;
+};
+
+int main() {
+    Money a(3, 80), b(2, 45);
+    Money total = a + b;
+    total.print();
+    a.print();
+    return 0;
+}`,
+        prints: "RM6.25\nRM3.80",
+      },
+      {
+        title: "Print an object with <<",
+        instructions:
+          "Make `cout << p` work for a `Point`, printing it as `(x, y)`. Overload `operator<<` as a `friend` function. It takes the stream and the point, and must **return the stream** so that several `<<` can be chained.",
+        starter: `#include <iostream>
+using namespace std;
+
+class Point {
+    // TODO: declare operator<< as a friend
+
+public:
+    Point(int a, int b) : x(a), y(b) {}
+
+private:
+    int x;
+    int y;
+};
+
+// TODO: define operator<< here
+
+int main() {
+    Point p(3, 7), q(-1, 4);
+    cout << p << " to " << q << endl;
+    return 0;
+}`,
+        solution: `#include <iostream>
+using namespace std;
+
+class Point {
+    friend ostream& operator<<(ostream& out, const Point& p);
+
+public:
+    Point(int a, int b) : x(a), y(b) {}
+
+private:
+    int x;
+    int y;
+};
+
+ostream& operator<<(ostream& out, const Point& p) {
+    out << "(" << p.x << ", " << p.y << ")";
+    return out;
+}
+
+int main() {
+    Point p(3, 7), q(-1, 4);
+    cout << p << " to " << q << endl;
+    return 0;
+}`,
+        prints: "(3, 7) to (-1, 4)",
+      },
+    ],
+  },
+  {
+    moduleFile: "5_Inheritance.pdf",
+    tasks: [
+      {
+        title: "Derive Dog from Animal",
+        instructions:
+          "`Animal` is finished. Write `Dog` so that it **is an** `Animal`.\n\n- Use public inheritance.\n- `Dog`'s constructor takes a name and passes it to the `Animal` constructor in its initializer list.\n- Add `speak()`, which prints `name says Woof`. `name` is `protected`, so `Dog` may use it directly.",
+        starter: `#include <iostream>
+#include <string>
+using namespace std;
+
+class Animal {
+public:
+    Animal(string n) : name(n) {}
+    void describe() const { cout << name << " is an animal" << endl; }
+
+protected:
+    string name;
+};
+
+// TODO: write class Dog here
+
+int main() {
+    Dog d("Rex");
+    d.describe();
+    d.speak();
+    return 0;
+}`,
+        solution: `#include <iostream>
+#include <string>
+using namespace std;
+
+class Animal {
+public:
+    Animal(string n) : name(n) {}
+    void describe() const { cout << name << " is an animal" << endl; }
+
+protected:
+    string name;
+};
+
+class Dog : public Animal {
+public:
+    Dog(string n) : Animal(n) {}
+    void speak() const { cout << name << " says Woof" << endl; }
+};
+
+int main() {
+    Dog d("Rex");
+    d.describe();
+    d.speak();
+    return 0;
+}`,
+        prints: "Rex is an animal\nRex says Woof",
+      },
+      {
+        title: "Three levels: Shape, Rectangle, Square",
+        instructions:
+          "Build a multilevel hierarchy.\n\n- `Rectangle` is derived from `Shape`. Its constructor takes a width and a height and passes the name `\"Rectangle\"` up to `Shape`. Add `area()`.\n- `Square` is derived from `Rectangle`. Its constructor takes one side and reuses the `Rectangle` constructor. A square should describe itself as a `Square`: set the inherited `name` in the constructor body.",
+        starter: `#include <iostream>
+#include <string>
+using namespace std;
+
+class Shape {
+public:
+    Shape(string n) : name(n) {}
+    string getName() const { return name; }
+
+protected:
+    string name;
+};
+
+// TODO: class Rectangle, derived from Shape
+// TODO: class Square, derived from Rectangle
+
+int main() {
+    Rectangle r(3, 5);
+    Square s(4);
+    cout << r.getName() << " " << r.area() << endl;
+    cout << s.getName() << " " << s.area() << endl;
+    return 0;
+}`,
+        solution: `#include <iostream>
+#include <string>
+using namespace std;
+
+class Shape {
+public:
+    Shape(string n) : name(n) {}
+    string getName() const { return name; }
+
+protected:
+    string name;
+};
+
+class Rectangle : public Shape {
+public:
+    Rectangle(int w, int h) : Shape("Rectangle"), width(w), height(h) {}
+    int area() const { return width * height; }
+
+private:
+    int width;
+    int height;
+};
+
+class Square : public Rectangle {
+public:
+    Square(int side) : Rectangle(side, side) { name = "Square"; }
+};
+
+int main() {
+    Rectangle r(3, 5);
+    Square s(4);
+    cout << r.getName() << " " << r.area() << endl;
+    cout << s.getName() << " " << s.area() << endl;
+    return 0;
+}`,
+        prints: "Rectangle 15\nSquare 16",
+      },
+    ],
+  },
+];
