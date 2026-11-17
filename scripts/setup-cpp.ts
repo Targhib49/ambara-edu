@@ -30,6 +30,7 @@ import { createClient } from "@supabase/supabase-js";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { blockDataSchemas } from "../src/lib/blocks/schema";
+import type { LifetimeScenarioName } from "../src/lib/viz/objectLifetime";
 import { parseCorrectAnswer } from "../src/lib/quiz/schema";
 import { CPP_EXERCISES, CPP_PRACTICE, PRELUDE, outputPrompt, type CppQuestion } from "./content/cpp-oop";
 
@@ -165,6 +166,31 @@ function questionRow(q: CppQuestion) {
   }
 }
 
+// Which lesson gets which object-lifetime visualization. Module 4 has none:
+// operator overloading isn't about when objects live and die.
+const VISUALIZATIONS: { moduleFile: string; scenario: LifetimeScenarioName; intro: string }[] = [
+  {
+    moduleFile: "1_Intro to Classes.pdf",
+    scenario: "scope",
+    intro: "Step through this program to see exactly when each constructor and destructor runs. Watch the output build up, and notice which object is destroyed first when main ends.",
+  },
+  {
+    moduleFile: "2_Classes Interface and Implementation.pdf",
+    scenario: "static_count",
+    intro: "Three objects, one counter. Step through to see that a static data member belongs to the class, not to any one object.",
+  },
+  {
+    moduleFile: "3_Composition.pdf",
+    scenario: "composition",
+    intro: "A Car has an Engine. Step through to see which is built first and which is destroyed first.",
+  },
+  {
+    moduleFile: "5_Inheritance.pdf",
+    scenario: "inheritance",
+    intro: "A Derived object contains a Base part. Step through to see the order the two constructors and the two destructors run in.",
+  },
+];
+
 const PRACTICE_INTRO = [
   "## Hands-on practice",
   "",
@@ -271,6 +297,17 @@ async function main() {
       console.log(`  hands-on practice in "${moduleTitle}": ${has ? "already there" : `add ${practice.tasks.length} tasks`}`);
     }
 
+    const lessonsWithViz = new Set(
+      existingLessons.length
+        ? (await db.contentBlock.findMany({ where: { lessonId: { in: existingLessons.map((l) => l.id) }, type: "VISUALIZATION" }, select: { lessonId: true } })).map((b) => b.lessonId)
+        : []
+    );
+    for (const v of VISUALIZATIONS) {
+      const moduleTitle = MODULES.find((m) => m.file === v.moduleFile)!.title;
+      const lesson = existingLessons.find((l) => l.title === moduleTitle);
+      console.log(`  visualization in "${moduleTitle}": ${lesson && lessonsWithViz.has(lesson.id) ? "already there" : `add "${v.scenario}"`}`);
+    }
+
     if (mode === "plan") {
       console.log("\nplan only — nothing changed. Run with `apply` to execute.");
       return;
@@ -371,6 +408,33 @@ async function main() {
         },
       });
       console.log(`✓ added "${exercise.title}" (${status})`);
+    }
+
+    for (const v of VISUALIZATIONS) {
+      const moduleTitle = MODULES.find((m) => m.file === v.moduleFile)!.title;
+      const lesson = lessons.find((l) => l.title === moduleTitle);
+      if (!lesson) throw new Error(`lesson "${moduleTitle}" not found in the course — was it renamed?`);
+      const blocks = await db.contentBlock.findMany({ where: { lessonId: lesson.id }, select: { id: true, type: true, order: true } });
+      if (blocks.some((b) => b.type === "VISUALIZATION")) continue;
+      // Straight after the slides, before the practice — or at the end if there are no slides.
+      const pdf = blocks.find((b) => b.type === "FILE_ATTACHMENT");
+      const at = pdf ? pdf.order + 1 : Math.max(-1, ...blocks.map((b) => b.order)) + 1;
+      const later = blocks.filter((b) => b.order >= at).sort((a, b) => b.order - a.order);
+      await db.$transaction([
+        ...later.map((b) => db.contentBlock.update({ where: { id: b.id }, data: { order: b.order + 2 } })),
+        db.contentBlock.create({
+          data: { lessonId: lesson.id, order: at, type: "MARKDOWN", data: blockDataSchemas.MARKDOWN.parse({ markdown: `## See it run\n\n${v.intro}` }) },
+        }),
+        db.contentBlock.create({
+          data: {
+            lessonId: lesson.id,
+            order: at + 1,
+            type: "VISUALIZATION",
+            data: blockDataSchemas.VISUALIZATION.parse({ component: "object_lifetime", props: { scenario: v.scenario } }),
+          },
+        }),
+      ]);
+      console.log(`✓ added the "${v.scenario}" visualization to "${moduleTitle}"`);
     }
 
     for (const practice of CPP_PRACTICE) {

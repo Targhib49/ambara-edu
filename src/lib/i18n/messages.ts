@@ -1674,6 +1674,15 @@ export const MESSAGES = {
   "calendar.more": { ID: "+{n} lagi", EN: "+{n} more" },
   "table.rangeTo": { ID: "s.d.", EN: "to" },
 
+  // --- C++ object lifetime visualization ------------------------------------
+  "viz.life.objects": { ID: "Objek yang ada sekarang", EN: "Objects that exist now" },
+  "viz.life.none": { ID: "Belum ada objek", EN: "No objects" },
+  "viz.life.newestFirst": { ID: "Yang terbaru di atas \u2014 dihancurkan lebih dulu", EN: "Newest at the top \u2014 destroyed first" },
+  "viz.life.building": { ID: "sedang dibangun", EN: "being built" },
+  "viz.life.ending": { ID: "destruktor berjalan", EN: "destructor running" },
+  "viz.life.static": { ID: "Data static (milik kelas)", EN: "Static data (belongs to the class)" },
+  "viz.life.output": { ID: "Output", EN: "Output" },
+
   // --- C++ editor -----------------------------------------------------------
   "cpp.compiling": { ID: "Mengompilasi\u2026", EN: "Compiling\u2026" },
   "cpp.inputToggle": { ID: "Input", EN: "Input" },

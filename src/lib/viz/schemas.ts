@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LIFETIME_SCENARIO_NAMES } from "./objectLifetime";
 
 /**
  * Server-safe half of the visualization framework: prop schemas, defaults,
@@ -90,6 +91,11 @@ export const emWidgetProps = z.object({
   caption: z.string().default(""),
 });
 
+/** C++ object lifetime: a fixed set of traced programs, see objectLifetime.ts. */
+export const objectLifetimeProps = z.object({
+  scenario: z.enum(LIFETIME_SCENARIO_NAMES),
+});
+
 /** Discriminated union stored as the VISUALIZATION block's data payload. */
 export const visualizationDataSchema = z.discriminatedUnion("component", [
   z.object({ component: z.literal("sorting_visualizer"), props: sortingVisualizerProps }),
@@ -99,6 +105,7 @@ export const visualizationDataSchema = z.discriminatedUnion("component", [
   z.object({ component: z.literal("pid_tuning"), props: pidTuningProps }),
   z.object({ component: z.literal("pole_zero_explorer"), props: poleZeroExplorerProps }),
   z.object({ component: z.literal("em_widget"), props: emWidgetProps }),
+  z.object({ component: z.literal("object_lifetime"), props: objectLifetimeProps }),
 ]);
 
 export type VisualizationData = z.infer<typeof visualizationDataSchema>;
@@ -112,6 +119,7 @@ export const VIZ_LABELS: Record<VizComponentName, string> = {
   pid_tuning: "PID tuning",
   pole_zero_explorer: "Pole-zero explorer",
   em_widget: "Electromagnetics widget",
+  object_lifetime: "C++ object lifetime",
 };
 
 export const vizDefaultProps: { [K in VizComponentName]: Extract<VisualizationData, { component: K }>["props"] } = {
@@ -127,6 +135,7 @@ export const vizDefaultProps: { [K in VizComponentName]: Extract<VisualizationDa
   pid_tuning: { plantNum: [1], plantDen: [1, 1, 0], kp: 2, ki: 1, kd: 1 },
   pole_zero_explorer: { zeta: 0.3, omegaN: 2 },
   em_widget: { widget: "unit_vector_explorer", height: 700, caption: "" },
+  object_lifetime: { scenario: "scope" },
 };
 
 export const defaultVisualizationData: VisualizationData = {

@@ -17,6 +17,7 @@ import os from "os";
 import path from "path";
 import { spawnSync } from "child_process";
 import { CPP_EXERCISES, CPP_PRACTICE, PRELUDE } from "./content/cpp-oop";
+import { LIFETIME_SCENARIOS, type LifetimeScenario } from "../src/lib/viz/objectLifetime";
 
 const CXX = process.env.CXX ?? "g++";
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "check-cpp-"));
@@ -103,6 +104,40 @@ for (const practice of CPP_PRACTICE) {
   });
 }
 
+// Object-lifetime visualizations: the trace's output, step by step, must add up
+// to exactly what the program prints, and the objects must come and go sanely.
+let scenarios = 0;
+for (const [name, scenario] of Object.entries(LIFETIME_SCENARIOS) as [string, LifetimeScenario][]) {
+  const where = `visualization "${name}"`;
+  scenarios++;
+  programs++;
+  const run = build({ "main.cpp": scenario.program });
+  const traced = scenario.steps.map((s) => s.out ?? "").join("");
+  if (!run.compiled) problems.push(`${where}: does not compile\n${run.log}`);
+  else if (run.output !== traced) problems.push(`${where}: the program prints ${JSON.stringify(run.output)} but the trace adds up to ${JSON.stringify(traced)}`);
+  const lineCount = scenario.program.split("\n").length;
+  const status = new Map<string, string>();
+  scenario.steps.forEach((step, i) => {
+    const at = `${where} step ${i + 1}`;
+    const line = scenario.program.split("\n")[step.line - 1];
+    if (step.line < 1 || step.line > lineCount) problems.push(`${at}: line ${step.line} is outside the program`);
+    else if (step.out && !line.includes("cout")) problems.push(`${at}: prints ${JSON.stringify(step.out)} but line ${step.line} has no cout: ${line.trim()}`);
+    for (const op of step.ops ?? []) {
+      const object = scenario.objects.find((o) => o.id === op.id);
+      if (!object) problems.push(`${at}: unknown object "${op.id}"`);
+      if (op.do === "destroy") {
+        if (!status.has(op.id)) problems.push(`${at}: destroys "${op.id}", which does not exist`);
+        if (scenario.objects.some((o) => o.parent === op.id && status.has(o.id))) problems.push(`${at}: destroys "${op.id}" while its parts still exist`);
+        status.delete(op.id);
+      } else {
+        if (object?.parent && !status.has(object.parent)) problems.push(`${at}: "${op.id}" exists before its parent "${object.parent}"`);
+        status.set(op.id, op.do);
+      }
+    }
+  });
+  if (status.size) problems.push(`${where}: still alive when the program ends: ${[...status.keys()].join(", ")}`);
+}
+
 fs.rmSync(work, { recursive: true, force: true });
 
 const count = CPP_EXERCISES.reduce((n, e) => n + e.questions.length, 0);
@@ -116,4 +151,5 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(`  hands-on practice: ${tasks} tasks`);
+console.log(`  object-lifetime visualizations: ${scenarios} scenarios`);
 console.log(`\n✓ ${count} questions and ${tasks} tasks, ${programs} programs compiled and run with ${CXX}; every answer key matches`);

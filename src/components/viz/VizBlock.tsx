@@ -8,6 +8,7 @@ import { StepResponse } from "./StepResponse";
 import { PidTuning } from "./PidTuning";
 import { PoleZeroExplorer } from "./PoleZeroExplorer";
 import { EmWidget } from "./EmWidget";
+import { ObjectLifetime } from "./ObjectLifetime";
 
 /**
  * Client-side dispatcher for the VISUALIZATION block: maps the stored
@@ -30,6 +31,8 @@ export function VizBlock({ data }: { data: VisualizationData }) {
       return <PoleZeroExplorer {...data.props} />;
     case "em_widget":
       return <EmWidget {...data.props} />;
+    case "object_lifetime":
+      return <ObjectLifetime {...data.props} />;
     default: {
       const _exhaustive: never = data;
       return _exhaustive;
