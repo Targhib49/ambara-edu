@@ -12,7 +12,8 @@ import {
   startOfMonth,
   SESSION_STATUS_BADGE_CLASS,
 } from "@/lib/sessions/format";
-import { useT } from "@/lib/i18n/client";
+import { useLanguage, useT } from "@/lib/i18n/client";
+import { localeFor } from "@/lib/i18n/messages";
 import type { SessionStatus } from "@/generated/prisma/enums";
 
 const MAX_CHIPS_PER_DAY = 3;
@@ -35,6 +36,7 @@ export function SessionCalendar({
   legendStatuses?: SessionStatus[];
 }) {
   const t = useT();
+  const language = useLanguage();
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date(nowMs())));
 
   const byDay = useMemo(() => {
@@ -58,14 +60,14 @@ export function SessionCalendar({
     <div className="rounded-xl border border-zinc-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-medium">
-          {monthCursor.toLocaleString("en-GB", { month: "long", year: "numeric" })}
+          {monthCursor.toLocaleString(localeFor(language), { month: "long", year: "numeric" })}
         </h3>
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setMonthCursor(startOfMonth(new Date(nowMs())))}
             className="rounded border border-zinc-300 bg-white px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-100"
           >
-            Today
+            {t("calendar.today")}
           </button>
           <button
             onClick={() => setMonthCursor((m) => addMonths(m, -1))}
@@ -96,7 +98,7 @@ export function SessionCalendar({
           const daySessions = byDay.get(key) ?? [];
           const overflow = daySessions.length - MAX_CHIPS_PER_DAY;
           return (
-            <div key={key} className={`min-h-[92px] bg-white p-1.5 ${inMonth ? "" : "bg-zinc-50/60"}`}>
+            <div key={key} className={`min-h-[92px] bg-white p-0.5 sm:p-1.5 ${inMonth ? "" : "bg-zinc-50/60"}`}>
               <p
                 className={`mb-1 text-right text-xs ${
                   key === todayKey
@@ -114,12 +116,13 @@ export function SessionCalendar({
                     key={s.id}
                     onClick={() => onSelectSession(s.id)}
                     title={`${s.label} · ${formatTimeOnly(s.startTime)}`}
-                    className={`block w-full truncate rounded px-1 py-0.5 text-left text-[11px] ${SESSION_STATUS_BADGE_CLASS[s.status]}`}
+                    className={`block w-full truncate rounded px-0.5 py-0.5 text-left text-[11px] sm:px-1 ${SESSION_STATUS_BADGE_CLASS[s.status]}`}
                   >
-                    {formatTimeOnly(s.startTime)} {s.label}
+                    {formatTimeOnly(s.startTime)}
+                    <span className="hidden sm:inline"> {s.label}</span>
                   </button>
                 ))}
-                {overflow > 0 && <p className="px-1 text-[11px] text-zinc-400">+{overflow} more</p>}
+                {overflow > 0 && <p className="px-1 text-[11px] text-zinc-400">{t("calendar.more", { n: overflow })}</p>}
               </div>
             </div>
           );

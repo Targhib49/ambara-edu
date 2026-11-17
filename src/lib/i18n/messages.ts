@@ -112,7 +112,9 @@ export const MESSAGES = {
   "dash.tile.progress": { ID: "Progres belajar", EN: "Learning progress" },
   "dash.tile.progressSub": { ID: "materi selesai", EN: "of the material done" },
   "dash.tile.sessionsThisMonth": { ID: "Sesi bulan ini", EN: "Sessions this month" },
-  "dash.tile.keepGoing": { ID: "lanjutkan terus! 🔥", EN: "keep it up! 🔥" },
+  "dash.tile.upcoming": { ID: "{n} akan datang", EN: "{n} coming up" },
+  "dash.tile.awaitingReview": { ID: "{n} menunggu dinilai", EN: "{n} awaiting review" },
+  "dash.tile.noQuizzes": { ID: "belum ada quiz", EN: "no quizzes yet" },
   "dash.tile.noSessions": { ID: "belum ada jadwal", EN: "nothing booked" },
   "dash.courseProgress": { ID: "Progres course", EN: "Course progress" },
   "dash.noCourses": { ID: "Belum terdaftar di course manapun.", EN: "You're not on any course yet." },
@@ -121,7 +123,7 @@ export const MESSAGES = {
   "dash.recentScores": { ID: "Nilai terbaru", EN: "Recent scores" },
   "dash.noQuizzesYet": { ID: "Belum ada quiz yang dikerjakan.", EN: "No quizzes done yet." },
   "dash.quizzesWaiting": { ID: "Quiz menunggu ({n})", EN: "Quizzes waiting ({n})" },
-  "dash.nothingWaiting": { ID: "Tidak ada — kerja bagus! 🎉", EN: "Nothing — nice work! 🎉" },
+  "dash.nothingWaiting": { ID: "Tidak ada yang menunggu.", EN: "Nothing waiting." },
   "dash.moreQuizzes": { ID: "+{n} lainnya — lihat semua quiz", EN: "+{n} more — see every quiz" },
   "dash.nextSessions": { ID: "Sesi berikutnya", EN: "Next sessions" },
   "dash.noSessionsScheduled": { ID: "Belum ada sesi terjadwal.", EN: "No sessions booked yet." },
@@ -1666,6 +1668,11 @@ export const MESSAGES = {
   "tutor.sessionCount": { ID: "{n} sesi", EN: "{n} sessions" },
   "tutor.viewAll": { ID: "Lihat semua →", EN: "View all →" },
   "tutor.manageAllArrow": { ID: "Kelola semua →", EN: "Manage all →" },
+
+  "course.viewAllSessions": { ID: "Lihat semua sesi", EN: "View all sessions" },
+  "calendar.today": { ID: "Hari ini", EN: "Today" },
+  "calendar.more": { ID: "+{n} lagi", EN: "+{n} more" },
+  "table.rangeTo": { ID: "s.d.", EN: "to" },
 
   // --- error and not-found pages -------------------------------------------
   "error.title": { ID: "Ada yang tidak beres", EN: "Something went wrong" },

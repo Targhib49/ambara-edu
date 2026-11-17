@@ -83,7 +83,7 @@ export default async function StudentLessonPage({
         <h1 className="mt-1 text-2xl font-semibold">{lesson.title}</h1>
 
         <div className="mt-6 space-y-5">
-          {lesson.blocks.map((block) => (
+          {withoutRepeatedTitle(lesson.blocks, lesson.title).map((block) => (
             <BlockRenderer key={block.id} block={block} />
           ))}
           {lesson.blocks.length === 0 && (
@@ -148,4 +148,23 @@ export default async function StudentLessonPage({
       </nav>
     </div>
   );
+}
+
+/**
+ * Lessons are often written with their own title as the first heading, which
+ * then sits directly under the page's title saying the same thing. When the
+ * first block opens with a top-level heading equal to the lesson title, that
+ * one line is dropped; any other opening heading is left alone.
+ */
+function withoutRepeatedTitle<B extends { type: string; data: unknown }>(blocks: B[], title: string): B[] {
+  const [first, ...rest] = blocks;
+  if (!first || first.type !== "MARKDOWN") return blocks;
+  const markdown = (first.data as { markdown?: unknown } | null)?.markdown;
+  if (typeof markdown !== "string") return blocks;
+  const match = markdown.match(/^\s*#[ \t]+(.+?)[ \t]*#*[ \t]*(?:\r?\n|$)/);
+  const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  if (!match || !same(match[1], title)) return blocks;
+  const remaining = markdown.slice(match[0].length).replace(/^\s+/, "");
+  if (!remaining) return rest;
+  return [{ ...first, data: { ...(first.data as object), markdown: remaining } }, ...rest];
 }

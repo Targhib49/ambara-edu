@@ -237,7 +237,7 @@ export default async function StudentTrackPage({
             </ul>
           )}
           <Link href="/sessions" className="mt-4 inline-block text-sm text-blue-700 hover:underline">
-            View all sessions →
+            {t("course.viewAllSessions")} →
           </Link>
         </div>
       </aside>

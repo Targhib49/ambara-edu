@@ -125,9 +125,11 @@ export default async function StudentDashboardPage() {
   const avgPct = scored.length ? Math.round(scored.reduce((n, s) => n + s.pct, 0) / scored.length) : null;
   const bestPct = scored.length ? Math.max(...scored.map((s) => s.pct)) : null;
   const recent = [...scored].reverse().slice(0, 5);
+  const awaitingReview = scored.filter((s) => s.status === "PENDING_REVIEW").length;
 
   // --- sessions
   const now = nowMs();
+  const upcomingCount = sessions.filter((s) => s.startTime.getTime() >= now).length;
   const upcoming = sessions
     .filter((s) => s.startTime.getTime() >= now)
     .slice(0, 3)
@@ -164,7 +166,15 @@ export default async function StudentDashboardPage() {
         <MetricTile
           label={tr("dash.tile.quizzesDone")}
           value={`${scored.length}`}
-          sub={due.length > 0 ? tr("dash.tile.quizzesLeft", { n: due.length }) : tr("dash.tile.allDone")}
+          sub={
+            due.length > 0
+              ? tr("dash.tile.quizzesLeft", { n: due.length })
+              : awaitingReview > 0
+                ? tr("dash.tile.awaitingReview", { n: awaitingReview })
+                : scored.length > 0
+                  ? tr("dash.tile.allDone")
+                  : tr("dash.tile.noQuizzes")
+          }
         />
         <MetricTile
           label={tr("dash.tile.average")}
@@ -179,7 +189,7 @@ export default async function StudentDashboardPage() {
         <MetricTile
           label={tr("dash.tile.sessionsThisMonth")}
           value={`${thisMonth}`}
-          sub={upcoming.length > 0 ? tr("dash.tile.keepGoing") : tr("dash.tile.noSessions")}
+          sub={upcomingCount > 0 ? tr("dash.tile.upcoming", { n: upcomingCount }) : tr("dash.tile.noSessions")}
         />
       </div>
 
@@ -221,7 +231,12 @@ export default async function StudentDashboardPage() {
           <section className={`${cardCls} p-5`}>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-zinc-700">{tr("dash.recentScores")}</h2>
-              {scored.length >= 2 && <ScoreSparkline points={scored.map((s) => s.pct)} label={tr("dash.scoreTrend")} />}
+              {scored.length >= 2 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-500">{tr("dash.scoreTrend")}</span>
+                  <ScoreSparkline points={scored.map((s) => s.pct)} />
+                </div>
+              )}
             </div>
             <ul className="mt-3 divide-y divide-zinc-100">
               {recent.map((s) => (
@@ -229,11 +244,14 @@ export default async function StudentDashboardPage() {
                   <Link href={`/quizzes/${s.quizId}`} className="min-w-0 flex-1 truncate hover:underline">
                     {s.title}
                   </Link>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SUBMISSION_STATUS_BADGE_CLASS[s.status]}`}>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${SUBMISSION_STATUS_BADGE_CLASS[s.status]}`}>
                     {tr(submissionStatusKey(s.status))}
                   </span>
-                  <span className="w-20 text-right font-mono font-medium text-zinc-800">
-                    {s.score}/{s.total} · {s.pct}%
+                  <span className="shrink-0 whitespace-nowrap text-right font-mono font-medium text-zinc-800">
+                    <span className="hidden sm:inline">
+                      {s.score}/{s.total} ·{" "}
+                    </span>
+                    {s.pct}%
                   </span>
                 </li>
               ))}
@@ -244,8 +262,10 @@ export default async function StudentDashboardPage() {
 
         <div className="space-y-6">
           {/* quizzes due */}
-          <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-5">
-            <h2 className="text-sm font-medium text-amber-800">{tr("dash.quizzesWaiting", { n: due.length })}</h2>
+          <section className={due.length > 0 ? "rounded-xl border border-amber-200 bg-amber-50/60 p-5" : `${cardCls} p-5`}>
+            <h2 className={`text-sm font-medium ${due.length > 0 ? "text-amber-800" : "text-zinc-700"}`}>
+              {tr("dash.quizzesWaiting", { n: due.length })}
+            </h2>
             <ul className="mt-3 space-y-2">
               {due.slice(0, 5).map((q) => (
                 <li key={q.id}>
@@ -255,7 +275,7 @@ export default async function StudentDashboardPage() {
                   </Link>
                 </li>
               ))}
-              {due.length === 0 && <p className="text-sm text-amber-700">{tr("dash.nothingWaiting")}</p>}
+              {due.length === 0 && <p className="text-sm text-zinc-500">{tr("dash.nothingWaiting")}</p>}
               {due.length > 5 && (
                 <Link href="/quizzes" className="block text-xs text-amber-800 underline">
                   {tr("dash.moreQuizzes", { n: due.length - 5 })}
@@ -304,7 +324,7 @@ function MetricTile({ label, value, sub }: { label: string; value: string; sub: 
 }
 
 /** Tiny inline sparkline of score percentages over time (oldest → newest). */
-function ScoreSparkline({ points, label }: { points: number[]; label: string }) {
+function ScoreSparkline({ points }: { points: number[] }) {
   const w = 120;
   const h = 28;
   const step = w / Math.max(points.length - 1, 1);
@@ -312,7 +332,7 @@ function ScoreSparkline({ points, label }: { points: number[]; label: string }) 
     .map((p, i) => `${(i * step).toFixed(1)},${(h - 3 - (p / 100) * (h - 6)).toFixed(1)}`)
     .join(" ");
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-label={label} className="text-blue-600">
+    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden className="shrink-0 text-blue-600">
       <polyline points={path} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
       {points.map((p, i) => (
         <circle key={i} cx={i * step} cy={h - 3 - (p / 100) * (h - 6)} r="2" fill="currentColor" />

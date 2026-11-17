@@ -78,11 +78,11 @@ const makeColumns = (t: Translate): Column<StudentQuizRow>[] => [
           </span>
           {/* The columns below are hidden on a phone — fold the essentials under the title. */}
           <span className="block truncate text-xs text-zinc-500 sm:hidden">
-            {statusLabel(q, t)} · {q.lessonTitle ?? t("quizList.chapterTest")} ·{" "}
+            {statusLabel(q, t)}
+            {q.scorePct !== null && ` · ${Math.round(q.scorePct)}%`} · {q.lessonTitle ?? t("quizList.chapterTest")} ·{" "}
             {q.style === "DRILL"
               ? t("drill.listDetails", { seconds: q.drillSeconds ?? DRILL_DEFAULTS.drillSeconds, target: q.drillTarget ?? DRILL_DEFAULTS.drillTarget })
               : sizeLabel(q, t)}
-            {q.scorePct !== null && ` · ${Math.round(q.scorePct)}%`}
           </span>
         </span>
       </div>

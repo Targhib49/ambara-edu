@@ -288,7 +288,7 @@ export function DataTable<T>({
             {dateOf && (
               <div className="flex items-center gap-2">
                 <input type="date" value={from} onChange={(e) => changeFrom(e.target.value)} className={control} aria-label={t("table.from")} />
-                <span className="text-sm text-zinc-400">to</span>
+                <span className="text-sm text-zinc-400">{t("table.rangeTo")}</span>
                 <input type="date" value={to} onChange={(e) => changeTo(e.target.value)} className={control} aria-label={t("table.to")} />
               </div>
             )}

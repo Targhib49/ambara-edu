@@ -26,7 +26,7 @@ export function ScoreRing({ pct, size = 44 }: { pct: number; size?: number }) {
         y="50%"
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize={size * 0.28}
+        fontSize={size * (Math.round(clamped) >= 100 ? 0.23 : 0.28)}
         fontWeight={600}
         fill="#27272a"
       >
