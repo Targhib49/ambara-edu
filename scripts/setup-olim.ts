@@ -181,8 +181,10 @@ async function main() {
   const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
   try {
     const tutor = await db.user.findFirstOrThrow({ where: { role: "TUTOR" }, select: { id: true, name: true } });
+    // The course was renamed "Persiapan Olimpiade Matematika SMP" when the level path was added
+    // (scripts/setup-olim-levels.ts); look for both names so a re-run never makes a second course.
     const existing = await db.course.findFirst({
-      where: { title: COURSE_TITLE },
+      where: { title: { in: [COURSE_TITLE, "Persiapan Olimpiade Matematika SMP"] } },
       include: {
         chapters: {
           orderBy: { order: "asc" },

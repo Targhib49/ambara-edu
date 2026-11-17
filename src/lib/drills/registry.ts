@@ -1,6 +1,16 @@
 import { makeRatioQuestion } from "@/lib/drills/ratio";
 import { makeFractionPercentQuestion } from "@/lib/drills/fractionPercent";
 import { makeIntegerQuestion } from "@/lib/drills/integers";
+import {
+  makeDivisorCountQuestion,
+  makeGcdLcmQuestion,
+  makeLastDigitQuestion,
+  makePowerRemainderQuestion,
+  makeTrailingZerosQuestion,
+} from "@/lib/drills/numberTheory";
+import { makeLinearEquationQuestion, makeSymmetricSumsQuestion } from "@/lib/drills/olympiadAlgebra";
+import { makeCountingQuestion, makeInclusionExclusionQuestion } from "@/lib/drills/counting";
+import { makePolygonAnglesQuestion, makePythagorasQuestion } from "@/lib/drills/olympiadGeometry";
 import type { DrillQuestion, DrillSkillDefinition } from "@/lib/drills/types";
 
 /**
@@ -23,6 +33,63 @@ export const DRILL_SKILLS = {
     instructionKey: "drill.instruction.integerOperations",
     make: makeIntegerQuestion,
     signed: true,
+  },
+  // Olympiad course (Persiapan Olimpiade Matematika SMP), one or two per level.
+  "gcd-lcm": {
+    labelKey: "drill.skill.gcdLcm",
+    instructionKey: "drill.instruction.gcdLcm",
+    make: makeGcdLcmQuestion,
+  },
+  "last-digit": {
+    labelKey: "drill.skill.lastDigit",
+    instructionKey: "drill.instruction.lastDigit",
+    make: makeLastDigitQuestion,
+  },
+  "power-remainder": {
+    labelKey: "drill.skill.powerRemainder",
+    instructionKey: "drill.instruction.powerRemainder",
+    make: makePowerRemainderQuestion,
+  },
+  "trailing-zeros": {
+    labelKey: "drill.skill.trailingZeros",
+    instructionKey: "drill.instruction.trailingZeros",
+    make: makeTrailingZerosQuestion,
+  },
+  "divisor-count": {
+    labelKey: "drill.skill.divisorCount",
+    instructionKey: "drill.instruction.divisorCount",
+    make: makeDivisorCountQuestion,
+  },
+  "linear-equation": {
+    labelKey: "drill.skill.linearEquation",
+    instructionKey: "drill.instruction.linearEquation",
+    make: makeLinearEquationQuestion,
+    signed: true,
+  },
+  "symmetric-sums": {
+    labelKey: "drill.skill.symmetricSums",
+    instructionKey: "drill.instruction.symmetricSums",
+    make: makeSymmetricSumsQuestion,
+  },
+  "counting": {
+    labelKey: "drill.skill.counting",
+    instructionKey: "drill.instruction.counting",
+    make: makeCountingQuestion,
+  },
+  "inclusion-exclusion": {
+    labelKey: "drill.skill.inclusionExclusion",
+    instructionKey: "drill.instruction.inclusionExclusion",
+    make: makeInclusionExclusionQuestion,
+  },
+  "pythagoras": {
+    labelKey: "drill.skill.pythagoras",
+    instructionKey: "drill.instruction.pythagoras",
+    make: makePythagorasQuestion,
+  },
+  "polygon-angles": {
+    labelKey: "drill.skill.polygonAngles",
+    instructionKey: "drill.instruction.polygonAngles",
+    make: makePolygonAnglesQuestion,
   },
 } as const satisfies Record<string, DrillSkillDefinition>;
 
