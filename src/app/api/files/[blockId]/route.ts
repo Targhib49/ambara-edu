@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { parseBlockData } from "@/lib/blocks/schema";
 import { ATTACHMENTS_BUCKET, createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { requireUuids } from "@/lib/params";
 
 // Access-checked file access: verifies the caller may see the lesson the
 // attachment belongs to, then redirects to a short-lived signed storage URL.
@@ -16,6 +17,8 @@ export async function GET(
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
   const { blockId } = await params;
+
+  requireUuids(blockId);
   const block = await db.contentBlock.findUnique({
     where: { id: blockId },
     include: { lesson: { select: { status: true, chapter: { select: { courseId: true } } } } },

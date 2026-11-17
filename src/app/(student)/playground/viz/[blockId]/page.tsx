@@ -6,11 +6,13 @@ import { findCourseVisualization } from "@/lib/playground/courseVisualizations";
 import { PlaygroundFrame } from "@/components/playground/PlaygroundFrame";
 import { VizBlock } from "@/components/viz/VizBlock";
 import { btnSecondary } from "@/components/ui/styles";
+import { requireUuids } from "@/lib/params";
 
 export default async function StudentCourseVizPage({ params }: { params: Promise<{ blockId: string }> }) {
   const student = await requireStudent();
   const t = await getT();
   const { blockId } = await params;
+  requireUuids(blockId);
   const viz = await findCourseVisualization(blockId, { studentId: student.id });
   if (!viz) notFound();
 

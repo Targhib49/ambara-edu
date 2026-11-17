@@ -24,6 +24,7 @@ import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translate } from "@/lib/i18n/translate";
 import type { CourseStatus, QuizStyle } from "@/generated/prisma/enums";
 import { QuizStyleChip } from "@/components/quiz/QuizStyleField";
+import { requireUuids } from "@/lib/params";
 
 const quizSelect = {
   id: true,
@@ -108,6 +109,7 @@ export default async function CourseEditorPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { courseId } = await params;
+  requireUuids(courseId);
   const { tab: requested } = await searchParams;
   const tab = requested === "students" || requested === "settings" ? requested : "syllabus";
   const t = await getT();

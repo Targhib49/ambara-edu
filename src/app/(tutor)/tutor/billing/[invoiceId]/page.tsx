@@ -18,6 +18,7 @@ import {
   RecordPaymentForm,
   RemoveItemButton,
 } from "./InvoiceEditor";
+import { requireUuids } from "@/lib/params";
 
 /**
  * One invoice, as the tutor works on it: the lines it bills, what's been
@@ -27,6 +28,7 @@ import {
 export default async function InvoicePage({ params }: { params: Promise<{ invoiceId: string }> }) {
   await requireTutor();
   const { invoiceId } = await params;
+  requireUuids(invoiceId);
   const t = await getT();
   const language = await getLanguage();
 

@@ -17,6 +17,7 @@ import { ClipboardIcon } from "@/components/ui/icons";
 import { QuizStyleChip } from "@/components/quiz/QuizStyleField";
 import { getT } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
+import { requireUuids } from "@/lib/params";
 
 const smallBtn =
   "rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-40";
@@ -37,6 +38,7 @@ export default async function LessonEditorPage({
   params: Promise<{ courseId: string; lessonId: string }>;
 }) {
   const { courseId, lessonId } = await params;
+  requireUuids(courseId, lessonId);
   const t = await getT();
   const lesson = await db.lesson.findUnique({
     where: { id: lessonId },

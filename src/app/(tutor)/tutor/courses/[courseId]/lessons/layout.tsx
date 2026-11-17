@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { SidebarNav, type SidebarSection } from "@/components/ui/SidebarNav";
 import { SidebarShell } from "@/components/ui/SidebarShell";
 import { getT } from "@/lib/i18n/server";
+import { requireUuids } from "@/lib/params";
 
 // The course outline beside the lesson editor, for hopping between lessons.
 // Only lessons get it: the course page's Syllabus tab already is the outline,
@@ -15,6 +16,7 @@ export default async function TutorLessonsLayout({
   params: Promise<{ courseId: string }>;
 }) {
   const { courseId } = await params;
+  requireUuids(courseId);
   const t = await getT();
   const course = await db.course.findUnique({
     where: { id: courseId },

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ProjectPlayer, type PlayerStep, type PreviewData } from "@/components/projects/ProjectPlayer";
 import { answerKey, currentStep, loadSteps, starterFiles, withStepFiles } from "@/lib/projects/progress";
 import { stepHints } from "@/lib/projects/schema";
+import { requireUuids } from "@/lib/params";
 
 /**
  * The tutor trying a project as a student would, before publishing it. Runs
@@ -16,6 +17,7 @@ export default async function ProjectPreviewPage({ params }: { params: Promise<{
   await requireTutor();
   const t = await getT();
   const { quizId } = await params;
+  requireUuids(quizId);
   const quiz = await db.quiz.findUnique({
     where: { id: quizId },
     include: { questions: { orderBy: { order: "asc" } }, chapter: { select: { courseId: true } } },

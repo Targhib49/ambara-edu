@@ -9,6 +9,7 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { LessonCompletion } from "@/components/student/LessonCompletion";
 import { cardCls } from "@/components/ui/styles";
 import { getT } from "@/lib/i18n/server";
+import { requireUuids } from "@/lib/params";
 
 export default async function StudentLessonPage({
   params,
@@ -16,6 +17,7 @@ export default async function StudentLessonPage({
   params: Promise<{ courseId: string; lessonId: string }>;
 }) {
   const { courseId, lessonId } = await params;
+  requireUuids(courseId, lessonId);
   const student = await requireStudent();
   const t = await getT();
 

@@ -11,6 +11,7 @@ import { buildChapterItems, chapterStatus } from "@/lib/courseItems";
 import { ChapterSection } from "@/components/student/ChapterSection";
 import { btnPrimary, cardCls } from "@/components/ui/styles";
 import { getLanguage, getT } from "@/lib/i18n/server";
+import { requireUuids } from "@/lib/params";
 
 const UPCOMING_LIMIT = 5;
 
@@ -20,6 +21,7 @@ export default async function StudentTrackPage({
   params: Promise<{ courseId: string }>;
 }) {
   const { courseId } = await params;
+  requireUuids(courseId);
   const student = await requireStudent();
   const t = await getT();
   const language = await getLanguage();

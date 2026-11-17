@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ATTACHMENTS_BUCKET, createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { requireUuids } from "@/lib/params";
 
 /**
  * A course's cover image, for tutors and students enrolled on it. Redirects to
@@ -14,6 +15,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
   const { courseId } = await params;
+
+  requireUuids(courseId);
   const course = await db.course.findUnique({ where: { id: courseId }, select: { coverImagePath: true } });
   if (!course?.coverImagePath) return new NextResponse("Not found", { status: 404 });
 

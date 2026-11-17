@@ -24,6 +24,7 @@ import { TRYOUT_DEFAULTS } from "@/lib/quiz/styles";
 import { placementTree } from "@/lib/courses/placement";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { QuestionType } from "@/generated/prisma/enums";
+import { requireUuids } from "@/lib/params";
 
 const inputCls =
   "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none";
@@ -43,6 +44,7 @@ const QUESTION_TYPE_BUTTONS: { type: QuestionType; labelKey: MessageKey }[] = [
 
 export default async function TutorQuizDetailPage({ params }: { params: Promise<{ quizId: string }> }) {
   const { quizId } = await params;
+  requireUuids(quizId);
   const t = await getT();
   const [quiz, tree] = await Promise.all([
     db.quiz.findUnique({

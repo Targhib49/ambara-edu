@@ -1666,6 +1666,21 @@ export const MESSAGES = {
   "tutor.sessionCount": { ID: "{n} sesi", EN: "{n} sessions" },
   "tutor.viewAll": { ID: "Lihat semua →", EN: "View all →" },
   "tutor.manageAllArrow": { ID: "Kelola semua →", EN: "Manage all →" },
+
+  // --- error and not-found pages -------------------------------------------
+  "error.title": { ID: "Ada yang tidak beres", EN: "Something went wrong" },
+  "error.body": {
+    ID: "Halaman ini gagal dimuat. Coba lagi — kalau masih gagal, kabari tutor kamu.",
+    EN: "This page failed to load. Try again — if it keeps failing, let your tutor know.",
+  },
+  "error.retry": { ID: "Coba lagi", EN: "Try again" },
+  "error.home": { ID: "Kembali ke beranda", EN: "Back to home" },
+  "error.reference": { ID: "Kode referensi: {code}", EN: "Reference code: {code}" },
+  "notFound.title": { ID: "Halaman tidak ditemukan", EN: "Page not found" },
+  "notFound.body": {
+    ID: "Halaman ini tidak ada, atau sudah dipindahkan.",
+    EN: "This page doesn't exist, or it has moved.",
+  },
 } satisfies Record<string, Entry>;
 
 export type MessageKey = keyof typeof MESSAGES;

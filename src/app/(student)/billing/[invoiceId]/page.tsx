@@ -7,11 +7,13 @@ import { getLanguage, getT } from "@/lib/i18n/server";
 import { formatIDR } from "@/lib/billing/money";
 import { INVOICE_STATUS_BADGE, invoiceStatusKey, invoiceTotal, paidTotal } from "@/lib/billing/invoice";
 import { dateLabel, monthLabel } from "@/lib/billing/period";
+import { requireUuids } from "@/lib/params";
 
 /** One invoice as the student reads it: what it covers, what's been paid, what's left. */
 export default async function StudentInvoicePage({ params }: { params: Promise<{ invoiceId: string }> }) {
   const student = await requireStudent();
   const { invoiceId } = await params;
+  requireUuids(invoiceId);
   const t = await getT();
   const language = await getLanguage();
 

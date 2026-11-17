@@ -5,6 +5,7 @@ import { SidebarNav, type SidebarSection } from "@/components/ui/SidebarNav";
 import { SidebarShell } from "@/components/ui/SidebarShell";
 import { getT } from "@/lib/i18n/server";
 import { isGradedStyle } from "@/lib/quiz/styles";
+import { requireUuids } from "@/lib/params";
 
 export default async function StudentTrackLayout({
   children,
@@ -14,6 +15,7 @@ export default async function StudentTrackLayout({
   params: Promise<{ courseId: string }>;
 }) {
   const { courseId } = await params;
+  requireUuids(courseId);
   const student = await requireStudent();
   const t = await getT();
 

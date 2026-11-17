@@ -29,6 +29,7 @@ import {
   type StudentQuizResultRow,
   type StudentSessionHistoryRow,
 } from "./StudentDetailTables";
+import { requireUuids } from "@/lib/params";
 
 const GROUP_LABEL_KEYS = {
   JUNIOR_HIGH: "group.JUNIOR_HIGH",
@@ -56,6 +57,7 @@ export default async function StudentDetailPage({
   const t = await getT();
   const language = await getLanguage();
   const { studentId } = await params;
+  requireUuids(studentId);
   const { tab: requestedTab } = await searchParams;
   const tab: TabKey = (TABS as readonly string[]).includes(requestedTab ?? "") ? (requestedTab as TabKey) : "overview";
 

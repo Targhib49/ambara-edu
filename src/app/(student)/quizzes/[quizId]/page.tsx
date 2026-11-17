@@ -30,6 +30,7 @@ import { type Crumb } from "@/components/ui/Breadcrumbs";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { btnSecondary } from "@/components/ui/styles";
 import type { Question } from "@/generated/prisma/client";
+import { requireUuids } from "@/lib/params";
 
 export default async function StudentQuizPage({
   params,
@@ -39,6 +40,7 @@ export default async function StudentQuizPage({
   searchParams: Promise<{ retake?: string }>;
 }) {
   const { quizId } = await params;
+  requireUuids(quizId);
   const { retake } = await searchParams;
   const student = await requireStudent();
 

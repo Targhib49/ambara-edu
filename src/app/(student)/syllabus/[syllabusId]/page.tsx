@@ -7,6 +7,7 @@ import { cardCls } from "@/components/ui/styles";
 import { getT } from "@/lib/i18n/server";
 import { syllabusSteps } from "@/lib/syllabus/access";
 import { refreshSyllabusAccess } from "@/lib/syllabus/grant";
+import { requireUuids } from "@/lib/params";
 
 /**
  * A syllabus as the student walks it: the courses in order, what they've
@@ -16,6 +17,7 @@ import { refreshSyllabusAccess } from "@/lib/syllabus/grant";
 export default async function StudentSyllabusPage({ params }: { params: Promise<{ syllabusId: string }> }) {
   const student = await requireStudent();
   const { syllabusId } = await params;
+  requireUuids(syllabusId);
   const t = await getT();
 
   const syllabus = await db.syllabus.findUnique({

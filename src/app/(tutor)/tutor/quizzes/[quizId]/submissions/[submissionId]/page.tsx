@@ -13,6 +13,7 @@ import { ProjectFilesViewer } from "@/components/projects/ProjectFilesViewer";
 import { ProjectReviewForm } from "./ProjectReviewForm";
 import { answerKey, loadSteps } from "@/lib/projects/progress";
 import { projectStepResponseSchema } from "@/lib/projects/schema";
+import { requireUuids } from "@/lib/params";
 
 export default async function SubmissionReviewPage({
   params,
@@ -21,6 +22,7 @@ export default async function SubmissionReviewPage({
 }) {
   const t = await getT();
   const { quizId, submissionId } = await params;
+  requireUuids(quizId, submissionId);
   const submission = await db.submission.findUnique({
     where: { id: submissionId },
     include: {

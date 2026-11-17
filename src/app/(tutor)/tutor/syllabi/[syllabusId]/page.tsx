@@ -9,11 +9,13 @@ import { cardCls } from "@/components/ui/styles";
 import { getT } from "@/lib/i18n/server";
 import { deleteSyllabus } from "@/lib/actions/syllabi";
 import { AddCourseForm, SyllabusCourseRow, SyllabusSettingsForm } from "../syllabi-ui";
+import { requireUuids } from "@/lib/params";
 
 /** Building one syllabus: which courses, in what order, and what passing each takes. */
 export default async function SyllabusBuilderPage({ params }: { params: Promise<{ syllabusId: string }> }) {
   await requireTutor();
   const { syllabusId } = await params;
+  requireUuids(syllabusId);
   const t = await getT();
 
   const syllabus = await db.syllabus.findUnique({
