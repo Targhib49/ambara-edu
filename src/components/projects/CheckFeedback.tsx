@@ -88,7 +88,7 @@ function oneLine(text: string): string {
  * dots on the first differing line, since a missing space is the usual cause
  * and is otherwise invisible.
  */
-function ExampleDiff({ run }: { run: CheckRun }) {
+export function ExampleDiff({ run }: { run: CheckRun }) {
   const t = useT();
   if (run.error) {
     return (

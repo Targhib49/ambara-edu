@@ -31,6 +31,9 @@ enum BlockType {
   CODE_EDITOR
   VISUALIZATION
   VIDEO_EMBED
+  // A short step-by-step coding exercise in one file (C++ for now): a guide
+  // above an editor, each step checked by what the program prints.
+  GUIDED_CODE
   // later phases append: QUIZ_REF
 }
 
@@ -132,6 +135,7 @@ model User {
   timedQuizSessions TimedQuizSession[]
   practiceProgress  PracticeProgress[]
   projectProgress   ProjectProgress[]
+  guidedCodeProgress GuidedCodeProgress[]
   verificationTokens EmailVerificationToken[]
   syllabusRequests  SyllabusRequest[]
   createdAt         DateTime      @default(now())
@@ -252,8 +256,29 @@ model ContentBlock {
   data      Json // shape validated per-type by Zod at the app boundary
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  guidedProgress GuidedCodeProgress[]
 
   @@index([lessonId, order])
+}
+
+// A student's place in one GUIDED_CODE block. Practice only — no score: it
+// keeps their code so they can come back to it, and how far they got.
+model GuidedCodeProgress {
+  studentId     String       @db.Uuid
+  student       User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  blockId       String       @db.Uuid
+  block         ContentBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  code          String
+  // The code as it was when the current step opened — what "restore" goes back to.
+  stepStartCode String
+  // Steps passed, in order; the current step is this index.
+  passedSteps   Int          @default(0)
+  completedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@id([studentId, blockId])
+  @@index([blockId])
 }
 
 // A student's progress through one lesson. A row exists as soon as they open

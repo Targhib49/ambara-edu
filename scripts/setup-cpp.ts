@@ -10,6 +10,7 @@
  *   npx tsx scripts/setup-cpp.ts apply                     creates the course as a DRAFT
  *   npx tsx scripts/setup-cpp.ts apply --publish           creates it PUBLISHED
  *   npx tsx scripts/setup-cpp.ts apply --enroll a@b.com    also enrolls that student (repeatable)
+ *   npx tsx scripts/setup-cpp.ts apply --update-guided     also rewrites guided exercises already in place
  *
  * This runs against whatever `.env` points at — the local stack. For the live
  * site:  npm run prod -- npx tsx scripts/setup-cpp.ts apply ...
@@ -17,7 +18,10 @@
  * It only adds. If the course already exists its lessons are left alone;
  * an exercise is added only where a lesson has no quiz of that title yet,
  * `--enroll` adds a missing enrollment, and `--publish` publishes a draft
- * course and any draft exercises. Existing questions are never rewritten. A PDF whose lesson fails to save is removed from storage.
+ * course and any draft exercises. Existing questions are never rewritten.
+ * A guided exercise (GUIDED_CODE block, from scripts/content/cpp-guided.ts) is
+ * appended to a lesson that has none; `--update-guided` rewrites the steps of
+ * one already there, keeping students' saved code. A PDF whose lesson fails to save is removed from storage.
  *
  * The slides are a lecturer's own course material, so the course is created
  * with ENROLLED access: only students added to it can open it.
@@ -33,6 +37,7 @@ import { blockDataSchemas } from "../src/lib/blocks/schema";
 import type { LifetimeScenarioName } from "../src/lib/viz/objectLifetime";
 import { parseCorrectAnswer } from "../src/lib/quiz/schema";
 import { CPP_EXERCISES, CPP_PRACTICE, PRELUDE, outputPrompt, type CppQuestion } from "./content/cpp-oop";
+import { CPP_GUIDED, blockSteps, type GuidedExerciseSource } from "./content/cpp-guided";
 
 const SOURCE_DIR = path.resolve(__dirname, "../../C++");
 const BUCKET = "attachments";
@@ -203,6 +208,18 @@ if (mode !== "plan" && mode !== "apply") {
   process.exit(1);
 }
 const publish = flags.includes("--publish");
+const updateGuided = flags.includes("--update-guided");
+
+/** The block as stored: the reference solutions stay in the script. */
+function guidedBlockData(g: GuidedExerciseSource) {
+  return blockDataSchemas.GUIDED_CODE.parse({
+    language: "cpp",
+    title: g.title,
+    intro: g.intro,
+    starterCode: g.starterCode,
+    steps: blockSteps(g),
+  });
+}
 const enrollEmails = flags.flatMap((f, i) => (f === "--enroll" && flags[i + 1] ? [flags[i + 1].toLowerCase()] : []));
 
 function validate() {
@@ -230,6 +247,14 @@ function validate() {
       if (q.kind === "write" && q.points !== 1 + q.rubric.reduce((n, r) => n + r.marks, 0))
         problems.push(`${e.title} #${i + 1}: points should be 1 + the rubric marks`);
     });
+  }
+  for (const g of CPP_GUIDED) {
+    if (!MODULES.some((m) => m.file === g.moduleFile)) problems.push(`${g.title}: no module uses ${g.moduleFile}`);
+    try {
+      guidedBlockData(g);
+    } catch (e) {
+      problems.push(`${g.title}: guided exercise invalid: ${(e as Error).message}`);
+    }
   }
   if (problems.length) {
     console.error(`✗ ${problems.length} problem(s):\n  ` + problems.join("\n  "));
@@ -306,6 +331,24 @@ async function main() {
       const moduleTitle = MODULES.find((m) => m.file === v.moduleFile)!.title;
       const lesson = existingLessons.find((l) => l.title === moduleTitle);
       console.log(`  visualization in "${moduleTitle}": ${lesson && lessonsWithViz.has(lesson.id) ? "already there" : `add "${v.scenario}"`}`);
+    }
+
+    const guidedBlocks = existingLessons.length
+      ? await db.contentBlock.findMany({ where: { lessonId: { in: existingLessons.map((l) => l.id) }, type: "GUIDED_CODE" }, select: { id: true, lessonId: true, data: true } })
+      : [];
+    for (const g of CPP_GUIDED) {
+      const moduleTitle = MODULES.find((m) => m.file === g.moduleFile)!.title;
+      const lesson = existingLessons.find((l) => l.title === moduleTitle);
+      const block = lesson && guidedBlocks.find((b) => b.lessonId === lesson.id);
+      const same = block && JSON.stringify(block.data) === JSON.stringify(guidedBlockData(g));
+      const what = !block
+        ? `add "${g.title}" (${g.steps.length} steps)`
+        : same
+          ? "already there, up to date"
+          : updateGuided
+            ? "already there → rewrite its steps"
+            : "already there, differs from the script (pass --update-guided to rewrite it)";
+      console.log(`  guided exercise in "${moduleTitle}": ${what}`);
     }
 
     if (mode === "plan") {
@@ -469,6 +512,26 @@ async function main() {
         ],
       });
       console.log(`✓ added ${practice.tasks.length} hands-on tasks to "${moduleTitle}"`);
+    }
+
+    for (const g of CPP_GUIDED) {
+      const moduleTitle = MODULES.find((m) => m.file === g.moduleFile)!.title;
+      const lesson = lessons.find((l) => l.title === moduleTitle);
+      if (!lesson) throw new Error(`lesson "${moduleTitle}" not found in the course — was it renamed?`);
+      const blocks = await db.contentBlock.findMany({ where: { lessonId: lesson.id }, select: { id: true, type: true, order: true, data: true } });
+      const existing = blocks.find((b) => b.type === "GUIDED_CODE");
+      const data = guidedBlockData(g);
+      if (existing) {
+        if (updateGuided && JSON.stringify(existing.data) !== JSON.stringify(data)) {
+          await db.contentBlock.update({ where: { id: existing.id }, data: { data } });
+          console.log(`✓ rewrote the guided exercise in "${moduleTitle}"`);
+        }
+        continue;
+      }
+      // At the end of the lesson, after the slides, visualization and practice tasks.
+      const order = Math.max(-1, ...blocks.map((b) => b.order)) + 1;
+      await db.contentBlock.create({ data: { lessonId: lesson.id, order, type: "GUIDED_CODE", data } });
+      console.log(`✓ added the guided exercise "${g.title}" to "${moduleTitle}"`);
     }
 
     for (const s of toEnroll) {

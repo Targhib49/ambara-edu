@@ -18,6 +18,8 @@ import path from "path";
 import { spawnSync } from "child_process";
 import { CPP_EXERCISES, CPP_PRACTICE, PRELUDE } from "./content/cpp-oop";
 import { LIFETIME_SCENARIOS, type LifetimeScenario } from "../src/lib/viz/objectLifetime";
+import { CPP_GUIDED, blockSteps } from "./content/cpp-guided";
+import { failedCodeChecks, guidedCodeSchema } from "../src/lib/blocks/guided";
 
 const CXX = process.env.CXX ?? "g++";
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "check-cpp-"));
@@ -104,6 +106,41 @@ for (const practice of CPP_PRACTICE) {
   });
 }
 
+// Guided exercises: every step's reference program compiles cleanly, prints
+// the step's expected output and passes its code checks — and the program
+// from the step before does not already pass, so each step asks for something.
+let guidedSteps = 0;
+for (const exercise of CPP_GUIDED) {
+  const { steps, ...rest } = exercise;
+  try {
+    guidedCodeSchema.parse({ ...rest, language: "cpp", steps: blockSteps(exercise) });
+  } catch (e) {
+    problems.push(`guided "${exercise.title}": invalid block data: ${(e as Error).message}`);
+  }
+  const passes = (source: string, step: (typeof steps)[number]) => {
+    const run = build({ "main.cpp": source });
+    const ok = run.compiled && lines(run.output) === step.expectedOutput && failedCodeChecks(source, step.codeChecks ?? []).length === 0;
+    return { run, ok };
+  };
+  let previous = exercise.starterCode;
+  steps.forEach((step, i) => {
+    const where = `guided "${exercise.title}" step ${i + 1} "${step.title}"`;
+    guidedSteps++;
+    programs += 2;
+    if (step.solution === previous) problems.push(`${where}: the solution is the same as the step before — a .replace() probably missed`);
+    const { run } = passes(step.solution, step);
+    if (!run.compiled) problems.push(`${where}: the solution does not compile\n${run.log}`);
+    else {
+      if (lines(run.output) !== step.expectedOutput) problems.push(`${where}: the solution prints\n${lines(run.output)}\nbut the step expects\n${step.expectedOutput}`);
+      if (/warning:/.test(run.log)) problems.push(`${where}: compiler warning\n${run.log}`);
+    }
+    const failed = failedCodeChecks(step.solution, step.codeChecks ?? []);
+    if (failed.length) problems.push(`${where}: the solution fails its own code checks: ${failed.join(" | ")}`);
+    if (passes(previous, step).ok) problems.push(`${where}: the program from the step before already passes`);
+    previous = step.solution;
+  });
+}
+
 // Object-lifetime visualizations: the trace's output, step by step, must add up
 // to exactly what the program prints, and the objects must come and go sanely.
 let scenarios = 0;
@@ -152,4 +189,5 @@ if (problems.length) {
 }
 console.log(`  hands-on practice: ${tasks} tasks`);
 console.log(`  object-lifetime visualizations: ${scenarios} scenarios`);
+console.log(`  guided exercises: ${CPP_GUIDED.length} (${guidedSteps} steps)`);
 console.log(`\n✓ ${count} questions and ${tasks} tasks, ${programs} programs compiled and run with ${CXX}; every answer key matches`);

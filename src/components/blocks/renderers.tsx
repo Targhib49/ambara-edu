@@ -11,6 +11,9 @@ import { parseVideoUrl } from "@/lib/blocks/video";
 import type { BlockType } from "@/generated/prisma/enums";
 import { CodeEditorBlock } from "./CodeEditorBlock";
 import { CppEditorBlock } from "./CppEditorBlock";
+import { GuidedCodeBlock } from "./GuidedCodeBlock";
+import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { VizBlock } from "@/components/viz/VizBlock";
 import { PdfFlipViewer } from "./PdfFlipViewer";
 
@@ -218,6 +221,22 @@ async function VideoEmbedRenderer({ url, caption }: { url: string; caption: stri
 }
 
 /**
+ * A student gets their saved code and place back; anyone else (the tutor's
+ * preview) starts fresh and saves nothing.
+ */
+async function GuidedCodeRenderer({ blockId, data }: { blockId: string; data: BlockDataMap["GUIDED_CODE"] }) {
+  const user = await getCurrentUser();
+  const isStudent = user?.role === "STUDENT";
+  const progress = isStudent
+    ? await db.guidedCodeProgress.findUnique({
+        where: { studentId_blockId: { studentId: user.id, blockId } },
+        select: { code: true, stepStartCode: true, passedSteps: true },
+      })
+    : null;
+  return <GuidedCodeBlock key={JSON.stringify(data)} blockId={blockId} data={data} initial={progress} preview={!isStudent} />;
+}
+
+/**
  * Server component: validates the raw JSON payload and dispatches to the
  * type-specific renderer. New block types get a case here (the switch is
  * exhaustive over BlockType, so the compiler flags omissions).
@@ -260,6 +279,8 @@ export async function BlockRenderer({
         );
       }
       return <CodeEditorBlock key={parsed.data.starterCode} starterCode={parsed.data.starterCode} />;
+    case "GUIDED_CODE":
+      return <GuidedCodeRenderer blockId={parsed.id} data={parsed.data} />;
     case "VISUALIZATION":
       // Same remount-on-save pattern: viz components seed state from props.
       return <VizBlock key={JSON.stringify(parsed.data)} data={parsed.data} />;

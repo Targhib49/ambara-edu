@@ -41,6 +41,7 @@ export function lessonTypeKey(blockTypes: BlockType[]): MessageKey {
   const has = (t: BlockType) => blockTypes.includes(t);
   if (has("VIDEO_EMBED")) return "outline.type.video";
   if (has("FILE_ATTACHMENT")) return "outline.type.file";
+  if (has("GUIDED_CODE")) return "outline.type.guided";
   if (has("VISUALIZATION")) return "outline.type.interactive";
   if (has("CODE_EDITOR")) return "outline.type.python";
   if (has("CODE_SNIPPET") || has("EQUATION") || has("MARKDOWN")) return "outline.type.reading";

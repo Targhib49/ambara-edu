@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BlockType } from "@/generated/prisma/enums";
 import { defaultVisualizationData, visualizationDataSchema } from "@/lib/viz/schemas";
 import { VIDEO_URL_HINT, parseVideoUrl } from "@/lib/blocks/video";
+import { guidedCodeSchema } from "@/lib/blocks/guided";
 
 /**
  * The single registration point for content block data shapes.
@@ -41,6 +42,7 @@ export const blockDataSchemas = {
     expectedOutput: z.string().optional(),
   }),
   VISUALIZATION: visualizationDataSchema,
+  GUIDED_CODE: guidedCodeSchema,
   VIDEO_EMBED: z.object({
     // Empty is allowed so a freshly added block can be saved to the DB before
     // the tutor has pasted anything; the renderer shows a placeholder for it.
@@ -58,8 +60,11 @@ export type AnyBlock = {
   [K in BlockType]: { id: string; type: K; data: BlockDataMap[K] };
 }[BlockType];
 
-/** Default payloads for freshly created blocks (FILE_ATTACHMENT is created via upload instead). */
-export const defaultBlockData: { [K in Exclude<BlockType, "FILE_ATTACHMENT">]: BlockDataMap[K] } = {
+/** Blocks a tutor can add from the lesson editor. Files come from an upload; guided exercises from a script. */
+export type AddableBlockType = Exclude<BlockType, "FILE_ATTACHMENT" | "GUIDED_CODE">;
+
+/** Default payloads for freshly created blocks. */
+export const defaultBlockData: { [K in AddableBlockType]: BlockDataMap[K] } = {
   MARKDOWN: { markdown: "" },
   EQUATION: { latex: "", display: true },
   CODE_SNIPPET: { language: "python", code: "" },

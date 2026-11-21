@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireTutor } from "@/lib/auth";
-import { BlockType } from "@/generated/prisma/enums";
-import { defaultBlockData, isPreviewableFile, parseBlockData } from "@/lib/blocks/schema";
+import { defaultBlockData, isPreviewableFile, parseBlockData, type AddableBlockType } from "@/lib/blocks/schema";
 import { ATTACHMENTS_BUCKET, createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 async function lessonEditorPath(lessonId: string) {
@@ -24,7 +23,7 @@ async function nextBlockOrder(lessonId: string) {
   return (last?.order ?? -1) + 1;
 }
 
-export async function addBlock(lessonId: string, type: Exclude<BlockType, "FILE_ATTACHMENT">) {
+export async function addBlock(lessonId: string, type: AddableBlockType) {
   await requireTutor();
   await db.contentBlock.create({
     data: {

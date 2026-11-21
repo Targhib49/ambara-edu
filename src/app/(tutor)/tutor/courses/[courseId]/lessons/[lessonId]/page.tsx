@@ -7,6 +7,7 @@ import { addBlock, addFileBlock, deleteBlock, moveBlock } from "@/lib/actions/bl
 import { BlockRenderer } from "@/components/blocks/renderers";
 import { BlockEditor } from "@/components/blocks/editors";
 import { toAnyBlock } from "@/lib/blocks/schema";
+import { guidedCodeSchema } from "@/lib/blocks/guided";
 import type { BlockType } from "@/generated/prisma/enums";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -30,6 +31,7 @@ const BLOCK_LABEL_KEYS = {
   CODE_EDITOR: "blockType.CODE_EDITOR",
   VISUALIZATION: "blockType.VISUALIZATION",
   VIDEO_EMBED: "blockType.VIDEO_EMBED",
+  GUIDED_CODE: "blockType.GUIDED_CODE",
 } as const satisfies Record<string, MessageKey>;
 
 export default async function LessonEditorPage({
@@ -125,7 +127,10 @@ export default async function LessonEditorPage({
               </div>
             </div>
             <div className="grid gap-4 p-4 lg:grid-cols-2">
-              <SafeBlockEditor block={block} />
+              <div className="space-y-4">
+                <SafeBlockEditor block={block} />
+                {block.type === "GUIDED_CODE" && <GuidedProgressList blockId={block.id} data={block.data} />}
+              </div>
               <div className="rounded-lg bg-zinc-50 p-4">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
                   {t("lessonEditor.previewSaved")}
@@ -233,4 +238,39 @@ async function SafeBlockEditor({ block }: { block: { id: string; type: BlockType
     );
   }
   return <BlockEditor block={parsed} />;
+}
+
+/** How far each student has got through a guided exercise, furthest first. */
+async function GuidedProgressList({ blockId, data }: { blockId: string; data: unknown }) {
+  const t = await getT();
+  const parsed = guidedCodeSchema.safeParse(data);
+  if (!parsed.success) return null;
+  const total = parsed.data.steps.length;
+  const rows = await db.guidedCodeProgress.findMany({
+    where: { blockId },
+    orderBy: [{ passedSteps: "desc" }, { updatedAt: "desc" }],
+    select: { passedSteps: true, completedAt: true, updatedAt: true, student: { select: { id: true, name: true } } },
+  });
+  return (
+    <div className="rounded-lg border border-zinc-200">
+      <p className="border-b border-zinc-100 px-3 py-2 text-xs font-medium uppercase tracking-wide text-zinc-400">{t("guided.studentsTitle")}</p>
+      {rows.length === 0 ? (
+        <p className="px-3 py-2 text-xs text-zinc-500">{t("guided.noStudents")}</p>
+      ) : (
+        <ul className="divide-y divide-zinc-100">
+          {rows.map((row) => (
+            <li key={row.student.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+              <Link href={`/tutor/students/${row.student.id}`} className="min-w-0 flex-1 truncate text-zinc-800 hover:text-blue-700">
+                {row.student.name}
+              </Link>
+              <span className="text-xs tabular-nums text-zinc-500">{t("guided.progress", { n: Math.min(row.passedSteps, total), total })}</span>
+              {row.completedAt && (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">{t("guided.studentDone")}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }

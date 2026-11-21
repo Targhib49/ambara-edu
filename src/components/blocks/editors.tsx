@@ -345,6 +345,21 @@ function FileAttachmentEditor({
 }
 
 /** Client component: type-specific edit form for a block. */
+/** Guided exercises are written by a script, so the editor only lists the steps. */
+function GuidedCodeSummary({ data }: { data: BlockDataMap["GUIDED_CODE"] }) {
+  const t = useT();
+  return (
+    <div className="space-y-2 text-sm">
+      <p className="text-xs text-zinc-500">{t("guided.scriptOnly")}</p>
+      <ol className="list-decimal space-y-0.5 pl-5 text-zinc-700">
+        {data.steps.map((step, i) => (
+          <li key={i}>{step.title}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 export function BlockEditor({ block }: { block: AnyBlock }) {
   switch (block.type) {
     case "MARKDOWN":
@@ -361,6 +376,8 @@ export function BlockEditor({ block }: { block: AnyBlock }) {
       return <VisualizationEditor block={block} />;
     case "VIDEO_EMBED":
       return <VideoEmbedEditor block={block} />;
+    case "GUIDED_CODE":
+      return <GuidedCodeSummary data={block.data} />;
     default: {
       const _exhaustive: never = block;
       return _exhaustive;
