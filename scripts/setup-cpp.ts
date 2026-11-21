@@ -210,6 +210,13 @@ if (mode !== "plan" && mode !== "apply") {
 const publish = flags.includes("--publish");
 const updateGuided = flags.includes("--update-guided");
 
+/** JSON with keys sorted — Postgres jsonb doesn't keep key order, so a plain stringify would always differ. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, v) =>
+    v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v
+  );
+}
+
 /** The block as stored: the reference solutions stay in the script. */
 function guidedBlockData(g: GuidedExerciseSource) {
   return blockDataSchemas.GUIDED_CODE.parse({
@@ -340,7 +347,7 @@ async function main() {
       const moduleTitle = MODULES.find((m) => m.file === g.moduleFile)!.title;
       const lesson = existingLessons.find((l) => l.title === moduleTitle);
       const block = lesson && guidedBlocks.find((b) => b.lessonId === lesson.id);
-      const same = block && JSON.stringify(block.data) === JSON.stringify(guidedBlockData(g));
+      const same = block && canonical(block.data) === canonical(guidedBlockData(g));
       const what = !block
         ? `add "${g.title}" (${g.steps.length} steps)`
         : same
@@ -522,7 +529,7 @@ async function main() {
       const existing = blocks.find((b) => b.type === "GUIDED_CODE");
       const data = guidedBlockData(g);
       if (existing) {
-        if (updateGuided && JSON.stringify(existing.data) !== JSON.stringify(data)) {
+        if (updateGuided && canonical(existing.data) !== canonical(data)) {
           await db.contentBlock.update({ where: { id: existing.id }, data: { data } });
           console.log(`✓ rewrote the guided exercise in "${moduleTitle}"`);
         }
