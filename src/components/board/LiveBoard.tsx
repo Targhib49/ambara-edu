@@ -293,12 +293,20 @@ export function LiveBoard({
       doc.pages.splice(at + 1, 0, ...newPages.map((p) => p.id));
       for (const p of newPages) if (p.background) doc.backgrounds[p.id] = p.background;
       syncPages();
-      userTurnsPage(newPages[0].id);
+      // Turn here at once, but tell the others only after they know the pages
+      // exist — a page-go for a page they haven't heard of would make a blank one.
+      const first = newPages[0].id;
+      if (me.role === "STUDENT" && followingRef.current) {
+        followingRef.current = false;
+        setFollowing(false);
+      }
+      goToPage(first, { broadcast: false });
       if (newPages.some((p) => p.background)) await saveNow();
       else saveSoon();
       send({ type: "pages-add", after, pages: newPages });
+      if (me.role === "TUTOR" && pageRef.current === first) send({ type: "page-go", id: first });
     },
-    [syncPages, userTurnsPage, saveNow, saveSoon, send]
+    [syncPages, goToPage, saveNow, saveSoon, send, me.role]
   );
 
   const addPage = useCallback(() => void insertPages([{ id: newId() }]), [insertPages]);
@@ -362,7 +370,11 @@ export function LiveBoard({
           removeStrokes(msg.ids);
           break;
         case "pages-add": {
-          const fresh = msg.pages.filter((p) => !doc.pages.includes(p.id) && !doc.removedPages.includes(p.id));
+          const incoming = msg.pages.filter((p) => !doc.removedPages.includes(p.id));
+          // A page we already made up from an early page-go goes where it belongs.
+          const ids = new Set(incoming.map((p) => p.id));
+          doc.pages = doc.pages.filter((p) => !ids.has(p));
+          const fresh = incoming;
           const at = msg.after ? doc.pages.indexOf(msg.after) : -1;
           if (at === -1) doc.pages.push(...fresh.map((p) => p.id));
           else doc.pages.splice(at + 1, 0, ...fresh.map((p) => p.id));
