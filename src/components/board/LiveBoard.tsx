@@ -1,30 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   PAGE_H,
   PAGE_W,
+  backgroundRect,
   mergeDocs,
   newId,
   roundPoint,
   type BoardDoc,
   type BoardEvent,
   type BoardMessage,
+  type PdfBackground,
   type Point,
   type PresenceState,
   type Stroke,
   type Tool,
 } from "@/lib/board/doc";
-import { NO_PRESSURE, StrokeCache, drawBackground, drawStroke, hitsStroke } from "./strokes";
+import { NO_PRESSURE, StrokeCache, drawBackground, drawPdfBackground, drawStroke, hitsStroke } from "./strokes";
+import { PdfPages } from "./pdfPages";
+import { PdfPicker } from "./PdfPicker";
 import { useT } from "@/lib/i18n/client";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, PlusIcon } from "@/components/ui/icons";
 
 type Me = { id: string; name: string; role: "TUTOR" | "STUDENT" };
-type ActiveTool = Tool | "eraser";
+type ActiveTool = Tool | "eraser" | "snip";
 /** Undo/redo step: remove these strokes, re-add copies of those. Applying one returns its inverse. */
 type HistoryEntry = { remove: string[]; add: Stroke[] };
 type SaveState = "saved" | "unsaved" | "saving" | "error";
@@ -33,6 +37,8 @@ type Connection = "connecting" | "live" | "offline";
 const COLORS = ["#18181b", "#2563eb", "#dc2626", "#16a34a", "#ea580c", "#9333ea", "#facc15"];
 const SIZES: Record<Tool, number[]> = { pen: [3, 6, 12], highlighter: [18, 30, 48] };
 const ERASER_RADIUS = 14;
+/** Smallest snip worth a page, in page units. */
+const MIN_SNIP = 24;
 /** How often an in-progress stroke's new points go out: smooth enough to watch, few enough messages. */
 const POINT_FLUSH_MS = 50;
 const CURSOR_THROTTLE_MS = 100;
@@ -71,6 +77,11 @@ export function LiveBoard({
   const [pageId, setPageIdState] = useState(initialDoc.pages[0]);
   const pageRef = useRef(pageId);
   const [pages, setPages] = useState(initialDoc.pages);
+  // Mirrors docRef's backgrounds for the toolbar (snip, page label). Set when pages change.
+  const [backgrounds, setBackgrounds] = useState(initialDoc.backgrounds);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pdfs] = useState(() => new PdfPages((blockId) => `/api/board/${sessionId}/file/${blockId}`));
   const [tool, setTool] = useState<ActiveTool>("pen");
   const [color, setColor] = useState(myColor);
   const [sizeIdx, setSizeIdx] = useState(1);
@@ -90,8 +101,24 @@ export function LiveBoard({
   const redoRef = useRef<HistoryEntry[]>([]);
   const cursorsRef = useRef(new Map<string, { page: string; x: number; y: number; at: number }>());
   const othersRef = useRef<PresenceState[]>([]);
+  const snipRef = useRef<{ pointerId: number; x0: number; y0: number; x1: number; y1: number } | null>(null);
 
   const markDirty = useCallback(() => {
+    dirtyRef.current = true;
+  }, []);
+
+  // Redraw when a PDF page finishes rendering.
+  useEffect(() => pdfs.subscribe(markDirty), [pdfs, markDirty]);
+
+  /** Pushes the doc's page list to the UI; leaves a page someone deleted for its neighbour. */
+  const syncPages = useCallback(() => {
+    const doc = docRef.current;
+    setPages([...doc.pages]);
+    setBackgrounds({ ...doc.backgrounds });
+    if (!doc.pages.includes(pageRef.current)) {
+      pageRef.current = doc.pages[0];
+      setPageIdState(doc.pages[0]);
+    }
     dirtyRef.current = true;
   }, []);
 
@@ -157,12 +184,13 @@ export function LiveBoard({
       const body = (await res.json()) as { doc: BoardDoc | null };
       if (!body.doc) return;
       docRef.current = mergeDocs(docRef.current, body.doc);
-      setPages([...docRef.current.pages]);
-      markDirty();
+      syncPages();
+      // A PDF that wasn't shared yet when we first asked for it may be now.
+      pdfs.retryFailed();
     } catch {
       // Offline: the next sync on reconnect tries again.
     }
-  }, [sessionId, markDirty]);
+  }, [sessionId, syncPages, pdfs]);
 
   // --- doc mutations -------------------------------------------------------
 
@@ -251,16 +279,45 @@ export function LiveBoard({
     [me.role, goToPage]
   );
 
-  const addPage = useCallback(() => {
+  /**
+   * Adds pages right after the current one and turns to the first. Pages with a
+   * PDF are saved before anyone hears of them: the student's copy of the file
+   * is only served once the saved board shows it.
+   */
+  const insertPages = useCallback(
+    async (newPages: { id: string; background?: PdfBackground }[]) => {
+      if (newPages.length === 0) return;
+      const doc = docRef.current;
+      const after = pageRef.current;
+      const at = doc.pages.indexOf(after);
+      doc.pages.splice(at + 1, 0, ...newPages.map((p) => p.id));
+      for (const p of newPages) if (p.background) doc.backgrounds[p.id] = p.background;
+      syncPages();
+      userTurnsPage(newPages[0].id);
+      if (newPages.some((p) => p.background)) await saveNow();
+      else saveSoon();
+      send({ type: "pages-add", after, pages: newPages });
+    },
+    [syncPages, userTurnsPage, saveNow, saveSoon, send]
+  );
+
+  const addPage = useCallback(() => void insertPages([{ id: newId() }]), [insertPages]);
+
+  const deletePage = useCallback(() => {
+    setConfirmDelete(false);
     const doc = docRef.current;
-    const id = newId();
-    const at = doc.pages.indexOf(pageRef.current);
-    doc.pages.splice(at + 1, 0, id);
-    setPages([...doc.pages]);
-    send({ type: "page-add", id, after: pageRef.current });
+    const id = pageRef.current;
+    const at = doc.pages.indexOf(id);
+    doc.pages = doc.pages.filter((p) => p !== id);
+    if (!doc.removedPages.includes(id)) doc.removedPages.push(id);
+    // Keep at least one page to stand on.
+    if (doc.pages.length === 0) doc.pages.push(newId());
+    const next = doc.pages[Math.min(at, doc.pages.length - 1)];
+    syncPages();
+    send({ type: "page-remove", id });
+    userTurnsPage(next);
     saveSoon();
-    userTurnsPage(id);
-  }, [send, saveSoon, userTurnsPage]);
+  }, [syncPages, send, userTurnsPage, saveSoon]);
 
   const follow = useCallback(() => {
     followingRef.current = true;
@@ -304,18 +361,26 @@ export function LiveBoard({
         case "erase":
           removeStrokes(msg.ids);
           break;
-        case "page-add":
-          if (!doc.pages.includes(msg.id)) {
-            const at = msg.after ? doc.pages.indexOf(msg.after) : -1;
-            if (at === -1) doc.pages.push(msg.id);
-            else doc.pages.splice(at + 1, 0, msg.id);
-            setPages([...doc.pages]);
-          }
+        case "pages-add": {
+          const fresh = msg.pages.filter((p) => !doc.pages.includes(p.id) && !doc.removedPages.includes(p.id));
+          const at = msg.after ? doc.pages.indexOf(msg.after) : -1;
+          if (at === -1) doc.pages.push(...fresh.map((p) => p.id));
+          else doc.pages.splice(at + 1, 0, ...fresh.map((p) => p.id));
+          for (const p of fresh) if (p.background) doc.backgrounds[p.id] = p.background;
+          syncPages();
+          break;
+        }
+        case "page-remove":
+          if (!doc.removedPages.includes(msg.id)) doc.removedPages.push(msg.id);
+          doc.pages = doc.pages.filter((p) => p !== msg.id);
+          if (doc.pages.length === 0) doc.pages.push(newId());
+          syncPages();
           break;
         case "page-go":
+          if (doc.removedPages.includes(msg.id)) break;
           tutorPageRef.current = msg.id;
           if (!doc.pages.includes(msg.id)) doc.pages.push(msg.id);
-          setPages([...doc.pages]);
+          syncPages();
           if (followingRef.current) goToPage(msg.id, { broadcast: false });
           break;
         case "cursor":
@@ -340,7 +405,7 @@ export function LiveBoard({
           break;
       }
     },
-    [addStrokes, removeStrokes, goToPage, saveNow, reloadAndMerge, send, me.role]
+    [addStrokes, removeStrokes, goToPage, saveNow, reloadAndMerge, send, me.role, syncPages]
   );
 
   // --- channel -------------------------------------------------------------
@@ -440,6 +505,8 @@ export function LiveBoard({
     dirtyRef.current = true;
   }, [canvasSize]);
 
+  const labels = useMemo(() => ({ loading: t("board.pdfLoading"), failed: t("board.pdfFailed") }), [t]);
+
   useEffect(() => {
     let raf = 0;
     const render = () => {
@@ -461,8 +528,21 @@ export function LiveBoard({
       ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
       drawBackground(ctx);
       const page = pageRef.current;
+      const bg = docRef.current.backgrounds[page];
+      if (bg) drawPdfBackground(ctx, bg, pdfs, scale * dpr, labels);
       for (const s of Object.values(docRef.current.strokes)) {
         if (s.page === page) drawStroke(ctx, cacheRef.current, s);
+      }
+      const snip = snipRef.current;
+      if (snip) {
+        const r = normRect(snip);
+        ctx.fillStyle = "rgba(37, 99, 235, 0.08)";
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.setLineDash([12, 8]);
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(r.x, r.y, r.w, r.h);
+        ctx.setLineDash([]);
       }
       for (const [id, c] of cursorsRef.current) {
         if (c.page !== page) continue;
@@ -484,9 +564,30 @@ export function LiveBoard({
     };
     raf = requestAnimationFrame(render);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [pdfs, labels]);
 
   // --- input -----------------------------------------------------------------
+
+
+  /** Turns the dragged box into a new page holding that region of the PDF. */
+  const finishSnip = (box: { x0: number; y0: number; x1: number; y1: number }) => {
+    const bg = docRef.current.backgrounds[pageRef.current];
+    if (!bg) return;
+    const shown = backgroundRect(bg);
+    const sel = normRect(box);
+    // Only the part of the box that is over the PDF counts.
+    const x = Math.max(sel.x, shown.x);
+    const y = Math.max(sel.y, shown.y);
+    const w = Math.min(sel.x + sel.w, shown.x + shown.w) - x;
+    const h = Math.min(sel.y + sel.h, shown.y + shown.h) - y;
+    if (w < MIN_SNIP || h < MIN_SNIP) return;
+    const [cx, cy, cw, ch] = bg.crop ?? [0, 0, 1, 1];
+    const fx = (x - shown.x) / shown.w;
+    const fy = (y - shown.y) / shown.h;
+    const crop: [number, number, number, number] = [cx + fx * cw, cy + fy * ch, (w / shown.w) * cw, (h / shown.h) * ch];
+    void insertPages([{ id: newId(), background: { ...bg, crop, aspect: w / h } }]);
+    setTool("pen");
+  };
 
   const drawingRef = useRef<{ pointerId: number; stroke: Stroke | null; pending: Point[]; erased: Stroke[]; erasing: boolean } | null>(null);
   const flushTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -521,18 +622,25 @@ export function LiveBoard({
     if (e.pointerType === "pen") penSeenRef.current = true;
     // Palm rejection: once a pen has been used, fingers don't draw.
     if (e.pointerType === "touch" && penSeenRef.current) return;
-    if (drawingRef.current) return;
+    if (drawingRef.current || snipRef.current) return;
     if (e.button !== 0 && e.button !== 5) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const { x, y } = toPage(e);
+    // Snip only means something over a PDF; elsewhere the pen carries on.
+    const current = tool === "snip" && !docRef.current.backgrounds[pageRef.current] ? "pen" : tool;
+    if (current !== tool) setTool(current);
+    if (current === "snip") {
+      snipRef.current = { pointerId: e.pointerId, x0: x, y0: y, x1: x, y1: y };
+      return;
+    }
     // The pen's eraser end (or its barrel button) erases whatever tool is picked.
-    const erasing = tool === "eraser" || e.button === 5 || (e.buttons & 32) !== 0;
+    const erasing = current === "eraser" || e.button === 5 || (e.buttons & 32) !== 0;
     if (erasing) {
       drawingRef.current = { pointerId: e.pointerId, stroke: null, pending: [], erased: [], erasing: true };
       eraseAt(x, y);
       return;
     }
-    const activeTool: Tool = tool === "highlighter" ? "highlighter" : "pen";
+    const activeTool: Tool = current === "highlighter" ? "highlighter" : "pen";
     const pressure = e.pointerType === "pen" ? e.pressure || NO_PRESSURE : NO_PRESSURE;
     const stroke: Stroke = {
       id: newId(),
@@ -551,6 +659,14 @@ export function LiveBoard({
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const snip = snipRef.current;
+    if (snip && snip.pointerId === e.pointerId) {
+      const { x, y } = toPage(e);
+      snip.x1 = x;
+      snip.y1 = y;
+      markDirty();
+      return;
+    }
     const d = drawingRef.current;
     if (!d || d.pointerId !== e.pointerId) {
       // Not drawing: share where we're pointing, so "this one here" makes sense.
@@ -578,6 +694,13 @@ export function LiveBoard({
   };
 
   const endStroke = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const snip = snipRef.current;
+    if (snip && snip.pointerId === e.pointerId) {
+      snipRef.current = null;
+      markDirty();
+      if (e.type === "pointerup") finishSnip(snip);
+      return;
+    }
     const d = drawingRef.current;
     if (!d || d.pointerId !== e.pointerId) return;
     if (flushTimer.current) {
@@ -628,6 +751,8 @@ export function LiveBoard({
     out.height = PAGE_H;
     const ctx = out.getContext("2d")!;
     drawBackground(ctx);
+    const bg = docRef.current.backgrounds[pageRef.current];
+    if (bg) drawPdfBackground(ctx, bg, pdfs, 1, labels);
     for (const s of Object.values(docRef.current.strokes)) {
       if (s.page === pageRef.current) drawStroke(ctx, cacheRef.current, s);
     }
@@ -646,6 +771,8 @@ export function LiveBoard({
   const pageIndex = Math.max(0, pages.indexOf(pageId));
   const toolSizes = tool === "highlighter" ? SIZES.highlighter : SIZES.pen;
   const tutorHere = others.some((p) => p.role === "TUTOR");
+  const pageBg = backgrounds[pageId];
+  const inkTool = tool === "pen" || tool === "highlighter";
 
   return (
     <div className="flex h-dvh w-full flex-col bg-zinc-100">
@@ -682,7 +809,7 @@ export function LiveBoard({
           <canvas
             ref={canvasRef}
             style={{ width: canvasSize.w, height: canvasSize.h, touchAction: "none" }}
-            className={`rounded-sm bg-white shadow-md ring-1 ring-zinc-200 ${tool === "eraser" ? "cursor-cell" : "cursor-crosshair"}`}
+            className={`rounded-sm bg-white shadow-md ring-1 ring-zinc-200 ${tool === "eraser" ? "cursor-cell" : tool === "snip" ? "cursor-copy" : "cursor-crosshair"}`}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={endStroke}
@@ -691,6 +818,16 @@ export function LiveBoard({
             onContextMenu={(e) => e.preventDefault()}
           />
         </div>
+        {pageBg && (
+          <p className="pointer-events-none absolute bottom-3 left-3 max-w-[45%] truncate rounded-md bg-white/90 px-2 py-1 text-xs text-zinc-600 shadow-sm ring-1 ring-zinc-200">
+            {pageBg.name} · {t(pageBg.crop ? "board.pdfSnipLabel" : "board.pdfPageLabel", { n: pageBg.page })}
+          </p>
+        )}
+        {tool === "snip" && pageBg && (
+          <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white shadow-sm">
+            {t("board.snipHint")}
+          </p>
+        )}
         {others.length === 0 && connection === "live" && (
           <p className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-xs text-zinc-500 shadow-sm ring-1 ring-zinc-200">
             {me.role === "TUTOR" ? t("board.waitingStudent") : t("board.waitingTutor")}
@@ -709,9 +846,14 @@ export function LiveBoard({
           <ToolButton active={tool === "eraser"} label={t("board.eraser")} onClick={() => setTool("eraser")}>
             <EraserIcon />
           </ToolButton>
+          {pageBg && (
+            <ToolButton active={tool === "snip"} label={t("board.snip")} onClick={() => setTool(tool === "snip" ? "pen" : "snip")}>
+              <SnipIcon />
+            </ToolButton>
+          )}
         </div>
 
-        <div className={`flex items-center gap-1 ${tool === "eraser" ? "opacity-40" : ""}`}>
+        <div className={`flex items-center gap-1 ${inkTool ? "" : "opacity-40"}`}>
           {COLORS.map((c) => (
             <button
               key={c}
@@ -719,15 +861,15 @@ export function LiveBoard({
               aria-label={c}
               onClick={() => {
                 setColor(c);
-                if (tool === "eraser") setTool("pen");
+                if (!inkTool) setTool("pen");
               }}
-              className={`h-7 w-7 rounded-full ring-offset-2 transition ${color === c && tool !== "eraser" ? "ring-2 ring-zinc-900" : "ring-1 ring-zinc-200"}`}
+              className={`h-7 w-7 rounded-full ring-offset-2 transition ${color === c && inkTool ? "ring-2 ring-zinc-900" : "ring-1 ring-zinc-200"}`}
               style={{ backgroundColor: c }}
             />
           ))}
         </div>
 
-        <div className={`flex items-center gap-0.5 rounded-lg bg-zinc-100 p-1 ${tool === "eraser" ? "opacity-40" : ""}`}>
+        <div className={`flex items-center gap-0.5 rounded-lg bg-zinc-100 p-1 ${inkTool ? "" : "opacity-40"}`}>
           {toolSizes.map((size, i) => (
             <button
               key={size}
@@ -735,9 +877,9 @@ export function LiveBoard({
               aria-label={t("board.size", { n: i + 1 })}
               onClick={() => {
                 setSizeIdx(i);
-                if (tool === "eraser") setTool("pen");
+                if (!inkTool) setTool("pen");
               }}
-              className={`flex h-8 w-8 items-center justify-center rounded-md ${sizeIdx === i && tool !== "eraser" ? "bg-white shadow-sm" : "hover:bg-white/60"}`}
+              className={`flex h-8 w-8 items-center justify-center rounded-md ${sizeIdx === i && inkTool ? "bg-white shadow-sm" : "hover:bg-white/60"}`}
             >
               <span className="rounded-full bg-zinc-800" style={{ width: 4 + i * 4, height: 4 + i * 4 }} />
             </button>
@@ -787,7 +929,32 @@ export function LiveBoard({
           <ToolButton label={t("board.addPage")} onClick={addPage}>
             <PlusIcon className="h-5 w-5" />
           </ToolButton>
+          {confirmDelete ? (
+            <span className="flex items-center gap-1 pl-1">
+              <button type="button" onClick={deletePage} className="rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-red-500">
+                {t("board.deletePageConfirm")}
+              </button>
+              <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-md px-2 py-1.5 text-xs text-zinc-600 hover:bg-white">
+                {t("action.cancel")}
+              </button>
+            </span>
+          ) : (
+            <ToolButton label={t("board.deletePage")} onClick={() => setConfirmDelete(true)}>
+              <PageRemoveIcon />
+            </ToolButton>
+          )}
         </div>
+
+        {me.role === "TUTOR" && (
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            <PdfIcon />
+            {t("board.insertPdf")}
+          </button>
+        )}
 
         {me.role === "STUDENT" && tutorHere && !following && (
           <button
@@ -799,6 +966,25 @@ export function LiveBoard({
           </button>
         )}
       </footer>
+
+      {pickerOpen && (
+        <PdfPicker
+          sessionId={sessionId}
+          pdfs={pdfs}
+          onClose={() => setPickerOpen(false)}
+          onInsert={(option, aspects, from, to) => {
+            setPickerOpen(false);
+            const newPages = [];
+            for (let n = from; n <= to; n++) {
+              newPages.push({
+                id: newId(),
+                background: { kind: "pdf" as const, blockId: option.blockId, page: n, name: option.fileName, aspect: aspects[n - 1] },
+              });
+            }
+            void insertPages(newPages);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -907,6 +1093,37 @@ function TrashIcon() {
       <path d="M10 11v6M14 11v6" />
       <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
       <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+
+function normRect(b: { x0: number; y0: number; x1: number; y1: number }) {
+  return { x: Math.min(b.x0, b.x1), y: Math.min(b.y0, b.y1), w: Math.abs(b.x1 - b.x0), h: Math.abs(b.y1 - b.y0) };
+}
+
+function SnipIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
+      <path d="M9 12h6M12 9v6" />
+    </svg>
+  );
+}
+
+function PageRemoveIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />
+      <path d="M14 3v5h5M9.5 14.5h5" />
+    </svg>
+  );
+}
+
+function PdfIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />
+      <path d="M14 3v5h5M12 11v6M9 14l3 3 3-3" />
     </svg>
   );
 }

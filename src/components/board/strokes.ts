@@ -1,5 +1,6 @@
 import { getStroke } from "perfect-freehand";
-import { PAGE_H, PAGE_W, type Stroke } from "@/lib/board/doc";
+import { PAGE_H, PAGE_W, backgroundRect, type PdfBackground, type Stroke } from "@/lib/board/doc";
+import type { PdfPages } from "./pdfPages";
 
 /** Mouse and touch report no real pressure; their points carry exactly this. */
 export const NO_PRESSURE = 0.5;
@@ -61,6 +62,39 @@ export function drawBackground(ctx: CanvasRenderingContext2D) {
       ctx.fillRect(x - 1.2, y - 1.2, 2.4, 2.4);
     }
   }
+}
+
+/**
+ * The PDF page (or snipped region of one) under the ink. `devicePxPerUnit` is
+ * how many device pixels one page unit covers, to ask pdf.js for a sharp
+ * enough bitmap. Returns false while the bitmap is still on its way.
+ */
+export function drawPdfBackground(
+  ctx: CanvasRenderingContext2D,
+  bg: PdfBackground,
+  pdfs: PdfPages,
+  devicePxPerUnit: number,
+  labels: { loading: string; failed: string }
+) {
+  const r = backgroundRect(bg);
+  const [cx, cy, cw, ch] = bg.crop ?? [0, 0, 1, 1];
+  const bitmap = pdfs.bitmap(bg, (r.w * devicePxPerUnit) / cw);
+  if (bitmap) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.drawImage(bitmap, cx * bitmap.width, cy * bitmap.height, cw * bitmap.width, ch * bitmap.height, r.x, r.y, r.w, r.h);
+  } else {
+    ctx.fillStyle = "#f4f4f5";
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = "#71717a";
+    ctx.font = "500 24px system-ui, sans-serif";
+    ctx.fillText(pdfs.isFailed(bg) ? labels.failed : labels.loading, r.x + 32, r.y + 56);
+  }
+  // A hairline edge, so the margin reads as the board's and not the PDF's.
+  ctx.strokeStyle = "#d4d4d8";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(r.x, r.y, r.w, r.h);
+  return !!bitmap;
 }
 
 export function drawStroke(ctx: CanvasRenderingContext2D, cache: StrokeCache, stroke: Stroke) {

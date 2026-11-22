@@ -28,15 +28,39 @@ export type Stroke = {
   points: Point[];
 };
 
+/**
+ * What a page is drawn on, under the ink. A PDF page is laid out to fill the
+ * page's height from the left edge, so a portrait page leaves a wide writing
+ * margin on its right. A `crop` (from the snip tool) is a region of that PDF
+ * page, as fractions of its width and height, shown small in the top-left
+ * corner of an otherwise empty page — room to work the problem out.
+ */
+export type PdfBackground = {
+  kind: "pdf";
+  blockId: string;
+  /** 1-based page number in the PDF. */
+  page: number;
+  /** File name, for the page label. */
+  name: string;
+  /** Width / height of what is shown (the crop, if there is one). */
+  aspect: number;
+  crop?: [number, number, number, number];
+};
+
 export type BoardDoc = {
   pages: string[];
   strokes: Record<string, Stroke>;
   deleted: string[];
+  /** By page id. Set once when the page is made and never changed. */
+  backgrounds: Record<string, PdfBackground>;
+  /** Pages someone deleted. Tombstoned like strokes, so a merge can't bring them back. */
+  removedPages: string[];
 };
 
 // Generous caps: a dense hour of writing is a few hundred strokes. They stop a
 // broken or hostile client from filling the row, not real use.
-const MAX_PAGES = 100;
+// 300 pages: a few whole PDFs inserted into one board.
+const MAX_PAGES = 300;
 const MAX_STROKES = 20_000;
 const MAX_POINTS = 4_000;
 
@@ -50,10 +74,22 @@ export const strokeSchema = z.object({
   size: z.number().min(0.5).max(80),
   points: z.array(pointSchema).max(MAX_POINTS),
 });
+const fraction = z.number().min(0).max(1);
+export const pdfBackgroundSchema = z.object({
+  kind: z.literal("pdf"),
+  blockId: z.string().regex(/^[0-9a-f-]{36}$/i),
+  page: z.number().int().min(1).max(10_000),
+  name: z.string().max(300),
+  aspect: z.number().min(0.05).max(20),
+  crop: z.tuple([fraction, fraction, fraction, fraction]).optional(),
+});
 export const boardDocSchema = z.object({
   pages: z.array(z.string().min(1).max(64)).min(1).max(MAX_PAGES),
   strokes: z.record(z.string(), strokeSchema),
   deleted: z.array(z.string().max(64)).max(MAX_STROKES * 2),
+  // Defaults: boards saved before PDF pages existed have neither.
+  backgrounds: z.record(z.string(), pdfBackgroundSchema).default({}),
+  removedPages: z.array(z.string().max(64)).max(MAX_PAGES * 10).default([]),
 });
 
 export function newId(): string {
@@ -61,7 +97,7 @@ export function newId(): string {
 }
 
 export function emptyDoc(): BoardDoc {
-  return { pages: [newId()], strokes: {}, deleted: [] };
+  return { pages: [newId()], strokes: {}, deleted: [], backgrounds: {}, removedPages: [] };
 }
 
 /**
@@ -70,8 +106,14 @@ export function emptyDoc(): BoardDoc {
  * mid-draw); anything either side erased stays erased.
  */
 export function mergeDocs(a: BoardDoc, b: BoardDoc): BoardDoc {
-  const pages = [...a.pages];
-  for (const p of b.pages) if (!pages.includes(p)) pages.push(p);
+  const removedPages = Array.from(new Set([...a.removedPages, ...b.removedPages]));
+  const removed = new Set(removedPages);
+  const order = [...a.pages];
+  for (const p of b.pages) if (!order.includes(p)) order.push(p);
+  let pages = order.filter((p) => !removed.has(p));
+  // Never end with no pages at all: both sides deleted everything they had.
+  if (pages.length === 0) pages = [newId()];
+  const backgrounds = { ...b.backgrounds, ...a.backgrounds };
   const deleted = Array.from(new Set([...a.deleted, ...b.deleted]));
   const gone = new Set(deleted);
   const strokes: Record<string, Stroke> = {};
@@ -84,6 +126,8 @@ export function mergeDocs(a: BoardDoc, b: BoardDoc): BoardDoc {
     pages: pages.slice(0, MAX_PAGES),
     strokes: Object.fromEntries(Object.entries(strokes).slice(0, MAX_STROKES)),
     deleted,
+    backgrounds,
+    removedPages,
   };
 }
 
@@ -91,6 +135,21 @@ export function mergeDocs(a: BoardDoc, b: BoardDoc): BoardDoc {
 export function parseDoc(value: unknown): BoardDoc {
   const parsed = boardDocSchema.safeParse(value);
   return parsed.success ? parsed.data : emptyDoc();
+}
+
+export type Rect = { x: number; y: number; w: number; h: number };
+
+/** Where a page's background sits, in page units. See PdfBackground. */
+export function backgroundRect(bg: PdfBackground): Rect {
+  if (bg.crop) {
+    // A snip: as large as fits a corner box, never upscaled past it.
+    const maxW = 860;
+    const maxH = 560;
+    const w = Math.min(maxW, maxH * bg.aspect);
+    return { x: 40, y: 40, w, h: w / bg.aspect };
+  }
+  const h = Math.min(PAGE_H, PAGE_W / bg.aspect);
+  return { x: 0, y: 0, w: h * bg.aspect, h };
 }
 
 /** Rounds to 0.1 page unit: invisible on screen, and halves the payload. */
@@ -106,7 +165,8 @@ export type BoardEvent =
   | { type: "stroke-points"; id: string; points: Point[] }
   | { type: "add-strokes"; strokes: Stroke[] }
   | { type: "erase"; ids: string[] }
-  | { type: "page-add"; id: string; after: string | null }
+  | { type: "pages-add"; after: string | null; pages: { id: string; background?: PdfBackground }[] }
+  | { type: "page-remove"; id: string }
   | { type: "page-go"; id: string }
   | { type: "cursor"; page: string; x: number; y: number }
   | { type: "cursor-leave" }
