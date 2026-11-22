@@ -47,12 +47,36 @@ export type PdfBackground = {
   crop?: [number, number, number, number];
 };
 
+/**
+ * A practice question the student shared from a quiz, as it stood when they
+ * pressed "Ask tutor": the question without its answer, and what they had
+ * answered so far. A snapshot, not a link — the board never needs to load or
+ * check quiz data, and it reads the same later as notes.
+ */
+export type QuestionBackground = {
+  kind: "question";
+  /** Quiz title and question number, for the card header. */
+  title: string;
+  /** Text with $…$ maths, as MathText renders it. */
+  prompt: string;
+  /** Choices in the order the student saw them, already lettered ("A. …"). */
+  choices: string[];
+  /** Steps, parts or solution lines, already labelled. */
+  items: string[];
+  /** The student's answer so far, one line each; empty if they hadn't started. */
+  answer: string[];
+  /** Show the answer as code. */
+  code: boolean;
+};
+
+export type PageBackground = PdfBackground | QuestionBackground;
+
 export type BoardDoc = {
   pages: string[];
   strokes: Record<string, Stroke>;
   deleted: string[];
   /** By page id. Set once when the page is made and never changed. */
-  backgrounds: Record<string, PdfBackground>;
+  backgrounds: Record<string, PageBackground>;
   /** Pages someone deleted. Tombstoned like strokes, so a merge can't bring them back. */
   removedPages: string[];
 };
@@ -83,12 +107,23 @@ export const pdfBackgroundSchema = z.object({
   aspect: z.number().min(0.05).max(20),
   crop: z.tuple([fraction, fraction, fraction, fraction]).optional(),
 });
+const shortText = z.string().max(4000);
+export const questionBackgroundSchema = z.object({
+  kind: z.literal("question"),
+  title: z.string().max(300),
+  prompt: z.string().max(8000),
+  choices: z.array(shortText).max(12),
+  items: z.array(shortText).max(30),
+  answer: z.array(z.string().max(20_000)).max(30),
+  code: z.boolean(),
+});
+export const pageBackgroundSchema = z.discriminatedUnion("kind", [pdfBackgroundSchema, questionBackgroundSchema]);
 export const boardDocSchema = z.object({
   pages: z.array(z.string().min(1).max(64)).min(1).max(MAX_PAGES),
   strokes: z.record(z.string(), strokeSchema),
   deleted: z.array(z.string().max(64)).max(MAX_STROKES * 2),
   // Defaults: boards saved before PDF pages existed have neither.
-  backgrounds: z.record(z.string(), pdfBackgroundSchema).default({}),
+  backgrounds: z.record(z.string(), pageBackgroundSchema).default({}),
   removedPages: z.array(z.string().max(64)).max(MAX_PAGES * 10).default([]),
 });
 
@@ -139,8 +174,12 @@ export function parseDoc(value: unknown): BoardDoc {
 
 export type Rect = { x: number; y: number; w: number; h: number };
 
+/** The question card's box: the left part of the page, the rest left for working. */
+export const QUESTION_CARD: Rect = { x: 0, y: 0, w: 860, h: PAGE_H };
+
 /** Where a page's background sits, in page units. See PdfBackground. */
-export function backgroundRect(bg: PdfBackground): Rect {
+export function backgroundRect(bg: PageBackground): Rect {
+  if (bg.kind === "question") return QUESTION_CARD;
   if (bg.crop) {
     // A snip: as large as fits a corner box, never upscaled past it.
     const maxW = 860;
@@ -165,7 +204,7 @@ export type BoardEvent =
   | { type: "stroke-points"; id: string; points: Point[] }
   | { type: "add-strokes"; strokes: Stroke[] }
   | { type: "erase"; ids: string[] }
-  | { type: "pages-add"; after: string | null; pages: { id: string; background?: PdfBackground }[] }
+  | { type: "pages-add"; after: string | null; pages: { id: string; background?: PageBackground }[] }
   | { type: "page-remove"; id: string }
   | { type: "page-go"; id: string }
   | { type: "cursor"; page: string; x: number; y: number }

@@ -14,7 +14,8 @@ import {
   type BoardDoc,
   type BoardEvent,
   type BoardMessage,
-  type PdfBackground,
+  QUESTION_CARD,
+  type PageBackground,
   type Point,
   type PresenceState,
   type Stroke,
@@ -23,6 +24,7 @@ import {
 import { NO_PRESSURE, StrokeCache, drawBackground, drawPdfBackground, drawStroke, hitsStroke } from "./strokes";
 import { PdfPages } from "./pdfPages";
 import { PdfPicker } from "./PdfPicker";
+import { QuestionCard, drawQuestionFallback } from "./QuestionCard";
 import { useT } from "@/lib/i18n/client";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, PlusIcon } from "@/components/ui/icons";
@@ -49,6 +51,7 @@ export function LiveBoard({
   sessionId,
   me,
   initialDoc,
+  initialPage,
   title,
   subtitle,
   backHref,
@@ -56,6 +59,8 @@ export function LiveBoard({
   sessionId: string;
   me: Me;
   initialDoc: BoardDoc;
+  /** Open on this page (a question just shared from a quiz) instead of the first. */
+  initialPage?: string;
   title: string;
   subtitle: string;
   backHref: string;
@@ -74,7 +79,8 @@ export function LiveBoard({
   const dirtyRef = useRef(true);
   const viewRef = useRef({ scale: 1, dpr: 1 });
 
-  const [pageId, setPageIdState] = useState(initialDoc.pages[0]);
+  const startPage = initialPage && initialDoc.pages.includes(initialPage) ? initialPage : initialDoc.pages[0];
+  const [pageId, setPageIdState] = useState(startPage);
   const pageRef = useRef(pageId);
   const [pages, setPages] = useState(initialDoc.pages);
   // Mirrors docRef's backgrounds for the toolbar (snip, page label). Set when pages change.
@@ -91,7 +97,10 @@ export function LiveBoard({
   const [connection, setConnection] = useState<Connection>("connecting");
   const [others, setOthers] = useState<PresenceState[]>([]);
   // Students follow the tutor's page until they turn a page themselves.
-  const [following, setFollowing] = useState(me.role === "STUDENT");
+  // …but not when they came here to show a question of their own.
+  const [following, setFollowing] = useState(me.role === "STUDENT" && startPage === initialDoc.pages[0]);
+  /** A question the student just shared, for the tutor's "take a look" prompt. */
+  const [sharedNotice, setSharedNotice] = useState<{ pageId: string; title: string } | null>(null);
   const followingRef = useRef(following);
   const tutorPageRef = useRef<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -183,14 +192,19 @@ export function LiveBoard({
       if (!res.ok) return;
       const body = (await res.json()) as { doc: BoardDoc | null };
       if (!body.doc) return;
+      const before = new Set(docRef.current.pages);
       docRef.current = mergeDocs(docRef.current, body.doc);
+      const doc = docRef.current;
+      const shared = doc.pages.find((p) => !before.has(p) && doc.backgrounds[p]?.kind === "question");
+      const sharedBg = shared ? doc.backgrounds[shared] : undefined;
+      if (shared && sharedBg?.kind === "question" && me.role === "TUTOR") setSharedNotice({ pageId: shared, title: sharedBg.title });
       syncPages();
       // A PDF that wasn't shared yet when we first asked for it may be now.
       pdfs.retryFailed();
     } catch {
       // Offline: the next sync on reconnect tries again.
     }
-  }, [sessionId, syncPages, pdfs]);
+  }, [sessionId, syncPages, pdfs, me.role]);
 
   // --- doc mutations -------------------------------------------------------
 
@@ -285,7 +299,7 @@ export function LiveBoard({
    * is only served once the saved board shows it.
    */
   const insertPages = useCallback(
-    async (newPages: { id: string; background?: PdfBackground }[]) => {
+    async (newPages: { id: string; background?: PageBackground }[]) => {
       if (newPages.length === 0) return;
       const doc = docRef.current;
       const after = pageRef.current;
@@ -541,7 +555,18 @@ export function LiveBoard({
       drawBackground(ctx);
       const page = pageRef.current;
       const bg = docRef.current.backgrounds[page];
-      if (bg) drawPdfBackground(ctx, bg, pdfs, scale * dpr, labels);
+      if (bg?.kind === "pdf") drawPdfBackground(ctx, bg, pdfs, scale * dpr, labels);
+      else if (bg?.kind === "question") {
+        // See-through where the card is: it is HTML (for the maths) under this canvas.
+        const r = QUESTION_CARD;
+        ctx.clearRect(r.x, r.y, r.w, r.h);
+        ctx.strokeStyle = "#d4d4d8";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(r.x + r.w, 0);
+        ctx.lineTo(r.x + r.w, r.h);
+        ctx.stroke();
+      }
       for (const s of Object.values(docRef.current.strokes)) {
         if (s.page === page) drawStroke(ctx, cacheRef.current, s);
       }
@@ -584,7 +609,7 @@ export function LiveBoard({
   /** Turns the dragged box into a new page holding that region of the PDF. */
   const finishSnip = (box: { x0: number; y0: number; x1: number; y1: number }) => {
     const bg = docRef.current.backgrounds[pageRef.current];
-    if (!bg) return;
+    if (bg?.kind !== "pdf") return;
     const shown = backgroundRect(bg);
     const sel = normRect(box);
     // Only the part of the box that is over the PDF counts.
@@ -639,7 +664,7 @@ export function LiveBoard({
     e.currentTarget.setPointerCapture(e.pointerId);
     const { x, y } = toPage(e);
     // Snip only means something over a PDF; elsewhere the pen carries on.
-    const current = tool === "snip" && !docRef.current.backgrounds[pageRef.current] ? "pen" : tool;
+    const current = tool === "snip" && docRef.current.backgrounds[pageRef.current]?.kind !== "pdf" ? "pen" : tool;
     if (current !== tool) setTool(current);
     if (current === "snip") {
       snipRef.current = { pointerId: e.pointerId, x0: x, y0: y, x1: x, y1: y };
@@ -764,7 +789,8 @@ export function LiveBoard({
     const ctx = out.getContext("2d")!;
     drawBackground(ctx);
     const bg = docRef.current.backgrounds[pageRef.current];
-    if (bg) drawPdfBackground(ctx, bg, pdfs, 1, labels);
+    if (bg?.kind === "pdf") drawPdfBackground(ctx, bg, pdfs, 1, labels);
+    else if (bg?.kind === "question") drawQuestionFallback(ctx, bg);
     for (const s of Object.values(docRef.current.strokes)) {
       if (s.page === pageRef.current) drawStroke(ctx, cacheRef.current, s);
     }
@@ -784,6 +810,8 @@ export function LiveBoard({
   const toolSizes = tool === "highlighter" ? SIZES.highlighter : SIZES.pen;
   const tutorHere = others.some((p) => p.role === "TUTOR");
   const pageBg = backgrounds[pageId];
+  const pdfBg = pageBg?.kind === "pdf" ? pageBg : undefined;
+  const questionBg = pageBg?.kind === "question" ? pageBg : undefined;
   const inkTool = tool === "pen" || tool === "highlighter";
 
   return (
@@ -818,10 +846,16 @@ export function LiveBoard({
 
       <div ref={wrapRef} className="relative min-h-0 flex-1 overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
+          <div className="relative" style={{ width: canvasSize.w, height: canvasSize.h }}>
+          {questionBg && canvasSize.w > 0 && (
+            <div className="absolute inset-0 overflow-hidden rounded-sm bg-white">
+              <QuestionCard bg={questionBg} scale={canvasSize.w / PAGE_W} viewerIsTutor={me.role === "TUTOR"} />
+            </div>
+          )}
           <canvas
             ref={canvasRef}
             style={{ width: canvasSize.w, height: canvasSize.h, touchAction: "none" }}
-            className={`rounded-sm bg-white shadow-md ring-1 ring-zinc-200 ${tool === "eraser" ? "cursor-cell" : tool === "snip" ? "cursor-copy" : "cursor-crosshair"}`}
+            className={`relative rounded-sm shadow-md ring-1 ring-zinc-200 ${tool === "eraser" ? "cursor-cell" : tool === "snip" ? "cursor-copy" : "cursor-crosshair"}`}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={endStroke}
@@ -829,13 +863,32 @@ export function LiveBoard({
             onPointerLeave={onPointerLeave}
             onContextMenu={(e) => e.preventDefault()}
           />
+          </div>
         </div>
-        {pageBg && (
+        {sharedNotice && (
+          <div className="absolute right-3 top-3 flex max-w-sm items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm text-white shadow-lg">
+            <span className="min-w-0 flex-1 truncate">{t("board.sharedNotice", { title: sharedNotice.title })}</span>
+            <button
+              type="button"
+              onClick={() => {
+                userTurnsPage(sharedNotice.pageId);
+                setSharedNotice(null);
+              }}
+              className="shrink-0 rounded bg-white px-2 py-0.5 text-xs font-semibold text-violet-700 hover:bg-violet-50"
+            >
+              {t("board.sharedOpen")}
+            </button>
+            <button type="button" onClick={() => setSharedNotice(null)} aria-label={t("action.cancel")} className="shrink-0 text-white/80 hover:text-white">
+              ×
+            </button>
+          </div>
+        )}
+        {pdfBg && (
           <p className="pointer-events-none absolute bottom-3 left-3 max-w-[45%] truncate rounded-md bg-white/90 px-2 py-1 text-xs text-zinc-600 shadow-sm ring-1 ring-zinc-200">
-            {pageBg.name} · {t(pageBg.crop ? "board.pdfSnipLabel" : "board.pdfPageLabel", { n: pageBg.page })}
+            {pdfBg.name} · {t(pdfBg.crop ? "board.pdfSnipLabel" : "board.pdfPageLabel", { n: pdfBg.page })}
           </p>
         )}
-        {tool === "snip" && pageBg && (
+        {tool === "snip" && pdfBg && (
           <p className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white shadow-sm">
             {t("board.snipHint")}
           </p>
@@ -858,7 +911,7 @@ export function LiveBoard({
           <ToolButton active={tool === "eraser"} label={t("board.eraser")} onClick={() => setTool("eraser")}>
             <EraserIcon />
           </ToolButton>
-          {pageBg && (
+          {pdfBg && (
             <ToolButton active={tool === "snip"} label={t("board.snip")} onClick={() => setTool(tool === "snip" ? "pen" : "snip")}>
               <SnipIcon />
             </ToolButton>

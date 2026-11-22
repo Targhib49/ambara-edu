@@ -15,8 +15,15 @@ export const metadata: Metadata = { title: "Board · AmbaraEdu" };
  * The live whiteboard for one session, full screen and outside both shells so
  * the page gets every pixel. Only that session's tutor and student get in.
  */
-export default async function BoardPage({ params }: { params: Promise<{ sessionId: string }> }) {
+export default async function BoardPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ sessionId: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
   const { sessionId } = await params;
+  const { page } = await searchParams;
   requireUuids(sessionId);
   const user = await requireUser();
   const session = await boardSessionFor(sessionId, user.id);
@@ -33,6 +40,7 @@ export default async function BoardPage({ params }: { params: Promise<{ sessionI
         sessionId={session.id}
         me={{ id: user.id, name: user.name, role: isTutor ? "TUTOR" : "STUDENT" }}
         initialDoc={session.board ? parseDoc(session.board.doc) : emptyDoc()}
+        initialPage={page}
         title={t("board.title", { name: other })}
         subtitle={formatSessionInstant(session.startTime, language)}
         backHref={isTutor ? "/tutor/sessions" : "/sessions"}

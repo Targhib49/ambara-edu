@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { QuestionAnswerInput, type QuestionForForm } from "@/components/quiz/QuestionAnswerInput";
+import { MathText } from "@/components/quiz/MathText";
+import { ShareQuestionButton } from "@/components/board/ShareQuestionButton";
 import { checkReviewAnswer, recordReviewRun } from "@/lib/actions/practice";
 import { runTestCases } from "@/lib/quiz/codeRunner";
 import { btnPrimary, cardCls } from "@/components/ui/styles";
@@ -19,12 +21,15 @@ export function ReviewPlayer({
   questions,
   sourceTitles,
   initialBest,
+  boardSessionId,
 }: {
   quizId: string;
   questions: QuestionForForm[];
   /** Which quiz each question came from, so a student can place it. */
   sourceTitles: string[];
   initialBest: number | null;
+  /** The live session's board, when there is one: shows "Ask tutor". */
+  boardSessionId: string | null;
 }) {
   const t = useT();
   const [index, setIndex] = useState(0);
@@ -108,12 +113,24 @@ export function ReviewPlayer({
       <div className={`${cardCls} space-y-4 p-5`}>
         <div>
           {sourceTitles[index] && <p className="text-xs text-zinc-400">{t("review.from", { title: sourceTitles[index] })}</p>}
-          <p className="mt-1 text-sm font-medium text-zinc-900">{current.prompt}</p>
+          <p className="mt-1 text-sm font-medium text-zinc-900">
+            <MathText text={current.prompt} />
+          </p>
           <div className="mt-3">
             <fieldset disabled={phase.kind !== "answering" || pending} className="contents">
               <QuestionAnswerInput question={current} response={response} onChange={setResponse} />
             </fieldset>
           </div>
+          {boardSessionId && phase.kind === "answering" && (
+            <div className="mt-3">
+              <ShareQuestionButton
+                sessionId={boardSessionId}
+                question={current}
+                response={response}
+                title={t("board.qTitle", { quiz: sourceTitles[index] ?? "", n: index + 1 })}
+              />
+            </div>
+          )}
         </div>
 
         {phase.kind === "checked" && (

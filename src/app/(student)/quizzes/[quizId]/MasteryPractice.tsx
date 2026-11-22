@@ -7,6 +7,7 @@ import { checkPracticeAnswer, restartPractice, revealPracticeSolution } from "@/
 import { runTestCases } from "@/lib/quiz/codeRunner";
 import { btnPrimary, btnSecondary, cardCls } from "@/components/ui/styles";
 import { useT } from "@/lib/i18n/client";
+import { ShareQuestionButton } from "@/components/board/ShareQuestionButton";
 
 type Phase =
   | { kind: "answering" }
@@ -28,12 +29,17 @@ export function MasteryPractice({
   questions,
   initialMasteredIds,
   runs,
+  boardSessionId,
+  quizTitle,
 }: {
   quizId: string;
   /** Only questions that can be checked instantly, in authored order. */
   questions: QuestionForForm[];
   initialMasteredIds: string[];
   runs: number;
+  /** The live session's board, when there is one: shows "Ask tutor". */
+  boardSessionId: string | null;
+  quizTitle: string;
 }) {
   const t = useT();
   const [pending, startTransition] = useTransition();
@@ -147,6 +153,16 @@ export function MasteryPractice({
                 />
               </fieldset>
             </div>
+            {boardSessionId && phase.kind !== "correct" && (
+              <div className="mt-3">
+                <ShareQuestionButton
+                  sessionId={boardSessionId}
+                  question={current}
+                  response={response}
+                  title={t("board.qTitle", { quiz: quizTitle, n: questions.indexOf(current) + 1 })}
+                />
+              </div>
+            )}
           </div>
 
           {phase.kind === "correct" && (

@@ -28,7 +28,7 @@ export async function GET(
 
   if (session.tutorId !== user.id) {
     const doc = session.board ? parseDoc(session.board.doc) : null;
-    const onBoard = doc && Object.values(doc.backgrounds).some((bg) => bg.blockId === blockId);
+    const onBoard = doc && Object.values(doc.backgrounds).some((bg) => bg.kind === "pdf" && bg.blockId === blockId);
     if (!onBoard) return new NextResponse("Not found", { status: 404 });
   }
 

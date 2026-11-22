@@ -25,6 +25,7 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 import { QuizTakeForm } from "./QuizTakeForm";
 import { TimedQuizTakeForm } from "./TimedQuizTakeForm";
 import { MasteryPractice } from "./MasteryPractice";
+import { liveSessionForStudent } from "@/lib/board/access";
 import { isPracticable } from "@/lib/quiz/practice";
 import { type Crumb } from "@/components/ui/Breadcrumbs";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -63,6 +64,9 @@ export default async function StudentQuizPage({
   if (!quiz) notFound();
 
   const isPractice = !isGradedStyle(quiz.style);
+  // "Ask tutor" puts a practice question on the live session's board. Graded
+  // quizzes never get it: the tutor explaining one would be doing it for them.
+  const boardSessionId = isPractice ? await liveSessionForStudent(student.id, nowMs()) : null;
   // A review draws a fresh set each visit, from chapters before this one.
   const reviewSet =
     quiz.style === "REVIEW"
@@ -168,6 +172,7 @@ export default async function StudentQuizPage({
           questions={reviewSet.map(toQuestionForForm)}
           sourceTitles={reviewSet.map((q) => q.quiz.title)}
           initialBest={practice?.bestScore ?? null}
+          boardSessionId={boardSessionId}
         />
       ) : quiz.style === "DRILL" ? (
         <DrillPlayer
@@ -184,6 +189,8 @@ export default async function StudentQuizPage({
           questions={quiz.questions.filter(isPracticable).map(toQuestionForForm)}
           initialMasteredIds={practice?.masteredIds ?? []}
           runs={practice?.runs ?? 0}
+          boardSessionId={boardSessionId}
+          quizTitle={quiz.title}
         />
       ) : isTimed ? (
         <>
