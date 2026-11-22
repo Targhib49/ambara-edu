@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Dev only: lets a second browser tab sign in as another account on
+  // 127.0.0.1:3000 next to localhost:3000 (separate cookies), which is how the
+  // two-sided whiteboard is tested locally.
+  allowedDevOrigins: ["127.0.0.1"],
   experimental: {
     serverActions: {
       // Server actions cap request bodies at 1 MB by default, which silently

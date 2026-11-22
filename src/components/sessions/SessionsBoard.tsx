@@ -19,6 +19,7 @@ export type StudentSessionBoardRow = {
   notes: string;
   statusReason: string | null;
   proposedAltTime: string | null;
+  boardOpen?: boolean;
 };
 
 // Shared by both roles; server pages can't pass render callbacks across the

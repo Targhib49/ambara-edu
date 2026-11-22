@@ -71,7 +71,9 @@ export default async function StudentSessionsPage() {
     (s) => s.status === "RESCHEDULE_REQUESTED_BY_TUTOR" || s.status === "AWAITING_RESCHEDULE"
   ).length;
 
+  const BOARD_OPENS_BEFORE_MS = 30 * 60_000;
   const rows = sessions.map((s) => ({
+    boardOpen: s.startTime.getTime() - BOARD_OPENS_BEFORE_MS <= now,
     id: s.id,
     tutorId: s.tutorId,
     tutorName: s.tutor.name,

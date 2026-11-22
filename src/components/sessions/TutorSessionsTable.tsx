@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useState, useTransition } from "react";
 import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { StatusBadge } from "./StatusBadge";
@@ -335,6 +337,9 @@ export function TutorSessionsTable({ sessions }: { sessions: TutorSessionTableRo
         if (s.status === "CANCELLED") return <span className="text-xs text-zinc-400">—</span>;
         return (
           <div className="flex flex-wrap justify-end gap-1.5">
+            <Link href={`/board/${s.id}`} className={smallBtn}>
+              {t("board.open")}
+            </Link>
             {s.status === "RESCHEDULE_REQUESTED_BY_STUDENT" && (
               <>
                 <button

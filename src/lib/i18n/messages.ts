@@ -1746,6 +1746,33 @@ export const MESSAGES = {
   "guided.runShortcut": { ID: "Jalankan main.cpp (Ctrl/\u2318 + Enter)", EN: "Run main.cpp (Ctrl/\u2318 + Enter)" },
   "guided.studentDone": { ID: "selesai", EN: "finished" },
 
+  // --- live whiteboard ------------------------------------------------------
+  "board.title": { ID: "Papan tulis · {name}", EN: "Whiteboard · {name}" },
+  "board.open": { ID: "Papan tulis", EN: "Whiteboard" },
+  "board.join": { ID: "Buka papan tulis", EN: "Open whiteboard" },
+  "board.back": { ID: "Kembali ke sesi", EN: "Back to sessions" },
+  "board.you": { ID: "Kamu", EN: "You" },
+  "board.waitingStudent": { ID: "Menunggu siswa bergabung…", EN: "Waiting for your student to join…" },
+  "board.waitingTutor": { ID: "Menunggu tutor bergabung…", EN: "Waiting for your tutor to join…" },
+  "board.pen": { ID: "Pena (P)", EN: "Pen (P)" },
+  "board.highlighter": { ID: "Stabilo (H)", EN: "Highlighter (H)" },
+  "board.eraser": { ID: "Penghapus (E)", EN: "Eraser (E)" },
+  "board.size": { ID: "Ukuran {n}", EN: "Size {n}" },
+  "board.undo": { ID: "Urungkan (Ctrl+Z)", EN: "Undo (Ctrl+Z)" },
+  "board.redo": { ID: "Ulangi (Ctrl+Shift+Z)", EN: "Redo (Ctrl+Shift+Z)" },
+  "board.clear": { ID: "Bersihkan halaman", EN: "Clear page" },
+  "board.clearConfirm": { ID: "Bersihkan halaman ini", EN: "Clear this page" },
+  "board.download": { ID: "Unduh halaman (PNG)", EN: "Download page (PNG)" },
+  "board.prevPage": { ID: "Halaman sebelumnya", EN: "Previous page" },
+  "board.nextPage": { ID: "Halaman berikutnya", EN: "Next page" },
+  "board.addPage": { ID: "Tambah halaman", EN: "Add page" },
+  "board.followTutor": { ID: "Ikuti tutor", EN: "Follow tutor" },
+  "board.connecting": { ID: "Menyambung…", EN: "Connecting…" },
+  "board.offline": { ID: "Terputus — mencoba lagi", EN: "Disconnected — retrying" },
+  "board.saved": { ID: "Tersimpan", EN: "Saved" },
+  "board.saving": { ID: "Menyimpan…", EN: "Saving…" },
+  "board.saveFailed": { ID: "Gagal menyimpan", EN: "Couldn't save" },
+
   // --- error and not-found pages -------------------------------------------
   "error.title": { ID: "Ada yang tidak beres", EN: "Something went wrong" },
   "error.body": {

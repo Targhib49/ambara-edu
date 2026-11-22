@@ -333,10 +333,25 @@ model Session {
   updatedAt       DateTime      @updatedAt
   // The invoice line this session was billed on, if it has been.
   invoiceItem     InvoiceItem?
+  // The shared whiteboard drawn on during this session, once anyone opens it.
+  board           SessionBoard?
 
   @@index([tutorId, startTime])
   @@index([studentId, startTime])
   @@index([seriesId])
+}
+
+// The live whiteboard for one session. Strokes travel peer to peer over a
+// Supabase Realtime channel ("board:<sessionId>"); this row is the saved copy
+// that late joiners load and that stays behind as the session's notes. `doc`
+// is a BoardDoc (src/lib/board/doc.ts): append-only strokes plus tombstones, so
+// two clients saving different snapshots merge instead of overwriting.
+model SessionBoard {
+  sessionId String   @id @db.Uuid
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  doc       Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // A weekly window the tutor is open to teach in, as a weekday plus a start

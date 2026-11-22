@@ -34,6 +34,8 @@ export function StudentSessionRow({
     notes: string;
     statusReason: string | null;
     proposedAltTime: string | null;
+    /** From half an hour before the start onwards; the board then stays as notes. Worked out on the server. */
+    boardOpen?: boolean;
   };
   isPast: boolean;
   /**
@@ -82,6 +84,14 @@ export function StudentSessionRow({
         </div>
         <StatusBadge status={session.status} />
       </div>
+
+      {session.boardOpen && session.status !== "CANCELLED" && (
+        <div className="mt-3">
+          <Link href={`/board/${session.id}`} className={isPast ? smallBtn : primaryBtn}>
+            {isPast ? t("board.open") : t("board.join")}
+          </Link>
+        </div>
+      )}
 
       {session.status === "AWAITING_RESCHEDULE" && (
         <div className="mt-3 space-y-2.5 rounded-lg border border-violet-200 bg-violet-50/60 p-3">

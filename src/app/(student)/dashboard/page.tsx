@@ -143,6 +143,8 @@ export default async function StudentDashboardPage() {
       status: s.status,
       notes: s.notes,
       proposedAltTime: s.proposedAltTime?.toISOString() ?? null,
+      // The whiteboard opens half an hour before the start.
+      boardOpen: s.startTime.getTime() - 30 * 60_000 <= now,
     }));
   const thisMonth = sessions.filter((s) => {
     const d = s.startTime;
