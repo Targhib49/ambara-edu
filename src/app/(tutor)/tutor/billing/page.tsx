@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { visibleEmail } from "@/lib/students/inviteEmail";
 import { requireTutor } from "@/lib/auth";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SlideOverButton } from "@/components/ui/SlideOver";
@@ -89,7 +90,7 @@ export default async function TutorBillingPage() {
     return {
       id: s.id,
       name: s.name,
-      email: s.email,
+      email: visibleEmail(s.email),
       plans,
       uninvoiced: s.sessionsAsStudent.filter((x) => x.status === "COMPLETED").length,
       unmarked: s.sessionsAsStudent.filter((x) => x.status === "CONFIRMED").length,
