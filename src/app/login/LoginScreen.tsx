@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -180,7 +181,11 @@ export function LoginScreen() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-zinc-400">{t("login.forgot")}</p>
+          <p className="mt-6 text-center text-sm">
+            <Link href="/forgot" className="text-brand-ink hover:underline">
+              {t("login.forgot")}
+            </Link>
+          </p>
         </div>
       </section>
     </main>

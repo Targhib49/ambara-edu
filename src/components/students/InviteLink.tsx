@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { newInviteLink, type InviteResult } from "@/lib/actions/students";
+import { newInviteLink, sendPasswordResetLink, type InviteResult } from "@/lib/actions/students";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import { btnPrimary, btnSecondary } from "@/components/ui/styles";
 import { useT } from "@/lib/i18n/client";
@@ -14,7 +14,11 @@ import { Alert } from "@/components/ui/Alert";
 export function InviteLinkCard({ invite }: { invite: InviteResult }) {
   const t = useT();
   const [copied, setCopied] = useState(false);
-  const message = t("invite.whatsappText", { name: invite.name.split(" ")[0], link: invite.url });
+  const reset = invite.kind === "RESET";
+  const first = invite.name.split(" ")[0];
+  const message = reset
+    ? t("resetLink.whatsappText", { name: first, link: invite.url })
+    : t("invite.whatsappText", { name: first, link: invite.url });
 
   return (
     <div className="space-y-3 rounded-lg border border-brand-line bg-brand-soft/60 p-4">
@@ -50,7 +54,7 @@ export function InviteLinkCard({ invite }: { invite: InviteResult }) {
       </div>
       <p className="text-xs text-ink-muted">
         {invite.emailedTo ? t("invite.emailed", { email: invite.emailedTo }) + " " : ""}
-        {t("invite.validity")}
+        {reset ? t("resetLink.validity") : t("invite.validity")}
       </p>
     </div>
   );
@@ -58,6 +62,37 @@ export function InviteLinkCard({ invite }: { invite: InviteResult }) {
 
 /** "New link" for a student who hasn't joined: replaces (and so cancels) the old one. */
 export function NewInviteLinkPanel({ studentId, name }: { studentId: string; name: string }) {
+  const t = useT();
+  return (
+    <IssueLinkPanel
+      intro={t("invite.newIntro", { name })}
+      buttonLabel={t("invite.newLink")}
+      issue={() => newInviteLink(studentId)}
+    />
+  );
+}
+
+/** "Send reset link" for a student who has joined and forgotten their password. */
+export function ResetLinkPanel({ studentId, name }: { studentId: string; name: string }) {
+  const t = useT();
+  return (
+    <IssueLinkPanel
+      intro={t("resetLink.intro", { name })}
+      buttonLabel={t("resetLink.create")}
+      issue={() => sendPasswordResetLink(studentId)}
+    />
+  );
+}
+
+function IssueLinkPanel({
+  intro,
+  buttonLabel,
+  issue,
+}: {
+  intro: string;
+  buttonLabel: string;
+  issue: () => Promise<{ error?: string; invite?: InviteResult }>;
+}) {
   const t = useT();
   const panel = useSlideOver();
   const [pending, startTransition] = useTransition();
@@ -79,7 +114,7 @@ export function NewInviteLinkPanel({ studentId, name }: { studentId: string; nam
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-ink-muted">{t("invite.newIntro", { name })}</p>
+      <p className="text-sm text-ink-muted">{intro}</p>
       {error && <Alert tone="danger">{error}</Alert>}
       <div className="flex justify-end gap-2 border-t border-line-soft pt-4">
         {panel && (
@@ -93,14 +128,14 @@ export function NewInviteLinkPanel({ studentId, name }: { studentId: string; nam
           onClick={() =>
             startTransition(async () => {
               setError(null);
-              const result = await newInviteLink(studentId);
+              const result = await issue();
               if (result.error) setError(result.error);
               else if (result.invite) setInvite(result.invite);
             })
           }
           className={btnPrimary}
         >
-          {pending ? t("invite.creating") : t("invite.newLink")}
+          {pending ? t("invite.creating") : buttonLabel}
         </button>
       </div>
     </div>

@@ -8,10 +8,10 @@ import { StudentGroup } from "@/generated/prisma/enums";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendVerificationEmail } from "@/lib/emailVerification";
 import { generatePassword } from "@/lib/passwords";
-import { issueInvite, sendInviteEmail } from "@/lib/invites";
+import { RESET_TTL_MS, issueInvite, issueResetLink, sendInviteEmail, sendResetEmail } from "@/lib/invites";
 import { isPlaceholderEmail, placeholderEmailFor } from "@/lib/students/placeholder";
 
-export type InviteResult = { name: string; url: string; emailedTo: string | null };
+export type InviteResult = { kind: "JOIN" | "RESET"; name: string; url: string; emailedTo: string | null };
 export type CreateStudentState = { error?: string; invite?: InviteResult };
 
 const looksLikeEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -60,7 +60,7 @@ export async function createStudent(
   const emailed = email ? await sendInviteEmail({ to: email, name, language: created.language, url }) : false;
 
   revalidatePath("/tutor/students");
-  return { invite: { name, url, emailedTo: emailed ? email : null } };
+  return { invite: { kind: "JOIN", name, url, emailedTo: emailed ? email : null } };
 }
 
 export type NewInviteState = { error?: string; invite?: InviteResult };
@@ -86,7 +86,27 @@ export async function newInviteLink(studentId: string): Promise<NewInviteState> 
     : false;
   revalidatePath("/tutor/students");
   revalidatePath(`/tutor/students/${student.id}`);
-  return { invite: { name: student.name, url, emailedTo: emailed ? suggested : null } };
+  return { invite: { kind: "JOIN", name: student.name, url, emailedTo: emailed ? suggested : null } };
+}
+
+/**
+ * A one-time link for a joined student to choose a new password — what the
+ * tutor sends instead of reading out a temporary one. Their current password
+ * keeps working until the link is used. Emailed too when mail is set up.
+ */
+export async function sendPasswordResetLink(studentId: string): Promise<NewInviteState> {
+  const t = await getT();
+  await requireTutor();
+  const student = await db.user.findUnique({
+    where: { id: studentId },
+    select: { id: true, name: true, role: true, email: true, language: true },
+  });
+  if (!student || student.role !== "STUDENT") return { error: t("action.notAStudent") };
+  if (isPlaceholderEmail(student.email)) return { error: t("action.invitePendingUseLink") };
+
+  const url = await issueResetLink(student.id, RESET_TTL_MS);
+  const emailed = await sendResetEmail({ to: student.email, name: student.name, language: student.language, url, ttl: "day" });
+  return { invite: { kind: "RESET", name: student.name, url, emailedTo: emailed ? student.email : null } };
 }
 
 export async function resendVerificationEmail(studentId: string) {

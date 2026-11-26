@@ -19,7 +19,7 @@ import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/f
 import { getLanguage, getT } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { ResetPasswordPanel } from "./ResetPasswordPanel";
-import { NewInviteLinkPanel } from "@/components/students/InviteLink";
+import { NewInviteLinkPanel, ResetLinkPanel } from "@/components/students/InviteLink";
 import { isPlaceholderEmail } from "@/lib/students/placeholder";
 import {
   AssignCourseForm,
@@ -512,14 +512,25 @@ export default async function StudentDetailPage({
                     <NewInviteLinkPanel studentId={student.id} name={student.name} />
                   </SlideOverButton>
                 ) : (
-                  <SlideOverButton
-                    label={t("studentPage.resetPassword")}
-                    title={t("studentPage.resetPasswordTitle", { name: student.name })}
-                    variant="secondary"
-                    icon="none"
-                  >
-                    <ResetPasswordPanel studentId={student.id} name={student.name} />
-                  </SlideOverButton>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <SlideOverButton
+                      label={t("resetLink.create")}
+                      title={t("resetLink.title", { name: student.name })}
+                      variant="secondary"
+                      icon="none"
+                    >
+                      <ResetLinkPanel studentId={student.id} name={student.name} />
+                    </SlideOverButton>
+                    {/* The old way, for when a link can't reach them in time (say, mid-session). */}
+                    <SlideOverButton
+                      label={t("resetLink.tempInstead")}
+                      title={t("studentPage.resetPasswordTitle", { name: student.name })}
+                      variant="small"
+                      icon="none"
+                    >
+                      <ResetPasswordPanel studentId={student.id} name={student.name} />
+                    </SlideOverButton>
+                  </div>
                 )}
               </div>
             </section>

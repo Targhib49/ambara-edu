@@ -655,8 +655,8 @@ export const MESSAGES = {
     EN: "Hasn\u2019t joined yet, and their invite link has expired. Make a new one to send.",
   },
   "profile.resetHint": {
-    ID: "Membuat password sementara yang baru dan mengeluarkan mereka dari semua perangkat.",
-    EN: "Sets a new temporary password and signs them out everywhere.",
+    ID: "Lupa password? Kirim link sekali pakai supaya mereka memilih password baru sendiri. Password lamanya tetap berlaku sampai link dipakai.",
+    EN: "Forgotten password? Send a one-time link so they choose a new one themselves. Their current password keeps working until the link is used.",
   },
   "profile.deleteTitle": { ID: "Hapus siswa", EN: "Delete student" },
   "profile.accountDetails": { ID: "Detail akun", EN: "Account details" },
@@ -687,7 +687,7 @@ export const MESSAGES = {
   "login.hidePassword": { ID: "Sembunyikan password", EN: "Hide password" },
   "login.signingIn": { ID: "Masuk\u2026", EN: "Signing in\u2026" },
   "login.signIn": { ID: "Masuk", EN: "Sign in" },
-  "login.forgot": { ID: "Lupa password? Minta tutor kamu untuk meresetnya.", EN: "Forgot your password? Ask your tutor to reset it." },
+  "login.forgot": { ID: "Lupa password?", EN: "Forgot your password?" },
   "verify.confirmTitle": { ID: "Konfirmasi email kamu", EN: "Confirm your email" },
   "verify.confirmBody": { ID: "Sekali klik dan kami tahu alamat ini benar-benar sampai ke kamu. Ini tidak mengubah cara kamu login.", EN: "One tap and we know this address reaches you. It doesn\u2019t change how you sign in." },
   "verify.confirming": { ID: "Mengonfirmasi\u2026", EN: "Confirming\u2026" },
@@ -1899,6 +1899,60 @@ export const MESSAGES = {
   "email.invite.body": {
     ID: "Tutor kamu sudah menyiapkan tempatmu di AmbaraEdu. Buka link ini untuk memilih email dan password:\n\n{link}\n\nLinknya cuma bisa dipakai sekali dan berlaku 7 hari.",
     EN: "Your tutor has set up a place for you on AmbaraEdu. Open this link to choose your email and password:\n\n{link}\n\nIt works once and expires in 7 days.",
+  },
+
+  // --- password reset links -----------------------------------------------
+  "resetLink.create": { ID: "Kirim link reset", EN: "Send reset link" },
+  "resetLink.title": { ID: "Link reset password untuk {name}", EN: "Password reset link for {name}" },
+  "resetLink.intro": {
+    ID: "Ini membuat link sekali pakai supaya {name} memilih password baru. Link reset sebelumnya langsung tidak berlaku. Password lamanya tetap bisa dipakai sampai link ini dibuka.",
+    EN: "This makes a one-time link for {name} to choose a new password. Any earlier reset link stops working. Their current password keeps working until this one is used.",
+  },
+  "resetLink.tempInstead": { ID: "Atau set password sementara", EN: "Or set a temporary password" },
+  "resetLink.whatsappText": {
+    ID: "Halo {name}! Ini link untuk membuat password AmbaraEdu yang baru: {link}\nLinknya cuma bisa dipakai sekali, berlaku 24 jam.",
+    EN: "Hi {name}! Here\u2019s the link to choose a new AmbaraEdu password: {link}\nIt works once and expires in 24 hours.",
+  },
+  "resetLink.validity": {
+    ID: "Link ini cuma bisa dipakai sekali dan berlaku 24 jam. Link ini tidak bisa ditampilkan lagi nanti; kalau hilang, buat yang baru.",
+    EN: "It works once and expires in 24 hours. It can\u2019t be shown again later; if it\u2019s lost, make a new one.",
+  },
+  "reset.title": { ID: "Pilih password baru", EN: "Choose a new password" },
+  "reset.intro": { ID: "Untuk akun {email}. Setelah disimpan, kamu langsung masuk.", EN: "For {email}. Once it\u2019s saved you\u2019re signed straight in." },
+  "reset.submit": { ID: "Simpan dan masuk", EN: "Save and sign in" },
+  "reset.saving": { ID: "Menyimpan\u2026", EN: "Saving\u2026" },
+  "reset.failed": { ID: "Password-nya belum bisa disimpan: {message}", EN: "Couldn\u2019t save the password: {message}" },
+  "reset.deadBody": {
+    ID: "Link reset cuma bisa dipakai sekali dan ada batas waktunya. Minta yang baru, atau masuk kalau kamu sudah ingat password-nya.",
+    EN: "Reset links work once and for a limited time. Ask for a new one, or sign in if you\u2019ve remembered your password.",
+  },
+  "reset.askAgain": { ID: "Minta link baru", EN: "Ask for a new link" },
+  "forgot.title": { ID: "Lupa password", EN: "Forgot your password" },
+  "forgot.intro": {
+    ID: "Masukkan email akun kamu dan kami kirim link untuk memilih password baru.",
+    EN: "Enter your account\u2019s email and we\u2019ll send a link to choose a new password.",
+  },
+  "forgot.askTutor": {
+    ID: "Minta tutor kamu untuk mengirim link reset. Kamu akan memilih password baru sendiri dari link itu.",
+    EN: "Ask your tutor to send you a reset link. You\u2019ll choose your new password yourself from it.",
+  },
+  "forgot.submit": { ID: "Kirim link reset", EN: "Send reset link" },
+  "forgot.sending": { ID: "Mengirim\u2026", EN: "Sending\u2026" },
+  "forgot.sent": {
+    ID: "Kalau alamat itu punya akun, link reset sudah dikirim ke sana. Linknya berlaku 1 jam; cek juga folder spam.",
+    EN: "If that address has an account, a reset link is on its way. It works for 1 hour; check your spam folder too.",
+  },
+  "forgot.noMail": { ID: "Email belum bisa dikirim. Minta tutor kamu untuk mengirim link reset.", EN: "Email can\u2019t be sent right now. Ask your tutor for a reset link." },
+  "forgot.back": { ID: "\u2190 Kembali ke halaman masuk", EN: "\u2190 Back to sign in" },
+  "email.reset.subject": { ID: "Reset password AmbaraEdu kamu", EN: "Reset your AmbaraEdu password" },
+  "email.reset.heading": { ID: "Halo, {name}", EN: "Hi, {name}" },
+  "email.reset.bodyHour": {
+    ID: "Buka link ini untuk memilih password baru:\n\n{link}\n\nLinknya cuma bisa dipakai sekali dan berlaku 1 jam. Kalau kamu tidak memintanya, abaikan saja email ini; password kamu tidak berubah.",
+    EN: "Open this link to choose a new password:\n\n{link}\n\nIt works once and expires in 1 hour. If you didn\u2019t ask for this, ignore this email; your password hasn\u2019t changed.",
+  },
+  "email.reset.bodyDay": {
+    ID: "Tutor kamu mengirim link untuk memilih password baru:\n\n{link}\n\nLinknya cuma bisa dipakai sekali dan berlaku 24 jam.",
+    EN: "Your tutor sent you a link to choose a new password:\n\n{link}\n\nIt works once and expires in 24 hours.",
   },
 
   // --- error and not-found pages -------------------------------------------
