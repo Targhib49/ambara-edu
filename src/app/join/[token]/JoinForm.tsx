@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { acceptInvite, type AcceptInviteState } from "@/lib/actions/invites";
 import { btnPrimary, hintCls, inputCls, labelCls } from "@/components/ui/styles";
 import { useT } from "@/lib/i18n/client";
+import { Alert } from "@/components/ui/Alert";
 
 export function JoinForm({ token, suggestedEmail }: { token: string; suggestedEmail: string }) {
   const t = useT();
@@ -58,16 +59,14 @@ export function JoinForm({ token, suggestedEmail }: { token: string; suggestedEm
           minLength={8}
           className={inputCls}
         />
-        <label className="mt-2 flex items-center gap-2 text-xs text-zinc-600">
+        <label className="mt-2 flex items-center gap-2 text-xs text-ink-muted">
           <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} />
           {t("login.showPassword")}
         </label>
       </div>
 
       {state.error && (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {state.error}
-        </p>
+        <Alert tone="danger">{state.error}</Alert>
       )}
 
       <button disabled={pending} className={`${btnPrimary} w-full py-2.5`}>

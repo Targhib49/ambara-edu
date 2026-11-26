@@ -14,16 +14,16 @@ export function EmailVerificationCard({ email, verified }: { email: string; veri
   return (
     <section className={`${cardCls} p-5`}>
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-medium text-zinc-900">{t("emailCard.title")}</h2>
+        <h2 className="font-medium text-ink">{t("emailCard.title")}</h2>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-            verified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800"
+            verified ? "bg-success-soft text-success-ink" : "bg-warning-soft text-warning-ink"
           }`}
         >
           {verified ? t("emailCard.confirmed") : t("emailCard.notConfirmed")}
         </span>
       </div>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="mt-1 text-sm text-ink-subtle">
         {verified ? t("emailCard.verifiedBody", { email }) : t("emailCard.pendingBody", { email })}
       </p>
       {!verified && (
@@ -40,7 +40,7 @@ export function EmailVerificationCard({ email, verified }: { email: string; veri
           >
             {pending ? t("emailCard.sending") : t("emailCard.resend")}
           </button>
-          {message && <span className="text-sm text-zinc-600">{message}</span>}
+          {message && <span className="text-sm text-ink-muted">{message}</span>}
         </div>
       )}
     </section>

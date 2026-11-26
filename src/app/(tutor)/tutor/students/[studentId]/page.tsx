@@ -233,21 +233,21 @@ export default async function StudentDetailPage({
   const projectsCard = openProjects.length > 0 && (
     <section className={cardCls}>
                 <SectionHead title={t("studentPage.openProjects")} />
-                <ul className="divide-y divide-zinc-100">
+                <ul className="divide-y divide-line-soft">
                   {openProjects.map((p) => (
                     <li key={p.quizId}>
-                      <Link href={`/tutor/quizzes/${p.quizId}`} className="block px-5 py-3 hover:bg-zinc-50">
+                      <Link href={`/tutor/quizzes/${p.quizId}`} className="block px-5 py-3 hover:bg-surface-muted">
                         <div className="flex items-baseline justify-between gap-3">
-                          <span className="truncate text-sm font-medium text-zinc-900">{p.title}</span>
-                          <span className="shrink-0 text-xs tabular-nums text-zinc-500">
+                          <span className="truncate text-sm font-medium text-ink">{p.title}</span>
+                          <span className="shrink-0 text-xs tabular-nums text-ink-subtle">
                             {t("projectProgress.steps", { n: p.passed, total: p.total })}
                           </span>
                         </div>
-                        <p className="mt-0.5 truncate text-xs text-zinc-500">
+                        <p className="mt-0.5 truncate text-xs text-ink-subtle">
                           {p.where || "—"} · {t("projectProgress.failed", { n: p.failed })} · {t("studentPage.lastActive", { date: p.updatedLabel })}
                         </p>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                          <div className="h-full rounded-full bg-blue-600" style={{ width: `${p.total ? (p.passed / p.total) * 100 : 0}%` }} />
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
+                          <div className="h-full rounded-full bg-brand" style={{ width: `${p.total ? (p.passed / p.total) * 100 : 0}%` }} />
                         </div>
                       </Link>
                     </li>
@@ -271,7 +271,7 @@ export default async function StudentDetailPage({
         }
         meta={
           <>
-            {invitePending ? <span className="text-amber-700">{t("students.invitePending")}</span> : student.email}
+            {invitePending ? <span className="text-warning-ink">{t("students.invitePending")}</span> : student.email}
             {student.studentGroup && <> · {t(GROUP_LABEL_KEYS[student.studentGroup])}</>} ·{" "}
             {t("studentPage.joined", { date: dateFmt.format(student.createdAt) })}
           </>
@@ -337,21 +337,21 @@ export default async function StudentDetailPage({
             <section className={cardCls}>
               <SectionHead title={t("studentPage.courseProgress")} href={`${base}?tab=progress`} />
               {courseRows.length === 0 ? (
-                <p className="px-5 pb-5 text-sm text-zinc-500">{t("studentPage.noCourses")}</p>
+                <p className="px-5 pb-5 text-sm text-ink-subtle">{t("studentPage.noCourses")}</p>
               ) : (
-                <ul className="divide-y divide-zinc-100">
+                <ul className="divide-y divide-line-soft">
                   {courseRows.slice(0, 5).map((c) => (
                     <li key={c.id} className="px-5 py-3">
                       <div className="flex items-baseline justify-between gap-3">
-                        <Link href={`/tutor/courses/${c.id}`} className="truncate text-sm font-medium text-zinc-900 hover:text-blue-700">
+                        <Link href={`/tutor/courses/${c.id}`} className="truncate text-sm font-medium text-ink hover:text-brand-ink">
                           {c.title}
                         </Link>
-                        <span className="shrink-0 text-xs tabular-nums text-zinc-500">
+                        <span className="shrink-0 text-xs tabular-nums text-ink-subtle">
                           {c.completed}/{c.total} · {c.pct}%
                         </span>
                       </div>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                        <div className="h-full rounded-full bg-blue-600" style={{ width: `${c.pct}%` }} />
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
+                        <div className="h-full rounded-full bg-brand" style={{ width: `${c.pct}%` }} />
                       </div>
                     </li>
                   ))}
@@ -364,19 +364,19 @@ export default async function StudentDetailPage({
             <section className={cardCls}>
               <SectionHead title={t("studentPage.recentQuizResults")} href={`${base}?tab=progress`} />
               {quizRows.length === 0 ? (
-                <p className="px-5 pb-5 text-sm text-zinc-500">{t("studentPage.noQuizzes")}</p>
+                <p className="px-5 pb-5 text-sm text-ink-subtle">{t("studentPage.noQuizzes")}</p>
               ) : (
-                <ul className="divide-y divide-zinc-100">
+                <ul className="divide-y divide-line-soft">
                   {quizRows.slice(0, 5).map((q) => (
                     <li key={q.id}>
-                      <Link href={`/tutor/quizzes/${q.quizId}/submissions/${q.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-zinc-50">
+                      <Link href={`/tutor/quizzes/${q.quizId}/submissions/${q.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-surface-muted">
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-zinc-900">{q.title}</span>
-                          <span className="block truncate text-xs text-zinc-500">
+                          <span className="block truncate text-sm font-medium text-ink">{q.title}</span>
+                          <span className="block truncate text-xs text-ink-subtle">
                             {q.where || "—"} · {q.submittedLabel}
                           </span>
                         </span>
-                        <span className="shrink-0 text-sm tabular-nums text-zinc-700">{q.pct === null ? "—" : `${q.pct}%`}</span>
+                        <span className="shrink-0 text-sm tabular-nums text-ink-soft">{q.pct === null ? "—" : `${q.pct}%`}</span>
                         <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${SUBMISSION_STATUS_BADGE_CLASS[q.status]}`}>
                           {t(submissionStatusKey(q.status))}
                         </span>
@@ -392,12 +392,12 @@ export default async function StudentDetailPage({
             <section className={cardCls}>
               <SectionHead title={t("nav.sessions")} href={`${base}?tab=sessions`} />
               {sessionRows.length === 0 ? (
-                <p className="px-5 pb-5 text-sm text-zinc-500">{t("studentPage.noSessions")}</p>
+                <p className="px-5 pb-5 text-sm text-ink-subtle">{t("studentPage.noSessions")}</p>
               ) : (
-                <ul className="divide-y divide-zinc-100">
+                <ul className="divide-y divide-line-soft">
                   {sessionRows.slice(0, 4).map((s) => (
                     <li key={s.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
-                      <span className="text-sm text-zinc-700">{s.whenLabel}</span>
+                      <span className="text-sm text-ink-soft">{s.whenLabel}</span>
                       <StatusBadge status={s.status} />
                     </li>
                   ))}
@@ -406,9 +406,9 @@ export default async function StudentDetailPage({
             </section>
 
             {invitePending && (
-              <section className={`${cardCls} border-amber-200 bg-amber-50/60 p-5`}>
-                <h2 className="text-sm font-semibold text-amber-900">{t("students.invitePending")}</h2>
-                <p className="mt-1 text-sm text-amber-900/80">{t("profile.inviteHint", { name: student.name })}</p>
+              <section className={`${cardCls} border-warning-line bg-warning-wash/60 p-5`}>
+                <h2 className="text-sm font-semibold text-warning-ink">{t("students.invitePending")}</h2>
+                <p className="mt-1 text-sm text-warning-ink/80">{t("profile.inviteHint", { name: student.name })}</p>
                 <div className="mt-3">
                   <SlideOverButton label={t("invite.newLink")} title={t("invite.newLinkTitle", { name: student.name })} variant="secondary" icon="none">
                     <NewInviteLinkPanel studentId={student.id} name={student.name} />
@@ -420,10 +420,10 @@ export default async function StudentDetailPage({
             <section className={cardCls}>
               <SectionHead title={t("profile.tab.billing")} href={`${base}?tab=billing`} />
               <div className="px-5 pb-5">
-                <p className={`text-xl font-semibold ${billing.owed > 0 ? "text-amber-700" : "text-zinc-900"}`}>
+                <p className={`text-xl font-semibold ${billing.owed > 0 ? "text-warning-ink" : "text-ink"}`}>
                   {billing.owed > 0 ? formatIDR(billing.owed, language) : t("studentBilling.settled")}
                 </p>
-                <p className="mt-0.5 text-xs text-zinc-500">
+                <p className="mt-0.5 text-xs text-ink-subtle">
                   {billing.plans.length > 0
                     ? billing.plans.map((p) => describePlan(t, language, p)).join(" · ")
                     : t("profile.noPlan")}
@@ -454,11 +454,11 @@ export default async function StudentDetailPage({
         <div className="space-y-6">
           {projectsCard}
           <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-zinc-900">{t("nav.courses")}</h2>
+            <h2 className="text-sm font-semibold text-ink">{t("nav.courses")}</h2>
             <StudentCoursesTable studentId={student.id} courses={courseRows} />
           </section>
           <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-zinc-900">{t("studentPage.tabQuizResults")}</h2>
+            <h2 className="text-sm font-semibold text-ink">{t("studentPage.tabQuizResults")}</h2>
             <StudentQuizTable results={quizRows} />
           </section>
         </div>
@@ -467,39 +467,39 @@ export default async function StudentDetailPage({
       {tab === "account" && (
         <div className="grid max-w-4xl grid-cols-[minmax(0,1fr)] items-start gap-6 md:grid-cols-2">
           <section className={`${cardCls} p-5`}>
-            <h2 className="text-sm font-semibold text-zinc-900">{t("profile.accountDetails")}</h2>
+            <h2 className="text-sm font-semibold text-ink">{t("profile.accountDetails")}</h2>
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-zinc-500">{t("createStudent.email")}</dt>
-                <dd className="min-w-0 truncate text-right text-zinc-900">
-                  {invitePending ? <span className="text-amber-700">{t("students.notJoinedYet")}</span> : student.email}
+                <dt className="text-ink-subtle">{t("createStudent.email")}</dt>
+                <dd className="min-w-0 truncate text-right text-ink">
+                  {invitePending ? <span className="text-warning-ink">{t("students.notJoinedYet")}</span> : student.email}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-zinc-500">{t("students.header.email")}</dt>
-                <dd className="text-right text-zinc-900">
+                <dt className="text-ink-subtle">{t("students.header.email")}</dt>
+                <dd className="text-right text-ink">
                   {invitePending ? "—" : student.emailVerifiedAt ? t("students.verified") : t("students.pending")}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-zinc-500">{t("createStudent.group")}</dt>
-                <dd className="text-right text-zinc-900">{student.studentGroup ? t(GROUP_LABEL_KEYS[student.studentGroup]) : "—"}</dd>
+                <dt className="text-ink-subtle">{t("createStudent.group")}</dt>
+                <dd className="text-right text-ink">{student.studentGroup ? t(GROUP_LABEL_KEYS[student.studentGroup]) : "—"}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-zinc-500">{t("profile.language")}</dt>
-                <dd className="text-right text-zinc-900">{student.language === "EN" ? "English" : "Bahasa Indonesia"}</dd>
+                <dt className="text-ink-subtle">{t("profile.language")}</dt>
+                <dd className="text-right text-ink">{student.language === "EN" ? "English" : "Bahasa Indonesia"}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-zinc-500">{t("profile.added")}</dt>
-                <dd className="text-right text-zinc-900">{dateFmt.format(student.createdAt)}</dd>
+                <dt className="text-ink-subtle">{t("profile.added")}</dt>
+                <dd className="text-right text-ink">{dateFmt.format(student.createdAt)}</dd>
               </div>
             </dl>
           </section>
 
           <div className="space-y-6">
             <section className={`${cardCls} p-5`}>
-              <h2 className="text-sm font-semibold text-zinc-900">{t("profile.signIn")}</h2>
-              <p className="mt-1 text-sm text-zinc-500">
+              <h2 className="text-sm font-semibold text-ink">{t("profile.signIn")}</h2>
+              <p className="mt-1 text-sm text-ink-subtle">
                 {invitePending
                   ? student.invite && student.invite.expiresAt > new Date(now)
                     ? t("profile.inviteActive", { date: dateFmt.format(student.invite.expiresAt) })
@@ -525,8 +525,8 @@ export default async function StudentDetailPage({
             </section>
 
             <section className={`${cardCls} p-5`}>
-              <h2 className="text-sm font-semibold text-zinc-900">{t("profile.deleteTitle")}</h2>
-              <p className="mt-1 text-sm text-zinc-500">
+              <h2 className="text-sm font-semibold text-ink">{t("profile.deleteTitle")}</h2>
+              <p className="mt-1 text-sm text-ink-subtle">
                 {sessionCount > 0
                   ? t(sessionCount === 1 ? "studentPage.deleteBlocked" : "studentPage.deleteBlockedPlural", { n: sessionCount })
                   : t("studentPage.deleteHint")}
@@ -545,9 +545,9 @@ export default async function StudentDetailPage({
 function Stat({ label, value, sub, small }: { label: string; value: string; sub: string; small?: boolean }) {
   return (
     <div className={`${cardCls} p-4`}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className={`mt-1 font-semibold tabular-nums text-zinc-900 ${small ? "text-base" : "text-2xl"}`}>{value}</p>
-      <p className="mt-0.5 truncate text-xs text-zinc-500">{sub}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">{label}</p>
+      <p className={`mt-1 font-semibold tabular-nums text-ink ${small ? "text-base" : "text-2xl"}`}>{value}</p>
+      <p className="mt-0.5 truncate text-xs text-ink-subtle">{sub}</p>
     </div>
   );
 }
@@ -556,9 +556,9 @@ async function SectionHead({ title, href }: { title: string; href?: string }) {
   const t = await getT();
   return (
     <div className="flex items-center justify-between px-5 pb-2 pt-4">
-      <h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
+      <h2 className="text-sm font-semibold text-ink">{title}</h2>
       {href && (
-        <Link href={href} className="text-xs font-medium text-blue-700 hover:underline">
+        <Link href={href} className="text-xs font-medium text-brand-ink hover:underline">
           {t("studentPage.viewAll")}
         </Link>
       )}

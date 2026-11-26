@@ -1,8 +1,63 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/*
+ * Design tokens. Screens use these names (bg-brand, text-ink-muted,
+ * border-line, rounded-card…) instead of raw palette classes, so a restyle or
+ * a dark mode is a change here rather than in every file. Each value is the
+ * Tailwind colour the app used before tokens existed, so moving a screen onto
+ * them changes nothing visually. Screens still on raw zinc/blue classes move
+ * over as they are revamped.
+ */
+@theme {
+  /* Brand: the blue accent — primary buttons, links, active states. */
+  --color-brand: oklch(54.6% 0.245 262.881); /* blue-600 */
+  --color-brand-hover: oklch(62.3% 0.214 259.815); /* blue-500 */
+  --color-brand-ink: oklch(48.8% 0.243 264.376); /* blue-700: brand-coloured text */
+  --color-brand-soft: oklch(97% 0.014 254.604); /* blue-50 */
+  --color-brand-line: oklch(88.2% 0.059 254.128); /* blue-200 */
+  --color-focus: oklch(62.3% 0.214 259.815); /* blue-500: focus border and ring */
+
+  /* Surfaces, back to front. */
+  --color-canvas: oklch(98.5% 0 0); /* zinc-50: page background */
+  --color-surface: #fff; /* cards, inputs, panels */
+  --color-surface-muted: oklch(98.5% 0 0); /* zinc-50: hover rows, insets */
+  --color-surface-sunken: oklch(96.7% 0.001 286.375); /* zinc-100: chips, progress tracks */
+
+  /* Lines. */
+  --color-line-soft: oklch(96.7% 0.001 286.375); /* zinc-100: dividers inside a card */
+  --color-line: oklch(92% 0.004 286.32); /* zinc-200: card borders */
+  --color-line-strong: oklch(87.1% 0.006 286.286); /* zinc-300: input and button borders */
+
+  /* Text, strongest to faintest. */
+  --color-ink: oklch(21% 0.006 285.885); /* zinc-900 */
+  --color-ink-soft: oklch(37% 0.013 285.805); /* zinc-700 */
+  --color-ink-muted: oklch(44.2% 0.017 285.786); /* zinc-600 */
+  --color-ink-subtle: oklch(55.2% 0.016 285.938); /* zinc-500: hints, meta */
+  --color-ink-faint: oklch(70.5% 0.015 286.067); /* zinc-400: placeholders, empty dashes */
+
+  /* Status: -ink for text, -soft for badges, -wash for alert backgrounds, -line for borders. */
+  --color-success-ink: oklch(52.7% 0.154 150.069); /* green-700 */
+  --color-success-soft: oklch(96.2% 0.044 156.743); /* green-100 */
+  --color-success-wash: oklch(98.2% 0.018 155.826); /* green-50 */
+  --color-success-line: oklch(92.5% 0.084 155.995); /* green-200 */
+  --color-warning-ink: oklch(47.3% 0.137 46.201); /* amber-800 */
+  --color-warning-soft: oklch(96.2% 0.059 95.617); /* amber-100 */
+  --color-warning-wash: oklch(98.7% 0.022 95.277); /* amber-50 */
+  --color-warning-line: oklch(92.4% 0.12 95.746); /* amber-200 */
+  --color-danger: oklch(57.7% 0.245 27.325); /* red-600: danger buttons */
+  --color-danger-ink: oklch(50.5% 0.213 27.518); /* red-700 */
+  --color-danger-soft: oklch(93.6% 0.032 17.717); /* red-100 */
+  --color-danger-wash: oklch(97.1% 0.013 17.38); /* red-50 */
+  --color-danger-line: oklch(88.5% 0.062 18.334); /* red-200 */
+
+  /* Corners. */
+  --radius-control: 0.375rem; /* buttons, inputs */
+  --radius-card: 0.75rem; /* cards, panels */
+}
+
 body {
-  @apply bg-zinc-50 text-zinc-900 antialiased;
+  @apply bg-canvas text-ink antialiased;
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 

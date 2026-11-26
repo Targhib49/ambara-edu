@@ -55,7 +55,7 @@ export default async function StudentsPage() {
           <>
             {t("tutorStudents.meta", { n: rows.length })}
             {unenrolled > 0 && (
-              <span className="text-amber-700"> · {t("tutorStudents.notEnrolledMeta", { n: unenrolled })}</span>
+              <span className="text-warning-ink"> · {t("tutorStudents.notEnrolledMeta", { n: unenrolled })}</span>
             )}
           </>
         }

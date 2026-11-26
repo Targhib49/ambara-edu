@@ -103,7 +103,7 @@ export async function StudentSessions({ studentId, withHeader }: { studentId: st
   const meta = (
     <>
       {t("sessions.upcomingMeta", { n: upcomingCount })}
-      {needsResponse > 0 && <span className="text-amber-700"> · {t("sessions.needsResponse", { n: needsResponse })}</span>}
+      {needsResponse > 0 && <span className="text-warning-ink"> · {t("sessions.needsResponse", { n: needsResponse })}</span>}
     </>
   );
 
@@ -118,7 +118,7 @@ export async function StudentSessions({ studentId, withHeader }: { studentId: st
         />
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-zinc-500">{meta}</p>
+          <p className="text-sm text-ink-subtle">{meta}</p>
           <div className="flex flex-wrap gap-2">{actions}</div>
         </div>
       )}

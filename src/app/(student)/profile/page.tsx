@@ -104,20 +104,20 @@ async function loadCourses(studentId: string) {
 }
 
 function CourseList({ courses, empty }: { courses: Awaited<ReturnType<typeof loadCourses>>; empty: string }) {
-  if (courses.length === 0) return <p className="px-5 pb-5 text-sm text-zinc-500">{empty}</p>;
+  if (courses.length === 0) return <p className="px-5 pb-5 text-sm text-ink-subtle">{empty}</p>;
   return (
-    <ul className="divide-y divide-zinc-100">
+    <ul className="divide-y divide-line-soft">
       {courses.map((c) => (
         <li key={c.id}>
-          <Link href={`/courses/${c.id}`} className="block px-5 py-3 hover:bg-zinc-50">
+          <Link href={`/courses/${c.id}`} className="block px-5 py-3 hover:bg-surface-muted">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="truncate text-sm font-medium text-zinc-900">{c.title}</span>
-              <span className="shrink-0 text-xs tabular-nums text-zinc-500">
+              <span className="truncate text-sm font-medium text-ink">{c.title}</span>
+              <span className="shrink-0 text-xs tabular-nums text-ink-subtle">
                 {c.completed}/{c.total} · {c.pct}%
               </span>
             </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
-              <div className="h-full rounded-full bg-blue-600" style={{ width: `${c.pct}%` }} />
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
+              <div className="h-full rounded-full bg-brand" style={{ width: `${c.pct}%` }} />
             </div>
           </Link>
         </li>
@@ -130,9 +130,9 @@ async function SectionHead({ title, href }: { title: string; href?: string }) {
   const t = await getT();
   return (
     <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
-      <h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
+      <h2 className="text-sm font-semibold text-ink">{title}</h2>
       {href && (
-        <Link href={href} className="text-xs font-medium text-blue-700 hover:underline">
+        <Link href={href} className="text-xs font-medium text-brand-ink hover:underline">
           {t("studentPage.viewAll")}
         </Link>
       )}
@@ -168,15 +168,15 @@ async function Overview({ studentId }: { studentId: string }) {
       <div className="space-y-6">
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-zinc-900">{t("profile.nextSession")}</h2>
-            <Link href="/profile?tab=sessions" className="text-xs font-medium text-blue-700 hover:underline">
+            <h2 className="text-sm font-semibold text-ink">{t("profile.nextSession")}</h2>
+            <Link href="/profile?tab=sessions" className="text-xs font-medium text-brand-ink hover:underline">
               {t("studentPage.viewAll")}
             </Link>
           </div>
           {sessions.length === 0 ? (
-            <div className={`${cardCls} p-5 text-sm text-zinc-500`}>
+            <div className={`${cardCls} p-5 text-sm text-ink-subtle`}>
               {t("studentPage.nothingBooked")} ·{" "}
-              <Link href="/profile?tab=sessions" className="font-medium text-blue-700 hover:underline">
+              <Link href="/profile?tab=sessions" className="font-medium text-brand-ink hover:underline">
                 {t("sessions.book")}
               </Link>
             </div>
@@ -209,12 +209,12 @@ async function Overview({ studentId }: { studentId: string }) {
       </div>
 
       <section className={`${cardCls} p-5`}>
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t("studentBilling.owed")}</p>
-        <p className={`mt-1 text-2xl font-semibold ${billing.owed > 0 ? "text-amber-700" : "text-zinc-900"}`}>
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">{t("studentBilling.owed")}</p>
+        <p className={`mt-1 text-2xl font-semibold ${billing.owed > 0 ? "text-warning-ink" : "text-ink"}`}>
           {billing.owed > 0 ? formatIDR(billing.owed, language) : t("studentBilling.settled")}
         </p>
-        {openInvoices > 0 && <p className="mt-0.5 text-xs text-zinc-500">{t("profile.openInvoices", { n: openInvoices })}</p>}
-        <Link href="/profile?tab=billing" className="mt-3 inline-block text-sm font-medium text-blue-700 hover:underline">
+        {openInvoices > 0 && <p className="mt-0.5 text-xs text-ink-subtle">{t("profile.openInvoices", { n: openInvoices })}</p>}
+        <Link href="/profile?tab=billing" className="mt-3 inline-block text-sm font-medium text-brand-ink hover:underline">
           {t("profile.seeBilling")}
         </Link>
       </section>
@@ -255,17 +255,17 @@ async function Progress({ studentId }: { studentId: string }) {
       <section className={cardCls}>
         <SectionHead title={t("studentPage.tabQuizResults")} />
         {results.length === 0 ? (
-          <p className="px-5 pb-5 text-sm text-zinc-500">{t("studentPage.noQuizzes")}</p>
+          <p className="px-5 pb-5 text-sm text-ink-subtle">{t("studentPage.noQuizzes")}</p>
         ) : (
-          <ul className="divide-y divide-zinc-100">
+          <ul className="divide-y divide-line-soft">
             {results.map((r) => (
               <li key={r.id}>
-                <Link href={`/quizzes/${r.quiz.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-zinc-50">
+                <Link href={`/quizzes/${r.quiz.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-surface-muted">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-zinc-900">{r.quiz.title}</span>
-                    <span className="block text-xs text-zinc-500">{dateFmt.format(r.updatedAt)}</span>
+                    <span className="block truncate text-sm font-medium text-ink">{r.quiz.title}</span>
+                    <span className="block text-xs text-ink-subtle">{dateFmt.format(r.updatedAt)}</span>
                   </span>
-                  <span className="shrink-0 text-sm tabular-nums text-zinc-700">{r.pct === null ? "—" : `${r.pct}%`}</span>
+                  <span className="shrink-0 text-sm tabular-nums text-ink-soft">{r.pct === null ? "—" : `${r.pct}%`}</span>
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${SUBMISSION_STATUS_BADGE_CLASS[r.status]}`}>
                     {t(submissionStatusKey(r.status))}
                   </span>

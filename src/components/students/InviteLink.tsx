@@ -5,6 +5,7 @@ import { newInviteLink, type InviteResult } from "@/lib/actions/students";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import { btnPrimary, btnSecondary } from "@/components/ui/styles";
 import { useT } from "@/lib/i18n/client";
+import { Alert } from "@/components/ui/Alert";
 
 /**
  * A freshly issued join link, with the two ways a tutor actually sends it.
@@ -16,14 +17,14 @@ export function InviteLinkCard({ invite }: { invite: InviteResult }) {
   const message = t("invite.whatsappText", { name: invite.name.split(" ")[0], link: invite.url });
 
   return (
-    <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/60 p-4">
-      <p className="text-sm font-medium text-zinc-900">{t("invite.sendTo", { name: invite.name })}</p>
+    <div className="space-y-3 rounded-lg border border-brand-line bg-brand-soft/60 p-4">
+      <p className="text-sm font-medium text-ink">{t("invite.sendTo", { name: invite.name })}</p>
       <input
         readOnly
         value={invite.url}
         onFocus={(e) => e.currentTarget.select()}
         aria-label={t("invite.linkLabel")}
-        className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 font-mono text-xs text-zinc-800"
+        className="w-full rounded-control border border-line-strong bg-surface px-3 py-2 font-mono text-xs text-ink"
       />
       <div className="flex flex-wrap gap-2">
         <button
@@ -47,7 +48,7 @@ export function InviteLinkCard({ invite }: { invite: InviteResult }) {
           {t("invite.whatsapp")}
         </a>
       </div>
-      <p className="text-xs text-zinc-600">
+      <p className="text-xs text-ink-muted">
         {invite.emailedTo ? t("invite.emailed", { email: invite.emailedTo }) + " " : ""}
         {t("invite.validity")}
       </p>
@@ -67,7 +68,7 @@ export function NewInviteLinkPanel({ studentId, name }: { studentId: string; nam
     return (
       <div className="space-y-4">
         <InviteLinkCard invite={invite} />
-        <div className="flex justify-end border-t border-zinc-100 pt-4">
+        <div className="flex justify-end border-t border-line-soft pt-4">
           <button type="button" onClick={panel?.close} className={btnSecondary}>
             {t("action.done")}
           </button>
@@ -78,9 +79,9 @@ export function NewInviteLinkPanel({ studentId, name }: { studentId: string; nam
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-600">{t("invite.newIntro", { name })}</p>
-      {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+      <p className="text-sm text-ink-muted">{t("invite.newIntro", { name })}</p>
+      {error && <Alert tone="danger">{error}</Alert>}
+      <div className="flex justify-end gap-2 border-t border-line-soft pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
             {t("action.cancel")}

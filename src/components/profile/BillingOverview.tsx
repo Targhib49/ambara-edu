@@ -51,28 +51,28 @@ export async function BillingOverview({ studentId, viewer }: { studentId: string
   return (
     <div className="space-y-4">
       {viewer === "student" && external && (
-        <p className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
+        <p className="rounded-card border border-line bg-surface p-4 text-sm text-ink-muted">
           {t("studentBilling.external", { payer: external.payer || t("billing.kind.EXTERNAL") })}
         </p>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className={`${cardCls} p-4`}>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t("studentBilling.owed")}</p>
-          <p className={`mt-1 text-2xl font-semibold ${owed > 0 ? "text-amber-700" : "text-zinc-900"}`}>
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">{t("studentBilling.owed")}</p>
+          <p className={`mt-1 text-2xl font-semibold ${owed > 0 ? "text-warning-ink" : "text-ink"}`}>
             {owed > 0 ? formatIDR(owed, language) : t("studentBilling.settled")}
           </p>
         </div>
         <div className={`${cardCls} p-4`}>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t("billing.plan")}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">{t("billing.plan")}</p>
           {plans.length === 0 ? (
-            <p className="mt-1 text-sm text-zinc-500">{t("profile.noPlan")}</p>
+            <p className="mt-1 text-sm text-ink-subtle">{t("profile.noPlan")}</p>
           ) : (
             <ul className="mt-1 space-y-0.5">
               {plans.map((p) => (
-                <li key={p.id} className="text-sm text-zinc-900">
+                <li key={p.id} className="text-sm text-ink">
                   {plans.length > 1 && (
-                    <span className="text-zinc-500">{p.course?.title ?? t("billing.plan.anySubject")}: </span>
+                    <span className="text-ink-subtle">{p.course?.title ?? t("billing.plan.anySubject")}: </span>
                   )}
                   {describePlan(t, language, p)}
                 </li>
@@ -83,17 +83,17 @@ export async function BillingOverview({ studentId, viewer }: { studentId: string
       </div>
 
       {credits.length > 0 && (
-        <div className={`${cardCls} border-blue-200 bg-blue-50/60 p-4`}>
-          <p className="font-medium text-blue-900">{t("studentBilling.credit", { n: creditTotal(credits) })}</p>
-          <p className="mt-0.5 text-sm text-blue-900/80">
+        <div className={`${cardCls} border-brand-line bg-brand-soft/60 p-4`}>
+          <p className="font-medium text-brand-ink">{t("studentBilling.credit", { n: creditTotal(credits) })}</p>
+          <p className="mt-0.5 text-sm text-brand-ink/80">
             {credits
               .map((c) => (c.subject ? t("billing.owesSubject", { subject: c.subject, n: c.sessions }) : t("billing.owes", { n: c.sessions })))
               .join(" · ")}
           </p>
           {viewer === "student" && (
             <>
-              <p className="mt-1 text-sm text-blue-900/80">{t("studentBilling.creditHint")}</p>
-              <Link href="/sessions" className="mt-1 inline-block text-sm font-medium text-blue-700 hover:underline">
+              <p className="mt-1 text-sm text-brand-ink/80">{t("studentBilling.creditHint")}</p>
+              <Link href="/sessions" className="mt-1 inline-block text-sm font-medium text-brand-ink hover:underline">
                 {t("studentBilling.book")}
               </Link>
             </>
@@ -102,7 +102,7 @@ export async function BillingOverview({ studentId, viewer }: { studentId: string
       )}
 
       {invoices.length === 0 ? (
-        <p className={`${cardCls} p-6 text-center text-sm text-zinc-500`}>{viewer === "tutor" ? t("profile.noInvoices") : t("studentBilling.none")}</p>
+        <p className={`${cardCls} p-6 text-center text-sm text-ink-subtle`}>{viewer === "tutor" ? t("profile.noInvoices") : t("studentBilling.none")}</p>
       ) : (
         <ul className="space-y-3">
           {invoices.map((invoice) => {
@@ -110,18 +110,18 @@ export async function BillingOverview({ studentId, viewer }: { studentId: string
             const remaining = total - paidTotal(invoice.payments);
             return (
               <li key={invoice.id}>
-                <Link href={invoiceHref(invoice.id)} className={`${cardCls} flex items-center gap-3 p-4 hover:border-zinc-300`}>
+                <Link href={invoiceHref(invoice.id)} className={`${cardCls} flex items-center gap-3 p-4 hover:border-line-strong`}>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-medium text-zinc-900">{monthLabel(invoice.periodStart, language)}</span>
-                    <span className="block truncate font-mono text-xs text-zinc-500">
+                    <span className="block font-medium text-ink">{monthLabel(invoice.periodStart, language)}</span>
+                    <span className="block truncate font-mono text-xs text-ink-subtle">
                       {invoice.number}
                       {invoice.dueOn && ` · ${t("invoice.due", { date: dateLabel(invoice.dueOn, language) })}`}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">
-                    <span className="block tabular-nums text-zinc-900">{formatIDR(total, language)}</span>
+                    <span className="block tabular-nums text-ink">{formatIDR(total, language)}</span>
                     {remaining > 0 && invoice.status === "SENT" && (
-                      <span className="block text-xs text-amber-700">
+                      <span className="block text-xs text-warning-ink">
                         {t("invoice.remaining")}: {formatIDR(remaining, language)}
                       </span>
                     )}

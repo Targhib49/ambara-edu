@@ -13,6 +13,7 @@ import { btnPrimary, btnSecondary, hintCls, inputCls, labelCls } from "@/compone
 import { useT } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translate } from "@/lib/i18n/translate";
+import { Alert } from "@/components/ui/Alert";
 
 export const GROUP_LABEL_KEYS: Record<StudentGroup, MessageKey> = {
   JUNIOR_HIGH: "group.JUNIOR_HIGH",
@@ -56,11 +57,11 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
           {initialsFor(s.name)}
         </span>
         <span className="min-w-0">
-          <span className="block truncate font-medium text-zinc-900">{s.name}</span>
+          <span className="block truncate font-medium text-ink">{s.name}</span>
           {s.invitePending ? (
-            <span className="block truncate text-xs text-amber-700">{t("students.notJoinedYet")}</span>
+            <span className="block truncate text-xs text-warning-ink">{t("students.notJoinedYet")}</span>
           ) : (
-            <span className="block truncate text-xs text-zinc-500">{s.email}</span>
+            <span className="block truncate text-xs text-ink-subtle">{s.email}</span>
           )}
         </span>
       </div>
@@ -73,7 +74,7 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
     sort: (s) => (s.studentGroup ? t(GROUP_LABEL_KEYS[s.studentGroup]) : ""),
     text: (s) => (s.studentGroup ? t(GROUP_LABEL_KEYS[s.studentGroup]) : ""),
     className: "whitespace-nowrap",
-    cell: (s) => (s.studentGroup ? t(GROUP_LABEL_KEYS[s.studentGroup]) : <span className="text-zinc-400">—</span>),
+    cell: (s) => (s.studentGroup ? t(GROUP_LABEL_KEYS[s.studentGroup]) : <span className="text-ink-faint">—</span>),
   },
   {
     key: "courses",
@@ -84,16 +85,16 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
       s.courses.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1">
           {s.courses.slice(0, 2).map((c) => (
-            <span key={c.id} className="max-w-[160px] truncate rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-700">
+            <span key={c.id} className="max-w-[160px] truncate rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] text-ink-soft">
               {c.title}
             </span>
           ))}
           {s.courses.length > 2 && (
-            <span className="text-[11px] text-zinc-500">{t("students.moreCourses", { n: s.courses.length - 2 })}</span>
+            <span className="text-[11px] text-ink-subtle">{t("students.moreCourses", { n: s.courses.length - 2 })}</span>
           )}
         </div>
       ) : (
-        <span className="text-xs font-medium text-amber-700">{t("students.notEnrolled")}</span>
+        <span className="text-xs font-medium text-warning-ink">{t("students.notEnrolled")}</span>
       ),
   },
   {
@@ -102,7 +103,7 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
     text: (s) => s.nextSessionLabel ?? "",
     hideBelow: "xl",
     className: "whitespace-nowrap",
-    cell: (s) => s.nextSessionLabel ?? <span className="text-zinc-400">—</span>,
+    cell: (s) => s.nextSessionLabel ?? <span className="text-ink-faint">—</span>,
   },
   {
     key: "status",
@@ -115,7 +116,7 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
       s.invitePending ? (
         // The panel renders inside this row; keep its clicks from opening the student.
         <span className="inline-flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">{t("students.invitePending")}</span>
+          <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs text-warning-ink">{t("students.invitePending")}</span>
           <SlideOverButton
             label={t("invite.newLink")}
             title={t("invite.newLinkTitle", { name: s.name })}
@@ -129,7 +130,7 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
       <span className="inline-flex items-center gap-2">
         <span
           className={`rounded-full px-2 py-0.5 text-xs ${
-            s.emailVerifiedAt ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+            s.emailVerifiedAt ? "bg-success-soft text-success-ink" : "bg-warning-soft text-warning-ink"
           }`}
         >
           {s.emailVerifiedAt ? t("students.verified") : t("students.pending")}
@@ -137,7 +138,7 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
         {/* Nothing to resend while mail is off; the badge still tells the
             tutor the address was never confirmed. */}
         {!s.emailVerifiedAt && mailEnabled && (
-          <button onClick={() => void resendVerificationEmail(s.id)} className="text-xs text-blue-600 hover:underline">
+          <button onClick={() => void resendVerificationEmail(s.id)} className="text-xs text-brand-ink hover:underline">
             {t("students.resend")}
           </button>
         )}
@@ -176,7 +177,7 @@ function BulkAssign({ courses, studentIds, onDone }: { courses: ComboOption[]; s
       >
         {pending ? t("students.assigning") : t("students.assign")}
       </button>
-      {message && <span className="text-xs text-red-700">{message}</span>}
+      {message && <span className="text-xs text-danger-ink">{message}</span>}
     </div>
   );
 }
@@ -223,9 +224,9 @@ export function CreateStudentForm() {
     // Stay open: the link has to be copied or shared before the panel goes.
     return (
       <div className="space-y-4">
-        <p className="text-sm text-zinc-600">{t("createStudent.created", { name: invite.name })}</p>
+        <p className="text-sm text-ink-muted">{t("createStudent.created", { name: invite.name })}</p>
         <InviteLinkCard invite={invite} />
-        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-line-soft pt-4">
           <button type="button" onClick={() => setDismissed(state)} className={btnSecondary}>
             {t("createStudent.addAnother")}
           </button>
@@ -267,10 +268,10 @@ export function CreateStudentForm() {
       </div>
 
       {state.error && state !== dismissed && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
+        <Alert tone="danger">{state.error}</Alert>
       )}
 
-      <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+      <div className="flex justify-end gap-2 border-t border-line-soft pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
             {t("action.cancel")}

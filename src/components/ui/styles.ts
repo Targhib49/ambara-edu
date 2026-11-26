@@ -1,27 +1,28 @@
-// One set of control styles for the tutor screens, so a button or field looks
-// and behaves the same on every page instead of each file re-declaring its own.
+// One set of control styles, so a button or field looks and behaves the same
+// on every page instead of each file re-declaring its own. Built on the design
+// tokens in globals.css; the components in Button.tsx, Field.tsx, Card.tsx,
+// Badge.tsx and Alert.tsx wrap these strings, and new code should prefer them.
 
-export const btnPrimary =
-  "inline-flex items-center justify-center transition-colors active:translate-y-px gap-1.5 whitespace-nowrap rounded-md bg-blue-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50";
+const btnBase =
+  "inline-flex items-center justify-center transition-colors active:translate-y-px whitespace-nowrap rounded-control font-medium disabled:cursor-not-allowed";
 
-export const btnSecondary =
-  "inline-flex items-center justify-center transition-colors active:translate-y-px gap-1.5 whitespace-nowrap rounded-md border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50";
+export const btnPrimary = `${btnBase} gap-1.5 bg-brand px-3.5 py-2 text-sm text-white shadow-sm hover:bg-brand-hover disabled:opacity-50`;
 
-export const btnDanger =
-  "inline-flex items-center justify-center transition-colors active:translate-y-px gap-1.5 whitespace-nowrap rounded-md border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50";
+export const btnSecondary = `${btnBase} gap-1.5 border border-line-strong bg-surface px-3.5 py-2 text-sm text-ink-soft shadow-sm hover:bg-surface-muted disabled:opacity-50`;
 
-export const btnSmall =
-  "inline-flex items-center justify-center transition-colors active:translate-y-px gap-1 whitespace-nowrap rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40";
+export const btnDanger = `${btnBase} gap-1.5 border border-danger-line bg-surface px-3.5 py-2 text-sm text-danger hover:bg-danger-wash disabled:opacity-50`;
+
+export const btnSmall = `${btnBase} gap-1 border border-line-strong bg-surface px-2.5 py-1 text-xs text-ink-soft hover:bg-surface-muted disabled:opacity-40`;
 
 /** A field with no width of its own — for controls sitting side by side in a filter bar. */
 export const controlCls =
-  "rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-zinc-50";
+  "rounded-control border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20 disabled:bg-surface-muted";
 
 /** A full-width form field. */
 export const inputCls = `w-full ${controlCls}`;
 
-export const labelCls = "mb-1 block text-xs font-medium text-zinc-600";
+export const labelCls = "mb-1 block text-xs font-medium text-ink-muted";
 
-export const hintCls = "mt-1 text-xs text-zinc-500";
+export const hintCls = "mt-1 text-xs text-ink-subtle";
 
-export const cardCls = "rounded-xl border border-zinc-200 bg-white shadow-sm";
+export const cardCls = "rounded-card border border-line bg-surface shadow-sm";
