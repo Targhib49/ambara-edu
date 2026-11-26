@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { StudentTable, CreateStudentForm, type StudentRow } from "./students-ui";
 import { isEmailConfigured } from "@/lib/email";
+import { visibleEmail } from "@/lib/students/inviteEmail";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { formatSessionShort, nowMs } from "@/lib/sessions/format";
@@ -21,6 +22,7 @@ export default async function StudentsPage() {
         email: true,
         studentGroup: true,
         emailVerifiedAt: true,
+        joinedAt: true,
         enrollments: { select: { course: { select: { id: true, title: true } } } },
         sessionsAsStudent: {
           where: { startTime: { gte: now }, status: { notIn: ["CANCELLED", "COMPLETED", "AWAITING_RESCHEDULE"] } },
@@ -36,9 +38,10 @@ export default async function StudentsPage() {
   const rows: StudentRow[] = students.map((s) => ({
     id: s.id,
     name: s.name,
-    email: s.email,
+    email: visibleEmail(s.email),
     studentGroup: s.studentGroup,
     emailVerifiedAt: s.emailVerifiedAt,
+    joined: s.joinedAt !== null,
     courses: s.enrollments.map((e) => e.course),
     nextSessionLabel: s.sessionsAsStudent[0] ? formatSessionShort(s.sessionsAsStudent[0].startTime, language) : null,
   }));
@@ -61,9 +64,9 @@ export default async function StudentsPage() {
           <SlideOverButton
             label={t("tutorStudents.add")}
             title={t("tutorStudents.add")}
-            description={t("tutorStudents.addDescription")}
+            description={t("tutorStudents.addDescriptionInvite")}
           >
-            <CreateStudentForm />
+            <CreateStudentForm mailEnabled={isEmailConfigured()} />
           </SlideOverButton>
         }
       />

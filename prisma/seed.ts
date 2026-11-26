@@ -53,6 +53,7 @@ async function upsertUser(opts: {
       name: opts.name,
       role: opts.role,
       studentGroup: opts.studentGroup ?? null,
+      joinedAt: new Date(),
     },
     update: { name: opts.name, role: opts.role, studentGroup: opts.studentGroup ?? null },
   });

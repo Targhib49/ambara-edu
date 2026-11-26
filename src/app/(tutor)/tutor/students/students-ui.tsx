@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { createStudent, resendVerificationEmail, type CreateStudentState } from "@/lib/actions/students";
 import { enrollStudents } from "@/lib/actions/courses";
 import type { StudentGroup } from "@/generated/prisma/enums";
@@ -9,6 +9,7 @@ import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { Combobox, type ComboOption } from "@/components/ui/Combobox";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import { btnPrimary, btnSecondary, hintCls, inputCls, labelCls } from "@/components/ui/styles";
+import { InviteLinkCard } from "./InviteLink";
 import { useT } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translate } from "@/lib/i18n/translate";
@@ -25,6 +26,8 @@ export type StudentRow = {
   email: string;
   studentGroup: StudentGroup | null;
   emailVerifiedAt: Date | null;
+  /** False while their invite link hasn't been used. */
+  joined: boolean;
   courses: { id: string; title: string }[];
   /** Server-formatted in WIB. */
   nextSessionLabel: string | null;
@@ -37,6 +40,7 @@ const makeTabs = (t: Translate): Tab<StudentRow>[] => [
   { key: "GRAD", label: t("group.GRAD"), match: (s) => s.studentGroup === "GRAD" },
   // An account that can sign in but sees nothing — worth finding quickly.
   { key: "unenrolled", label: t("students.notEnrolled"), match: (s) => s.courses.length === 0 },
+  { key: "invited", label: t("students.invitePending"), match: (s) => !s.joined },
 ];
 
 const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] => [
@@ -53,7 +57,7 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
         </span>
         <span className="min-w-0">
           <span className="block truncate font-medium text-zinc-900">{s.name}</span>
-          <span className="block truncate text-xs text-zinc-500">{s.email}</span>
+          <span className="block truncate text-xs text-zinc-500">{s.email || t("students.noEmailYet")}</span>
         </span>
       </div>
     ),
@@ -98,28 +102,32 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
   },
   {
     key: "status",
-    header: t("students.header.email"),
-    sort: (s) => (s.emailVerifiedAt ? 1 : 0),
-    text: (s) => (s.emailVerifiedAt ? t("students.verified") : t("students.pending")),
+    header: t("students.header.account"),
+    sort: (s) => (!s.joined ? 0 : s.emailVerifiedAt ? 2 : 1),
+    text: (s) => (!s.joined ? t("students.invitePending") : s.emailVerifiedAt ? t("students.verified") : t("students.pending")),
     className: "whitespace-nowrap",
-    cell: (s) => (
-      <span className="inline-flex items-center gap-2">
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs ${
-            s.emailVerifiedAt ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-          }`}
-        >
-          {s.emailVerifiedAt ? t("students.verified") : t("students.pending")}
+    cell: (s) =>
+      !s.joined ? (
+        // The fix for a pending invite is a new link, which lives on their page.
+        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800">{t("students.invitePending")}</span>
+      ) : (
+        <span className="inline-flex items-center gap-2">
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs ${
+              s.emailVerifiedAt ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+            }`}
+          >
+            {s.emailVerifiedAt ? t("students.verified") : t("students.pending")}
+          </span>
+          {/* Nothing to resend while mail is off; the badge still tells the
+              tutor the address was never confirmed. */}
+          {!s.emailVerifiedAt && mailEnabled && (
+            <button onClick={() => void resendVerificationEmail(s.id)} className="text-xs text-blue-600 hover:underline">
+              {t("students.resend")}
+            </button>
+          )}
         </span>
-        {/* Nothing to resend while mail is off; the badge still tells the
-            tutor the address was never confirmed. */}
-        {!s.emailVerifiedAt && mailEnabled && (
-          <button onClick={() => void resendVerificationEmail(s.id)} className="text-xs text-blue-600 hover:underline">
-            {t("students.resend")}
-          </button>
-        )}
-      </span>
-    ),
+      ),
   },
 ];
 
@@ -187,32 +195,48 @@ export function StudentTable({
   );
 }
 
-function randomPassword() {
-  // No look-alike characters, so it can be read out or written down safely.
-  const alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
-  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
-}
-
 /** Lives in the "Add student" panel. */
-export function CreateStudentForm() {
+export function CreateStudentForm({ mailEnabled }: { mailEnabled: boolean }) {
   const t = useT();
   const panel = useSlideOver();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [password, setPassword] = useState("");
-  const [state, formAction, pending] = useActionState<CreateStudentState, FormData>(async (prev, formData) => {
-    const result = await createStudent(prev, formData);
-    // Stay open on success: the message carries the login details to hand over,
-    // and the next student can be added straight away.
-    if (result.success) {
-      formRef.current?.reset();
-      setPassword("");
-    }
-    return result;
-  }, {});
+  // Bumped to clear the form for the next student after a link is shown.
+  const [formKey, setFormKey] = useState(0);
+  const [state, formAction, pending] = useActionState<CreateStudentState, FormData>(createStudent, {});
+  // "Add another" hides the link without a round trip: a later submit returns a new state object.
+  const [dismissed, setDismissed] = useState<CreateStudentState | null>(null);
+  const invite = state === dismissed ? undefined : state.invite;
+
+  if (invite) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-medium text-zinc-900">{t("invite.created", { name: invite.name })}</p>
+          <p className="mt-1 text-sm text-zinc-600">{invite.emailed ? t("invite.emailedToo") : t("invite.sendIt")}</p>
+        </div>
+        <InviteLinkCard url={invite.url} name={invite.name} />
+        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+          <button
+            type="button"
+            onClick={() => {
+              setDismissed(state);
+              setFormKey((k) => k + 1);
+            }}
+            className={btnSecondary}
+          >
+            {t("invite.addAnother")}
+          </button>
+          {panel && (
+            <button type="button" onClick={panel.close} className={btnPrimary}>
+              {t("action.done")}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-4">
+    <form key={formKey} action={formAction} className="space-y-4">
       <div>
         <label className={labelCls} htmlFor="student-name">
           {t("createStudent.fullName")}
@@ -221,30 +245,10 @@ export function CreateStudentForm() {
       </div>
       <div>
         <label className={labelCls} htmlFor="student-email">
-          {t("createStudent.email")}
+          {t("createStudent.emailOptional")}
         </label>
-        <input id="student-email" name="email" type="email" required className={inputCls} />
-      </div>
-      <div>
-        <label className={labelCls} htmlFor="student-password">
-          {t("createStudent.tempPassword")}
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="student-password"
-            name="password"
-            type="text"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={`${inputCls} font-mono`}
-          />
-          <button type="button" onClick={() => setPassword(randomPassword())} className={btnSecondary}>
-            {t("createStudent.generate")}
-          </button>
-        </div>
-        <p className={hintCls}>{t("createStudent.passwordHint")}</p>
+        <input id="student-email" name="email" type="email" className={inputCls} />
+        <p className={hintCls}>{mailEnabled ? t("createStudent.emailHintMail") : t("createStudent.emailHint")}</p>
       </div>
       <div>
         <label className={labelCls} htmlFor="student-group">
@@ -259,16 +263,15 @@ export function CreateStudentForm() {
       </div>
 
       {state.error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-      {state.success && <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">{state.success}</p>}
 
       <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
-            {state.success ? t("action.done") : t("action.cancel")}
+            {t("action.cancel")}
           </button>
         )}
         <button disabled={pending} className={btnPrimary}>
-          {pending ? t("action.creating") : t("createStudent.submit")}
+          {pending ? t("action.creating") : t("createStudent.submitInvite")}
         </button>
       </div>
     </form>

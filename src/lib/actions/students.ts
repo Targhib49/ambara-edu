@@ -8,9 +8,26 @@ import { StudentGroup } from "@/generated/prisma/enums";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendVerificationEmail } from "@/lib/emailVerification";
 import { generatePassword } from "@/lib/passwords";
+import { issueInvite } from "@/lib/invites";
+import { sendInviteEmail } from "@/lib/inviteEmail";
+import { placeholderEmail } from "@/lib/students/inviteEmail";
 
-export type CreateStudentState = { error?: string; success?: string };
+export type CreateStudentState = {
+  error?: string;
+  /** Set on success: the one-time link to hand to the student. */
+  invite?: { url: string; name: string; emailed: boolean };
+};
 
+/**
+ * Adds a student and returns a one-time invite link. The tutor never chooses a
+ * password: the student sets their own email and password when they open the
+ * link (see acceptInvite).
+ *
+ * The sign-in account is still created now, with a password nobody knows and,
+ * when no email is given, a stand-in address. That keeps the student's id the
+ * same from day one, so courses, sessions and invoices can be set up before
+ * they join and stay theirs afterwards.
+ */
 export async function createStudent(
   _prev: CreateStudentState,
   formData: FormData
@@ -19,33 +36,51 @@ export async function createStudent(
   await requireTutor();
 
   const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
+  const typedEmail = String(formData.get("email") ?? "").trim().toLowerCase();
   const groupRaw = String(formData.get("studentGroup") ?? "");
   const studentGroup = (Object.values(StudentGroup) as string[]).includes(groupRaw)
     ? (groupRaw as StudentGroup)
     : null;
 
-  if (!name || !email) return { error: t("action.nameEmailRequired") };
-  if (password.length < 8) return { error: t("action.passwordShort") };
+  if (!name) return { error: t("action.nameRequired") };
+  if (typedEmail && (await db.user.findUnique({ where: { email: typedEmail }, select: { id: true } }))) {
+    return { error: t("action.emailTaken") };
+  }
+  const email = typedEmail || placeholderEmail();
 
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.auth.admin.createUser({
     email,
-    password,
-    email_confirm: true, // skips Supabase's own confirmation UI — our own
-    // informational verification (below) runs separately and never gates login
+    password: generatePassword(32), // never shown: replaced when the student joins
+    email_confirm: true,
   });
   if (error) return { error: t("action.accountCreateFailed", { message: error.message }) };
 
   const created = await db.user.create({
     data: { id: data.user.id, email, name, role: "STUDENT", studentGroup },
   });
-  // A brand-new student has the default language until they change it.
-  await sendVerificationEmail({ id: created.id, email, name, language: created.language });
+  const { url } = await issueInvite(created.id);
+  const emailed = typedEmail ? await sendInviteEmail({ email, name, language: created.language }, url) : false;
 
   revalidatePath("/tutor/students");
-  return { success: t("action.studentCreated", { email }) };
+  return { invite: { url, name, emailed } };
+}
+
+export type InviteLinkState = { error?: string; url?: string };
+
+/**
+ * A fresh link for a student who hasn't joined yet. Their previous link stops
+ * working, which is also how a link sent to the wrong person is cancelled.
+ */
+export async function createInviteLink(studentId: string): Promise<InviteLinkState> {
+  const t = await getT();
+  await requireTutor();
+  const student = await db.user.findUnique({ where: { id: studentId }, select: { role: true, joinedAt: true } });
+  if (!student || student.role !== "STUDENT") return { error: t("action.notAStudent") };
+  if (student.joinedAt) return { error: t("action.alreadyJoined") };
+  const { url } = await issueInvite(studentId);
+  revalidatePath(`/tutor/students/${studentId}`);
+  return { url };
 }
 
 export async function resendVerificationEmail(studentId: string) {

@@ -119,6 +119,11 @@ model User {
   studentGroup      StudentGroup? // display/defaults only, not an access constraint
   language          Language      @default(ID)
   emailVerifiedAt   DateTime?
+  /// When the student first set their own email and password. Null while an
+  /// invite link is outstanding: the account exists (so courses, sessions and
+  /// invoices can be set up) but nobody can sign in to it yet.
+  joinedAt          DateTime?
+  invites           StudentInvite[]
   enrollments       Enrollment[]
   ownedCourses      Course[]      @relation("CourseOwner")
   sessionsAsStudent Session[]     @relation("SessionStudent")
@@ -149,6 +154,22 @@ model EmailVerificationToken {
   token     String   @unique
   expiresAt DateTime @db.Timestamptz(3)
   createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// A one-time link a student uses to set their own email and password. Only a
+/// SHA-256 hash of the token is kept, so the link can't be read back out of the
+/// database; a lost link is replaced, not recovered. Issuing a new one deletes
+/// the student's unused ones, so there is only ever one live link.
+model StudentInvite {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now())
 
   @@index([userId])
 }

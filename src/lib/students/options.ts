@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { ComboOption } from "@/components/ui/Combobox";
+import { visibleEmail } from "@/lib/students/inviteEmail";
 
 const GROUP_LABEL = { JUNIOR_HIGH: "Junior high", UNDERGRAD: "Undergrad", GRAD: "Grad" } as const;
 
@@ -13,6 +14,6 @@ export async function studentOptions(): Promise<ComboOption[]> {
   return students.map((s) => ({
     value: s.id,
     label: s.name,
-    hint: s.studentGroup ? `${s.email} · ${GROUP_LABEL[s.studentGroup]}` : s.email,
+    hint: [visibleEmail(s.email), s.studentGroup && GROUP_LABEL[s.studentGroup]].filter(Boolean).join(" · "),
   }));
 }
