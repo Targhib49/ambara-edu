@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isPlaceholderEmail } from "@/lib/students/placeholder";
 import { DRILL_SKILLS, parseDrillSkill } from "@/lib/drills/registry";
 import { isGradedStyle } from "@/lib/quiz/styles";
 import { notFound } from "next/navigation";
@@ -410,7 +411,7 @@ async function StudentsTab({ courseId }: { courseId: string }) {
     return {
       id: e.student.id,
       name: e.student.name,
-      email: e.student.email,
+      email: isPlaceholderEmail(e.student.email) ? "" : e.student.email,
       completed: done,
       total: totalLessons,
       pct: totalLessons ? Math.round((done / totalLessons) * 100) : 0,

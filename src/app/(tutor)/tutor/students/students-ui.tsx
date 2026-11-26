@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { createStudent, resendVerificationEmail, type CreateStudentState } from "@/lib/actions/students";
 import { enrollStudents } from "@/lib/actions/courses";
 import type { StudentGroup } from "@/generated/prisma/enums";
 import { badgeColorForKey, initialsFor } from "@/lib/ui/palette";
 import { DataTable, type Column, type Tab } from "@/components/ui/DataTable";
 import { Combobox, type ComboOption } from "@/components/ui/Combobox";
-import { useSlideOver } from "@/components/ui/SlideOver";
+import { SlideOverButton, useSlideOver } from "@/components/ui/SlideOver";
+import { InviteLinkCard, NewInviteLinkPanel } from "@/components/students/InviteLink";
 import { btnPrimary, btnSecondary, hintCls, inputCls, labelCls } from "@/components/ui/styles";
 import { useT } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/messages";
@@ -25,6 +26,8 @@ export type StudentRow = {
   email: string;
   studentGroup: StudentGroup | null;
   emailVerifiedAt: Date | null;
+  /** Added by name and hasn't used their join link yet; `email` is a placeholder. */
+  invitePending: boolean;
   courses: { id: string; title: string }[];
   /** Server-formatted in WIB. */
   nextSessionLabel: string | null;
@@ -35,6 +38,7 @@ const makeTabs = (t: Translate): Tab<StudentRow>[] => [
   { key: "JUNIOR_HIGH", label: t("group.JUNIOR_HIGH"), match: (s) => s.studentGroup === "JUNIOR_HIGH" },
   { key: "UNDERGRAD", label: t("group.UNDERGRAD"), match: (s) => s.studentGroup === "UNDERGRAD" },
   { key: "GRAD", label: t("group.GRAD"), match: (s) => s.studentGroup === "GRAD" },
+  { key: "invited", label: t("students.invitePending"), match: (s) => s.invitePending },
   // An account that can sign in but sees nothing — worth finding quickly.
   { key: "unenrolled", label: t("students.notEnrolled"), match: (s) => s.courses.length === 0 },
 ];
@@ -53,12 +57,16 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
         </span>
         <span className="min-w-0">
           <span className="block truncate font-medium text-zinc-900">{s.name}</span>
-          <span className="block truncate text-xs text-zinc-500">{s.email}</span>
+          {s.invitePending ? (
+            <span className="block truncate text-xs text-amber-700">{t("students.notJoinedYet")}</span>
+          ) : (
+            <span className="block truncate text-xs text-zinc-500">{s.email}</span>
+          )}
         </span>
       </div>
     ),
   },
-  { key: "email", header: t("students.header.email"), text: (s) => s.email, csvOnly: true, cell: () => null },
+  { key: "email", header: t("students.header.email"), text: (s) => (s.invitePending ? "" : s.email), csvOnly: true, cell: () => null },
   {
     key: "group",
     header: t("students.header.group"),
@@ -99,10 +107,25 @@ const makeColumns = (t: Translate, mailEnabled: boolean): Column<StudentRow>[] =
   {
     key: "status",
     header: t("students.header.email"),
-    sort: (s) => (s.emailVerifiedAt ? 1 : 0),
-    text: (s) => (s.emailVerifiedAt ? t("students.verified") : t("students.pending")),
+    sort: (s) => (s.invitePending ? -1 : s.emailVerifiedAt ? 1 : 0),
+    text: (s) =>
+      s.invitePending ? t("students.invitePending") : s.emailVerifiedAt ? t("students.verified") : t("students.pending"),
     className: "whitespace-nowrap",
-    cell: (s) => (
+    cell: (s) =>
+      s.invitePending ? (
+        // The panel renders inside this row; keep its clicks from opening the student.
+        <span className="inline-flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">{t("students.invitePending")}</span>
+          <SlideOverButton
+            label={t("invite.newLink")}
+            title={t("invite.newLinkTitle", { name: s.name })}
+            variant="small"
+            icon="none"
+          >
+            <NewInviteLinkPanel studentId={s.id} name={s.name} />
+          </SlideOverButton>
+        </span>
+      ) : (
       <span className="inline-flex items-center gap-2">
         <span
           className={`rounded-full px-2 py-0.5 text-xs ${
@@ -175,7 +198,7 @@ export function StudentTable({
       rowKey={(s) => s.id}
       rowHref={(s) => `/tutor/students/${s.id}`}
       tabs={makeTabs(t)}
-      search={{ placeholder: t("students.search"), of: (s) => `${s.name} ${s.email} ${s.courses.map((c) => c.title).join(" ")}` }}
+      search={{ placeholder: t("students.search"), of: (s) => `${s.name} ${s.invitePending ? "" : s.email} ${s.courses.map((c) => c.title).join(" ")}` }}
       initialSort={{ key: "name", dir: "asc" }}
       exportName="students"
       minWidth="700px"
@@ -187,64 +210,42 @@ export function StudentTable({
   );
 }
 
-function randomPassword() {
-  // No look-alike characters, so it can be read out or written down safely.
-  const alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
-  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
-}
-
 /** Lives in the "Add student" panel. */
 export function CreateStudentForm() {
   const t = useT();
   const panel = useSlideOver();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [password, setPassword] = useState("");
-  const [state, formAction, pending] = useActionState<CreateStudentState, FormData>(async (prev, formData) => {
-    const result = await createStudent(prev, formData);
-    // Stay open on success: the message carries the login details to hand over,
-    // and the next student can be added straight away.
-    if (result.success) {
-      formRef.current?.reset();
-      setPassword("");
-    }
-    return result;
-  }, {});
+  const [state, formAction, pending] = useActionState<CreateStudentState, FormData>(createStudent, {});
+  // Cleared by "Add another" so the next student starts from a blank form.
+  const [dismissed, setDismissed] = useState<CreateStudentState | null>(null);
+  const invite = state !== dismissed ? state.invite : undefined;
+
+  if (invite) {
+    // Stay open: the link has to be copied or shared before the panel goes.
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-zinc-600">{t("createStudent.created", { name: invite.name })}</p>
+        <InviteLinkCard invite={invite} />
+        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+          <button type="button" onClick={() => setDismissed(state)} className={btnSecondary}>
+            {t("createStudent.addAnother")}
+          </button>
+          {panel && (
+            <button type="button" onClick={panel.close} className={btnPrimary}>
+              {t("action.done")}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-4">
       <div>
         <label className={labelCls} htmlFor="student-name">
           {t("createStudent.fullName")}
         </label>
         <input id="student-name" name="name" required className={inputCls} />
-      </div>
-      <div>
-        <label className={labelCls} htmlFor="student-email">
-          {t("createStudent.email")}
-        </label>
-        <input id="student-email" name="email" type="email" required className={inputCls} />
-      </div>
-      <div>
-        <label className={labelCls} htmlFor="student-password">
-          {t("createStudent.tempPassword")}
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="student-password"
-            name="password"
-            type="text"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={`${inputCls} font-mono`}
-          />
-          <button type="button" onClick={() => setPassword(randomPassword())} className={btnSecondary}>
-            {t("createStudent.generate")}
-          </button>
-        </div>
-        <p className={hintCls}>{t("createStudent.passwordHint")}</p>
       </div>
       <div>
         <label className={labelCls} htmlFor="student-group">
@@ -257,14 +258,22 @@ export function CreateStudentForm() {
           <option value="GRAD">{t("group.GRAD")}</option>
         </select>
       </div>
+      <div>
+        <label className={labelCls} htmlFor="student-email">
+          {t("createStudent.emailOptional")}
+        </label>
+        <input id="student-email" name="email" type="email" className={inputCls} />
+        <p className={hintCls}>{t("createStudent.emailHint")}</p>
+      </div>
 
-      {state.error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-      {state.success && <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">{state.success}</p>}
+      {state.error && state !== dismissed && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
+      )}
 
       <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
         {panel && (
           <button type="button" onClick={panel.close} className={btnSecondary}>
-            {state.success ? t("action.done") : t("action.cancel")}
+            {t("action.cancel")}
           </button>
         )}
         <button disabled={pending} className={btnPrimary}>

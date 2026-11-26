@@ -19,6 +19,8 @@ import { SUBMISSION_STATUS_BADGE_CLASS, submissionStatusKey } from "@/lib/quiz/f
 import { getLanguage, getT } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { ResetPasswordPanel } from "./ResetPasswordPanel";
+import { NewInviteLinkPanel } from "@/components/students/InviteLink";
+import { isPlaceholderEmail } from "@/lib/students/placeholder";
 import {
   AssignCourseForm,
   DeleteStudentButton,
@@ -66,6 +68,7 @@ export default async function StudentDetailPage({
     select: { id: true, name: true, email: true, studentGroup: true, createdAt: true },
   });
   if (!student) notFound();
+  const invitePending = isPlaceholderEmail(student.email);
 
   const [enrollments, submissions, sessions, students, courses] = await Promise.all([
     db.enrollment.findMany({
@@ -224,21 +227,32 @@ export default async function StudentDetailPage({
         }
         meta={
           <>
-            {student.email}
+            {invitePending ? <span className="text-amber-700">{t("students.invitePending")}</span> : student.email}
             {student.studentGroup && <> · {t(GROUP_LABEL_KEYS[student.studentGroup])}</>} ·{" "}
             {t("studentPage.joined", { date: dateFmt.format(student.createdAt) })}
           </>
         }
         actions={
           <>
-            <SlideOverButton
-              label={t("studentPage.resetPassword")}
-              title={t("studentPage.resetPasswordTitle", { name: student.name })}
-              variant="secondary"
-              icon="none"
-            >
-              <ResetPasswordPanel studentId={student.id} name={student.name} />
-            </SlideOverButton>
+            {invitePending ? (
+              <SlideOverButton
+                label={t("invite.newLink")}
+                title={t("invite.newLinkTitle", { name: student.name })}
+                variant="secondary"
+                icon="none"
+              >
+                <NewInviteLinkPanel studentId={student.id} name={student.name} />
+              </SlideOverButton>
+            ) : (
+              <SlideOverButton
+                label={t("studentPage.resetPassword")}
+                title={t("studentPage.resetPasswordTitle", { name: student.name })}
+                variant="secondary"
+                icon="none"
+              >
+                <ResetPasswordPanel studentId={student.id} name={student.name} />
+              </SlideOverButton>
+            )}
             <SlideOverButton
               label={t("studentDetail.assignCourse")}
               title={t("studentPage.assignCourseTitle", { name: student.name })}

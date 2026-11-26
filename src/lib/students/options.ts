@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { isPlaceholderEmail } from "@/lib/students/placeholder";
 import type { ComboOption } from "@/components/ui/Combobox";
 
 const GROUP_LABEL = { JUNIOR_HIGH: "Junior high", UNDERGRAD: "Undergrad", GRAD: "Grad" } as const;
@@ -10,9 +11,9 @@ export async function studentOptions(): Promise<ComboOption[]> {
     orderBy: { name: "asc" },
     select: { id: true, name: true, email: true, studentGroup: true },
   });
-  return students.map((s) => ({
-    value: s.id,
-    label: s.name,
-    hint: s.studentGroup ? `${s.email} · ${GROUP_LABEL[s.studentGroup]}` : s.email,
-  }));
+  return students.map((s) => {
+    // Not joined yet: the address is a placeholder, not something to show.
+    const parts = [isPlaceholderEmail(s.email) ? null : s.email, s.studentGroup ? GROUP_LABEL[s.studentGroup] : null];
+    return { value: s.id, label: s.name, hint: parts.filter(Boolean).join(" · ") };
+  });
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { Resend } from "resend";
+import { isPlaceholderEmail } from "@/lib/students/placeholder";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -24,6 +25,9 @@ export async function sendSessionEmail(opts: {
   heading: string;
   body: string;
 }): Promise<boolean> {
+  // A student who hasn't accepted their invite has no real address yet. One
+  // check here covers every booking and reschedule notice that might reach them.
+  if (isPlaceholderEmail(opts.to)) return false;
   if (!resend) {
     console.warn(`[email] RESEND_API_KEY not set — skipped "${opts.subject}" to ${opts.to}`);
     return false;

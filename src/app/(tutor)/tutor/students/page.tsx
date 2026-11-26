@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { StudentTable, CreateStudentForm, type StudentRow } from "./students-ui";
 import { isEmailConfigured } from "@/lib/email";
+import { isPlaceholderEmail } from "@/lib/students/placeholder";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SlideOverButton } from "@/components/ui/SlideOver";
 import { formatSessionShort, nowMs } from "@/lib/sessions/format";
@@ -39,6 +40,7 @@ export default async function StudentsPage() {
     email: s.email,
     studentGroup: s.studentGroup,
     emailVerifiedAt: s.emailVerifiedAt,
+    invitePending: isPlaceholderEmail(s.email),
     courses: s.enrollments.map((e) => e.course),
     nextSessionLabel: s.sessionsAsStudent[0] ? formatSessionShort(s.sessionsAsStudent[0].startTime, language) : null,
   }));
