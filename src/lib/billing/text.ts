@@ -1,6 +1,6 @@
 import { formatIDR } from "./money";
 import { invoiceTotal, type ItemLike } from "./invoice";
-import { makeT } from "@/lib/i18n/translate";
+import { makeT, type Translate } from "@/lib/i18n/translate";
 import type { Language } from "@/lib/i18n/messages";
 
 export type InvoiceTextInput = {
@@ -36,4 +36,20 @@ export function invoiceText(invoice: InvoiceTextInput, language: Language = "ID"
   if (invoice.dueLabel) lines.push(t("invoice.due", { date: invoice.dueLabel }));
   if (invoice.note.trim()) lines.push("", invoice.note.trim());
   return lines.join("\n");
+}
+
+/** One line for an arrangement, as both the billing list and a student's profile show it. */
+export function describePlan(
+  t: Translate,
+  language: Language,
+  plan: { kind: string; amount: number; includedSessions: number | null; payer: string }
+): string {
+  return plan.kind === "PER_SESSION"
+    ? t("billing.plan.perSession", { amount: formatIDR(plan.amount, language) })
+    : plan.kind === "MONTHLY"
+      ? t("billing.plan.perMonth", { amount: formatIDR(plan.amount, language) }) +
+        (plan.includedSessions ? ` · ${t("billing.plan.includedCount", { n: plan.includedSessions })}` : "")
+      : plan.kind === "EXTERNAL"
+        ? `${t("billing.kind.EXTERNAL")}${plan.payer ? `: ${plan.payer}` : ""}`
+        : t("billing.kind.FREE");
 }

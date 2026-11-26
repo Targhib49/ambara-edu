@@ -32,14 +32,21 @@ import {
   type StudentSessionHistoryRow,
 } from "./StudentDetailTables";
 import { requireUuids } from "@/lib/params";
+import { BillingOverview, loadBilling } from "@/components/profile/BillingOverview";
+import { BillingPlanForm, NewInvoiceForm } from "../../billing/billing-ui";
+import { formatIDR } from "@/lib/billing/money";
+import { describePlan } from "@/lib/billing/text";
+import { currentMonth, dateInputValue, todayDate } from "@/lib/billing/period";
 
 const GROUP_LABEL_KEYS = {
   JUNIOR_HIGH: "group.JUNIOR_HIGH",
   UNDERGRAD: "group.UNDERGRAD",
   GRAD: "group.GRAD",
 } as const satisfies Record<string, MessageKey>;
-const TABS = ["overview", "courses", "quizzes", "sessions"] as const;
+const TABS = ["overview", "sessions", "billing", "progress", "account"] as const;
 type TabKey = (typeof TABS)[number];
+// Older links (and bookmarks) still point at the tabs Progress replaced.
+const LEGACY_TABS: Record<string, TabKey> = { courses: "progress", quizzes: "progress" };
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
 
@@ -61,16 +68,27 @@ export default async function StudentDetailPage({
   const { studentId } = await params;
   requireUuids(studentId);
   const { tab: requestedTab } = await searchParams;
-  const tab: TabKey = (TABS as readonly string[]).includes(requestedTab ?? "") ? (requestedTab as TabKey) : "overview";
+  const tab: TabKey = (TABS as readonly string[]).includes(requestedTab ?? "")
+    ? (requestedTab as TabKey)
+    : (LEGACY_TABS[requestedTab ?? ""] ?? "overview");
 
   const student = await db.user.findFirst({
     where: { id: studentId, role: "STUDENT" },
-    select: { id: true, name: true, email: true, studentGroup: true, createdAt: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      studentGroup: true,
+      language: true,
+      emailVerifiedAt: true,
+      createdAt: true,
+      invite: { select: { expiresAt: true } },
+    },
   });
   if (!student) notFound();
   const invitePending = isPlaceholderEmail(student.email);
 
-  const [enrollments, submissions, sessions, students, courses] = await Promise.all([
+  const [enrollments, submissions, sessions, students, courses, billing] = await Promise.all([
     db.enrollment.findMany({
       where: { studentId },
       orderBy: { createdAt: "asc" },
@@ -122,6 +140,7 @@ export default async function StudentDetailPage({
     }),
     studentOptions(),
     courseOptions(),
+    loadBilling(studentId, "tutor"),
   ]);
   // Sessions reference the student with no cascade, so the database refuses to
   // delete a student who has any. Checked here so the button never offers it.
@@ -211,6 +230,31 @@ export default async function StudentDetailPage({
   const pendingReview = quizRows.filter((q) => q.status === "PENDING_REVIEW").length;
 
   const base = `/tutor/students/${student.id}`;
+  const projectsCard = openProjects.length > 0 && (
+    <section className={cardCls}>
+                <SectionHead title={t("studentPage.openProjects")} />
+                <ul className="divide-y divide-zinc-100">
+                  {openProjects.map((p) => (
+                    <li key={p.quizId}>
+                      <Link href={`/tutor/quizzes/${p.quizId}`} className="block px-5 py-3 hover:bg-zinc-50">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="truncate text-sm font-medium text-zinc-900">{p.title}</span>
+                          <span className="shrink-0 text-xs tabular-nums text-zinc-500">
+                            {t("projectProgress.steps", { n: p.passed, total: p.total })}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 truncate text-xs text-zinc-500">
+                          {p.where || "—"} · {t("projectProgress.failed", { n: p.failed })} · {t("studentPage.lastActive", { date: p.updatedLabel })}
+                        </p>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                          <div className="h-full rounded-full bg-blue-600" style={{ width: `${p.total ? (p.passed / p.total) * 100 : 0}%` }} />
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+  );
   const enrolledIds = new Set(courseRows.map((c) => c.id));
 
   return (
@@ -234,25 +278,6 @@ export default async function StudentDetailPage({
         }
         actions={
           <>
-            {invitePending ? (
-              <SlideOverButton
-                label={t("invite.newLink")}
-                title={t("invite.newLinkTitle", { name: student.name })}
-                variant="secondary"
-                icon="none"
-              >
-                <NewInviteLinkPanel studentId={student.id} name={student.name} />
-              </SlideOverButton>
-            ) : (
-              <SlideOverButton
-                label={t("studentPage.resetPassword")}
-                title={t("studentPage.resetPasswordTitle", { name: student.name })}
-                variant="secondary"
-                icon="none"
-              >
-                <ResetPasswordPanel studentId={student.id} name={student.name} />
-              </SlideOverButton>
-            )}
             <SlideOverButton
               label={t("studentDetail.assignCourse")}
               title={t("studentPage.assignCourseTitle", { name: student.name })}
@@ -298,18 +323,19 @@ export default async function StudentDetailPage({
       <PageTabs
         active={tab}
         tabs={[
-          { key: "overview", label: t("studentPage.tabOverview"), href: base },
-          { key: "courses", label: t("nav.courses"), href: `${base}?tab=courses`, count: courseRows.length },
-          { key: "quizzes", label: t("studentPage.tabQuizResults"), href: `${base}?tab=quizzes`, count: quizRows.length },
-          { key: "sessions", label: t("nav.sessions"), href: `${base}?tab=sessions`, count: sessionRows.length },
+          { key: "overview", label: t("profile.tab.overview"), href: base },
+          { key: "sessions", label: t("profile.tab.sessions"), href: `${base}?tab=sessions`, count: sessionRows.length },
+          { key: "billing", label: t("profile.tab.billing"), href: `${base}?tab=billing` },
+          { key: "progress", label: t("profile.tab.progress"), href: `${base}?tab=progress`, count: pendingReview || undefined },
+          { key: "account", label: t("profile.tab.account"), href: `${base}?tab=account` },
         ]}
       />
 
       {tab === "overview" && (
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
             <section className={cardCls}>
-              <SectionHead title={t("studentPage.courseProgress")} href={`${base}?tab=courses`} />
+              <SectionHead title={t("studentPage.courseProgress")} href={`${base}?tab=progress`} />
               {courseRows.length === 0 ? (
                 <p className="px-5 pb-5 text-sm text-zinc-500">{t("studentPage.noCourses")}</p>
               ) : (
@@ -333,34 +359,10 @@ export default async function StudentDetailPage({
               )}
             </section>
 
-            {openProjects.length > 0 && (
-              <section className={cardCls}>
-                <SectionHead title={t("studentPage.openProjects")} />
-                <ul className="divide-y divide-zinc-100">
-                  {openProjects.map((p) => (
-                    <li key={p.quizId}>
-                      <Link href={`/tutor/quizzes/${p.quizId}`} className="block px-5 py-3 hover:bg-zinc-50">
-                        <div className="flex items-baseline justify-between gap-3">
-                          <span className="truncate text-sm font-medium text-zinc-900">{p.title}</span>
-                          <span className="shrink-0 text-xs tabular-nums text-zinc-500">
-                            {t("projectProgress.steps", { n: p.passed, total: p.total })}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 truncate text-xs text-zinc-500">
-                          {p.where || "—"} · {t("projectProgress.failed", { n: p.failed })} · {t("studentPage.lastActive", { date: p.updatedLabel })}
-                        </p>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                          <div className="h-full rounded-full bg-blue-600" style={{ width: `${p.total ? (p.passed / p.total) * 100 : 0}%` }} />
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+            {projectsCard}
 
             <section className={cardCls}>
-              <SectionHead title={t("studentPage.recentQuizResults")} href={`${base}?tab=quizzes`} />
+              <SectionHead title={t("studentPage.recentQuizResults")} href={`${base}?tab=progress`} />
               {quizRows.length === 0 ? (
                 <p className="px-5 pb-5 text-sm text-zinc-500">{t("studentPage.noQuizzes")}</p>
               ) : (
@@ -403,8 +405,127 @@ export default async function StudentDetailPage({
               )}
             </section>
 
+            {invitePending && (
+              <section className={`${cardCls} border-amber-200 bg-amber-50/60 p-5`}>
+                <h2 className="text-sm font-semibold text-amber-900">{t("students.invitePending")}</h2>
+                <p className="mt-1 text-sm text-amber-900/80">{t("profile.inviteHint", { name: student.name })}</p>
+                <div className="mt-3">
+                  <SlideOverButton label={t("invite.newLink")} title={t("invite.newLinkTitle", { name: student.name })} variant="secondary" icon="none">
+                    <NewInviteLinkPanel studentId={student.id} name={student.name} />
+                  </SlideOverButton>
+                </div>
+              </section>
+            )}
+
+            <section className={cardCls}>
+              <SectionHead title={t("profile.tab.billing")} href={`${base}?tab=billing`} />
+              <div className="px-5 pb-5">
+                <p className={`text-xl font-semibold ${billing.owed > 0 ? "text-amber-700" : "text-zinc-900"}`}>
+                  {billing.owed > 0 ? formatIDR(billing.owed, language) : t("studentBilling.settled")}
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  {billing.plans.length > 0
+                    ? billing.plans.map((p) => describePlan(t, language, p)).join(" · ")
+                    : t("profile.noPlan")}
+                </p>
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
+
+      {tab === "sessions" && <StudentSessionHistoryTable sessions={sessionRows} />}
+
+      {tab === "billing" && (
+        <div className="max-w-3xl space-y-4">
+          <div className="flex flex-wrap justify-end gap-2">
+            <SlideOverButton label={t("billing.plan.set")} title={t("billing.plan.set")} variant="secondary" icon="none">
+              <BillingPlanForm studentId={student.id} courses={courses} defaultDate={dateInputValue(todayDate())} />
+            </SlideOverButton>
+            <SlideOverButton label={t("billing.newInvoice")} title={t("billing.newInvoice")}>
+              <NewInvoiceForm studentId={student.id} defaultMonth={currentMonth()} />
+            </SlideOverButton>
+          </div>
+          <BillingOverview studentId={student.id} viewer="tutor" />
+        </div>
+      )}
+
+      {tab === "progress" && (
+        <div className="space-y-6">
+          {projectsCard}
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold text-zinc-900">{t("nav.courses")}</h2>
+            <StudentCoursesTable studentId={student.id} courses={courseRows} />
+          </section>
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold text-zinc-900">{t("studentPage.tabQuizResults")}</h2>
+            <StudentQuizTable results={quizRows} />
+          </section>
+        </div>
+      )}
+
+      {tab === "account" && (
+        <div className="grid max-w-4xl grid-cols-[minmax(0,1fr)] items-start gap-6 md:grid-cols-2">
+          <section className={`${cardCls} p-5`}>
+            <h2 className="text-sm font-semibold text-zinc-900">{t("profile.accountDetails")}</h2>
+            <dl className="mt-3 space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">{t("createStudent.email")}</dt>
+                <dd className="min-w-0 truncate text-right text-zinc-900">
+                  {invitePending ? <span className="text-amber-700">{t("students.notJoinedYet")}</span> : student.email}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">{t("students.header.email")}</dt>
+                <dd className="text-right text-zinc-900">
+                  {invitePending ? "—" : student.emailVerifiedAt ? t("students.verified") : t("students.pending")}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">{t("createStudent.group")}</dt>
+                <dd className="text-right text-zinc-900">{student.studentGroup ? t(GROUP_LABEL_KEYS[student.studentGroup]) : "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">{t("profile.language")}</dt>
+                <dd className="text-right text-zinc-900">{student.language === "EN" ? "English" : "Bahasa Indonesia"}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">{t("profile.added")}</dt>
+                <dd className="text-right text-zinc-900">{dateFmt.format(student.createdAt)}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <div className="space-y-6">
             <section className={`${cardCls} p-5`}>
-              <h2 className="text-sm font-semibold text-zinc-900">{t("studentPage.account")}</h2>
+              <h2 className="text-sm font-semibold text-zinc-900">{t("profile.signIn")}</h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                {invitePending
+                  ? student.invite && student.invite.expiresAt > new Date(now)
+                    ? t("profile.inviteActive", { date: dateFmt.format(student.invite.expiresAt) })
+                    : t("profile.inviteExpired")
+                  : t("profile.resetHint")}
+              </p>
+              <div className="mt-3">
+                {invitePending ? (
+                  <SlideOverButton label={t("invite.newLink")} title={t("invite.newLinkTitle", { name: student.name })} variant="secondary" icon="none">
+                    <NewInviteLinkPanel studentId={student.id} name={student.name} />
+                  </SlideOverButton>
+                ) : (
+                  <SlideOverButton
+                    label={t("studentPage.resetPassword")}
+                    title={t("studentPage.resetPasswordTitle", { name: student.name })}
+                    variant="secondary"
+                    icon="none"
+                  >
+                    <ResetPasswordPanel studentId={student.id} name={student.name} />
+                  </SlideOverButton>
+                )}
+              </div>
+            </section>
+
+            <section className={`${cardCls} p-5`}>
+              <h2 className="text-sm font-semibold text-zinc-900">{t("profile.deleteTitle")}</h2>
               <p className="mt-1 text-sm text-zinc-500">
                 {sessionCount > 0
                   ? t(sessionCount === 1 ? "studentPage.deleteBlocked" : "studentPage.deleteBlockedPlural", { n: sessionCount })
@@ -417,10 +538,6 @@ export default async function StudentDetailPage({
           </div>
         </div>
       )}
-
-      {tab === "courses" && <StudentCoursesTable studentId={student.id} courses={courseRows} />}
-      {tab === "quizzes" && <StudentQuizTable results={quizRows} />}
-      {tab === "sessions" && <StudentSessionHistoryTable sessions={sessionRows} />}
     </div>
   );
 }

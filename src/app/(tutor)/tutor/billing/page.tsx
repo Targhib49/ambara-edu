@@ -11,6 +11,7 @@ import { courseOptions } from "@/lib/courses/options";
 import { sessionCredit } from "@/lib/billing/credit";
 import { formatIDR } from "@/lib/billing/money";
 import { planOn } from "@/lib/billing/plan";
+import { describePlan } from "@/lib/billing/text";
 import { invoiceTotal, isOwed, outstanding, paidTotal } from "@/lib/billing/invoice";
 import { currentMonth, dateInputValue, monthLabel, todayDate } from "@/lib/billing/period";
 import { BillingPlanForm, BillingStudentsTable, InvoicesTable, NewInvoiceForm, type BillingRow, type InvoiceRow } from "./billing-ui";
@@ -63,15 +64,7 @@ export default async function TutorBillingPage() {
     courseOptions(),
   ]);
 
-  const describePlan = (plan: { kind: string; amount: number; includedSessions: number | null; payer: string }) =>
-    plan.kind === "PER_SESSION"
-      ? t("billing.plan.perSession", { amount: formatIDR(plan.amount, language) })
-      : plan.kind === "MONTHLY"
-        ? t("billing.plan.perMonth", { amount: formatIDR(plan.amount, language) }) +
-          (plan.includedSessions ? ` · ${t("billing.plan.includedCount", { n: plan.includedSessions })}` : "")
-        : plan.kind === "EXTERNAL"
-          ? `${t("billing.kind.EXTERNAL")}${plan.payer ? `: ${plan.payer}` : ""}`
-          : t("billing.kind.FREE");
+  const describe = (plan: Parameters<typeof describePlan>[2]) => describePlan(t, language, plan);
 
   const credits = new Map(await Promise.all(students.map(async (s) => [s.id, await sessionCredit(s.id)] as const)));
 
@@ -81,7 +74,7 @@ export default async function TutorBillingPage() {
     const plans = subjects.flatMap((courseId) => {
       const plan = planOn(s.billingPlans.filter((p) => p.courseId === courseId), today);
       if (!plan) return [];
-      return [{ subject: plan.course?.title ?? t("billing.plan.anySubject"), label: describePlan(plan) }];
+      return [{ subject: plan.course?.title ?? t("billing.plan.anySubject"), label: describe(plan) }];
     });
     const owed = s.invoices
       .filter((i) => isOwed(i.status))

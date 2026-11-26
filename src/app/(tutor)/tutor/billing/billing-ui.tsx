@@ -211,7 +211,16 @@ export function InvoicesTable({ rows }: { rows: InvoiceRow[] }) {
 }
 
 /** Creates the month's draft, then goes straight to it for checking over. */
-export function NewInvoiceForm({ students, defaultMonth }: { students: ComboOption[]; defaultMonth: string }) {
+export function NewInvoiceForm({
+  students,
+  studentId,
+  defaultMonth,
+}: {
+  students?: ComboOption[];
+  /** Fixed when raised from a student's own page. */
+  studentId?: string;
+  defaultMonth: string;
+}) {
   const t = useT();
   const [state, action] = useActionState(createInvoice, {} as BillingResult);
   const router = useRouter();
@@ -223,10 +232,14 @@ export function NewInvoiceForm({ students, defaultMonth }: { students: ComboOpti
   return (
     <form action={action} className="space-y-4">
       <p className={hintCls}>{t("billing.newInvoiceHint")}</p>
-      <div>
-        <label className={labelCls}>{t("billing.students")}</label>
-        <Combobox name="studentId" options={students} placeholder={t("action.pickStudent")} />
-      </div>
+      {studentId ? (
+        <input type="hidden" name="studentId" value={studentId} />
+      ) : (
+        <div>
+          <label className={labelCls}>{t("billing.students")}</label>
+          <Combobox name="studentId" options={students ?? []} placeholder={t("action.pickStudent")} />
+        </div>
+      )}
       <div>
         <label className={labelCls} htmlFor="invoice-month">
           {t("billing.month")}
