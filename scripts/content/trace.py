@@ -133,6 +133,31 @@ def main():
         if header_of(step["line"]).startswith("else") and CONDITION.match(lines[before["line"] - 1].strip()):
             step["note"] = "Semua syarat di atasnya False, jadi blok else yang dijalankan."
 
+    # A for line also has no note of its own (its next value isn't known yet), so
+    # say on the following step which value the loop took, or that it finished.
+    FOR = re.compile(r"^for\s+([A-Za-z_]\w*)\s+in\s+(.+?):\s*(#.*)?$")
+
+    def indent_of(lineno):
+        return len(lines[lineno - 1]) - len(lines[lineno - 1].lstrip())
+
+    for before, step in zip(steps, steps[1:]):
+        if step["note"] or not before["line"]:
+            continue
+        match = FOR.match(lines[before["line"] - 1].strip())
+        if not match:
+            # Back at a for line from its body: the next pass is about to start.
+            if step["line"] and step["line"] < before["line"] and FOR.match(lines[step["line"] - 1].strip()):
+                step["note"] = "Kembali ke baris for untuk mengambil nilai berikutnya."
+            continue
+        name = match.group(1)
+        inside = step["line"] and step["line"] > before["line"] and indent_of(step["line"]) > indent_of(before["line"])
+        if inside:
+            value = next((v for n, v in step["vars"] if n == name), None)
+            if value is not None:
+                step["note"] = f"Putaran baru: {name} = {value}."
+        else:
+            step["note"] = f"Tidak ada nilai lagi di {match.group(2)} — loop for di baris {before['line']} selesai."
+
     final_vars = []
     for name in order:
         if name in env and "›" not in name:

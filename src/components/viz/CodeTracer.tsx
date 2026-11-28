@@ -55,7 +55,8 @@ export function CodeTracer({ title, code, stdin, steps, predict }: Props) {
   };
 
   return (
-    <div className="rounded-card border border-line bg-surface p-4">
+    // Sized by its own width, not the screen's: lessons sit in a narrow column beside the outline.
+    <div className="@container rounded-card border border-line bg-surface p-4">
       <div className="mb-3 flex flex-wrap items-baseline gap-x-2">
         <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-ink">{t("viz.trace.badge")}</span>
         {title && <p className="text-sm font-medium text-ink">{title}</p>}
@@ -67,7 +68,7 @@ export function CodeTracer({ title, code, stdin, steps, predict }: Props) {
         </p>
       )}
 
-      <div className={open ? "grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : ""}>
+      <div className={open ? "grid grid-cols-[minmax(0,1fr)] gap-4 @xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : ""}>
         <pre ref={codeRef} className="relative max-h-[26rem] overflow-auto rounded-control bg-zinc-900 py-3 text-xs leading-6">
           {lines.map((line, i) => {
             const active = open && i + 1 === step.line;
@@ -117,7 +118,7 @@ export function CodeTracer({ title, code, stdin, steps, predict }: Props) {
       {predict && (
         <div className="mt-4 rounded-control border border-brand-line bg-brand-soft/40 p-3">
           <p className="text-sm font-medium text-ink">🤔 {predict.question}</p>
-          <div className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
+          <div className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-2 @sm:grid-cols-2">
             {predict.options.map((option, i) => {
               const picked = choice === i;
               const right = i === predict.answer;

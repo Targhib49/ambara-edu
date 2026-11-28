@@ -1,15 +1,18 @@
 /**
- * Builds the "Percabangan: Langkah demi Langkah" chapter of Basic Python from
- * scripts/content/python-if.ts — the pilot of the step-by-step remake.
+ * Builds one step-by-step chapter of Basic Python from a unit in
+ * scripts/content/ (see python-stepwise.ts for the block kinds):
+ *   --unit if     python-if.ts    "Percabangan: Langkah demi Langkah"
+ *   --unit loop   python-loop.ts  "Perulangan: Langkah demi Langkah"
  *
- *   npx tsx scripts/setup-python-if.ts validate          runs every program, checks every step; no database
- *   npx tsx scripts/setup-python-if.ts plan              validate + what apply would do (read-only)
- *   npx tsx scripts/setup-python-if.ts apply             adds the chapter, all lessons DRAFT
- *   npx tsx scripts/setup-python-if.ts apply --replace   rebuilds the chapter's lessons if it already exists
+ *   npx tsx scripts/setup-python-stepwise.ts validate --unit loop          runs every program, checks every step; no database
+ *   npx tsx scripts/setup-python-stepwise.ts plan --unit loop              validate + what apply would do (read-only)
+ *   npx tsx scripts/setup-python-stepwise.ts apply --unit loop             adds the chapter, all lessons DRAFT
+ *   npx tsx scripts/setup-python-stepwise.ts apply --unit loop --replace   rebuilds the chapter's lessons if it already exists
+ *   npx tsx scripts/setup-python-stepwise.ts publish --unit loop           publishes the chapter's draft lessons
  *   options: --course "<title>" (default "Basic Python"), --create-course (local testing: makes a DRAFT course)
  *
  * Runs against whatever `.env` points at — the local stack. For the live site:
- *   npm run prod -- npx tsx scripts/setup-python-if.ts plan
+ *   npm run prod -- npx tsx scripts/setup-python-stepwise.ts plan --unit loop
  *
  * Every output on the page comes from running the code with Python 3.12, the
  * version Pyodide 0.26 ships, so error messages read exactly as students will
@@ -33,7 +36,11 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { blockDataSchemas, type BlockDataMap } from "../src/lib/blocks/schema";
 import { failedCodeChecks } from "../src/lib/blocks/guided";
 import { codeTracerProps } from "../src/lib/viz/schemas";
-import { CHAPTER_TITLE, PYTHON_IF_LESSONS, type BlockSource } from "./content/python-if";
+import type { BlockSource, Unit } from "./content/python-stepwise";
+import { PYTHON_IF } from "./content/python-if";
+import { PYTHON_LOOP } from "./content/python-loop";
+
+const UNITS: Record<string, Unit> = { if: PYTHON_IF, loop: PYTHON_LOOP };
 
 const PYTHON = process.env.PYTHON ?? "/opt/homebrew/bin/python3.12";
 const TRACE_PY = path.resolve(__dirname, "content/trace.py");
@@ -180,8 +187,8 @@ function buildBlock(lesson: string, src: BlockSource, index: number): Built[] {
   }
 }
 
-function buildAll() {
-  const lessons = PYTHON_IF_LESSONS.map((lesson) => {
+function buildAll(unit: Unit) {
+  const lessons = unit.lessons.map((lesson) => {
     const blocks = lesson.blocks.flatMap((b, i) => buildBlock(lesson.title, b, i));
     for (const [i, block] of blocks.entries()) {
       const parsed = blockDataSchemas[block.type].safeParse(block.data);
@@ -200,12 +207,15 @@ function arg(name: string) {
 
 async function main() {
   const mode = process.argv[2];
-  if (!["validate", "plan", "apply"].includes(mode)) {
-    console.log("usage: setup-python-if.ts validate | plan | apply [--replace] [--course <title>] [--create-course]");
+  const unit = UNITS[arg("--unit") ?? ""];
+  if (!["validate", "plan", "apply", "publish"].includes(mode) || !unit) {
+    console.log(`usage: setup-python-stepwise.ts validate | plan | apply [--replace] | publish  --unit ${Object.keys(UNITS).join("|")} [--course <title>] [--create-course]`);
     process.exit(1);
   }
+  const CHAPTER_TITLE = unit.chapterTitle;
+  if (mode === "publish") return publish(CHAPTER_TITLE);
 
-  const lessons = buildAll();
+  const lessons = buildAll(unit);
   const counts = lessons.map((l) => {
     const by = (t: string) => l.blocks.filter((b) => b.type === t).length;
     const guided = l.blocks.find((b) => b.type === "GUIDED_CODE")?.data as BlockDataMap["GUIDED_CODE"] | undefined;
@@ -288,6 +298,26 @@ async function main() {
       { timeout: 60_000 }
     );
     console.log(`✓ applied to "${course.title}".`);
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+/** Publishes the chapter's draft lessons — the tutor's call, after reviewing them. */
+async function publish(chapterTitle: string) {
+  const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
+  try {
+    const courseTitle = arg("--course") ?? "Basic Python";
+    const chapter = await db.chapter.findFirst({
+      where: { title: chapterTitle, course: { title: courseTitle } },
+      select: { id: true, course: { select: { status: true } }, lessons: { select: { title: true, status: true } } },
+    });
+    if (!chapter) {
+      console.error(`No chapter "${chapterTitle}" in "${courseTitle}".`);
+      process.exit(1);
+    }
+    const { count } = await db.lesson.updateMany({ where: { chapterId: chapter.id, status: "DRAFT" }, data: { status: "PUBLISHED" } });
+    console.log(`✓ published ${count} lesson(s) of "${chapterTitle}" (${chapter.lessons.length} in the chapter). Course is ${chapter.course.status}.`);
   } finally {
     await db.$disconnect();
   }

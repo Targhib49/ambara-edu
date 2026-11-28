@@ -1,55 +1,11 @@
 /**
- * Basic Python, pilot of the step-by-step remake: "Percabangan" (if) as six
- * small lessons, each teaching one idea.
- *
- * Every lesson follows the same shape:
- *   why → see it (examples) → trace it (predict, then step through) →
- *   guided exercise (step by step, checked) → common mistakes → try alone → summary
- *
- * Nothing here states an output by hand. scripts/setup-python-if.ts runs every
- * example, mistake, trace and solution with Python 3.12 (the version Pyodide
- * 0.26 ships) and writes what really came out:
- *   - `example`  → a code block plus its real output
- *   - `mistake`  → the broken code, its real error (or wrong output), the fix
- *   - `trace`    → a code_tracer visualization recorded by trace.py; the
- *                  predict answer is whichever option equals the real output
- *   - `guided`   → a GUIDED_CODE block; each step's expectedOutput is its
- *                  solution's real output, and the step before must not pass
- *   - `try`      → a task, a scratchpad, and the target output of a solution
+ * Basic Python, step-by-step unit 1: "Percabangan" (if) as six small lessons,
+ * each teaching one idea. Block kinds and the lesson shape are described in
+ * python-stepwise.ts; scripts/setup-python-stepwise.ts --unit if builds it.
  */
+import { GUIDED_TAIL, INPUT_NOTE, md, py, type LessonSource, type Unit } from "./python-stepwise";
 
-export type PredictSource = { question: string; options: string[]; explanation: string };
-
-export type GuidedStepSource = {
-  title: string;
-  instructions: string;
-  stdin?: string;
-  hints?: string[];
-  codeChecks?: { pattern: string; message: string }[];
-  /** The whole program once this step is done. Never reaches the page. */
-  solution: string;
-};
-
-export type BlockSource =
-  | { kind: "md"; text: string }
-  | { kind: "example"; code: string; stdin?: string; lead?: string }
-  | { kind: "mistake"; title: string; code: string; explain: string; fix: string; stdin?: string }
-  | { kind: "trace"; title: string; code: string; stdin?: string; notes?: Record<number, string>; predict?: PredictSource }
-  | { kind: "guided"; title: string; intro: string; starterCode: string; steps: GuidedStepSource[] }
-  | { kind: "try"; title: string; task: string; starterCode: string; solution: string };
-
-export type LessonSource = { title: string; blocks: BlockSource[] };
-
-export const CHAPTER_TITLE = "Percabangan: Langkah demi Langkah";
-
-const md = (...lines: string[]): BlockSource => ({ kind: "md", text: lines.join("\n") });
-const py = (source: string) => source.replace(/^\n/, "").replace(/\s+$/, "");
-
-const GUIDED_TAIL =
-  "Kerjakan satu langkah dulu, lalu tekan **✓ Cek langkah**. Programmu dijalankan dan output-nya dibandingkan dengan *Output yang diharapkan*. Kalau sudah benar, langkah berikutnya terbuka — dan kodenya terus kamu kembangkan. Kodemu tersimpan otomatis.";
-
-const INPUT_NOTE =
-  "Di latihan terpandu, `input()` ditulis **tanpa teks pertanyaan** di dalam kurungnya, karena nilai input-nya sudah disiapkan oleh tiap langkah (lihat *Input langkah ini*).";
+const CHAPTER_TITLE = "Percabangan: Langkah demi Langkah";
 
 // ───────────────────────────────────────────────────────────── Lesson 1
 
@@ -1920,4 +1876,4 @@ else:
   ],
 };
 
-export const PYTHON_IF_LESSONS: LessonSource[] = [L1, L2, L3, L4, L5, L6];
+export const PYTHON_IF: Unit = { chapterTitle: CHAPTER_TITLE, lessons: [L1, L2, L3, L4, L5, L6] };
