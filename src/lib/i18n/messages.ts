@@ -1724,6 +1724,15 @@ export const MESSAGES = {
   "viz.life.ending": { ID: "destruktor berjalan", EN: "destructor running" },
   "viz.life.static": { ID: "Data static (milik kelas)", EN: "Static data (belongs to the class)" },
   "viz.life.output": { ID: "Output", EN: "Output" },
+  "viz.trace.badge": { ID: "Telusuri kodenya", EN: "Trace the code" },
+  "viz.trace.input": { ID: "Input program: {input}", EN: "Program input: {input}" },
+  "viz.trace.vars": { ID: "Variabel", EN: "Variables" },
+  "viz.trace.noVars": { ID: "Belum ada variabel.", EN: "No variables yet." },
+  "viz.trace.next": { ID: "Baris {line} akan dijalankan.", EN: "Line {line} runs next." },
+  "viz.trace.done": { ID: "Program selesai.", EN: "The program has finished." },
+  "viz.trace.right": { ID: "Tepat!", EN: "Right!" },
+  "viz.trace.wrong": { ID: "Belum tepat.", EN: "Not quite." },
+  "viz.trace.nowTrace": { ID: "Sekarang telusuri baris demi baris di atas dengan tombol Langkah.", EN: "Now trace it line by line above with the Step button." },
 
   // --- C++ editor -----------------------------------------------------------
   "cpp.compiling": { ID: "Mengompilasi\u2026", EN: "Compiling\u2026" },
@@ -1751,11 +1760,15 @@ export const MESSAGES = {
   "guided.restoreTitle": { ID: "Kembalikan kode ke keadaan saat langkah ini dimulai", EN: "Restore the code to how it was when this step started" },
   "guided.previewNote": { ID: "Pratinjau tutor \u2014 tidak disimpan", EN: "Tutor preview \u2014 not saved" },
   "guided.useInput": { ID: "Input langkah ini: {input}", EN: "This step\u2019s input: {input}" },
-  "guided.scriptOnly": { ID: "Latihan terpandu ditulis lewat skrip (scripts/content/cpp-guided.ts), jadi tidak bisa diubah di sini. Langkahnya:", EN: "Guided exercises are written by a script (scripts/content/cpp-guided.ts), so they can\u2019t be edited here. Its steps:" },
+  "guided.scriptOnly": { ID: "Latihan terpandu ditulis lewat skrip (scripts/content/), jadi tidak bisa diubah di sini. Langkahnya:", EN: "Guided exercises are written by a script (scripts/content/), so they can\u2019t be edited here. Its steps:" },
   "guided.studentsTitle": { ID: "Progres siswa", EN: "Student progress" },
   "guided.noStudents": { ID: "Belum ada siswa yang mulai.", EN: "No student has started yet." },
   "guided.showHint": { ID: "Lihat petunjuk", EN: "Show a hint" },
-  "guided.runShortcut": { ID: "Jalankan main.cpp (Ctrl/\u2318 + Enter)", EN: "Run main.cpp (Ctrl/\u2318 + Enter)" },
+  "guided.runShortcut": { ID: "Jalankan {file} (Ctrl/\u2318 + Enter)", EN: "Run {file} (Ctrl/\u2318 + Enter)" },
+  "guided.runsInBrowser": { ID: "Python berjalan di browsermu", EN: "Python runs in your browser" },
+  "guided.inputLabelPy": { ID: "Input program (yang dibaca input()), satu nilai per baris", EN: "Program input (what input() reads), one value per line" },
+  "guided.checkTitlePy": { ID: "Jalankan program, lalu bandingkan output-nya dengan target langkah ini", EN: "Run the program, then compare what it prints with this step\u2019s target" },
+  "guided.pyError": { ID: "Programnya berhenti karena error sebelum selesai. Baca pesan error di bawah \u2014 baris terakhirnya biasanya paling membantu.", EN: "The program stopped with an error before it finished. Read the message below \u2014 its last line is usually the most helpful." },
   "guided.studentDone": { ID: "selesai", EN: "finished" },
 
   // --- live whiteboard ------------------------------------------------------

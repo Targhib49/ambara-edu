@@ -96,6 +96,45 @@ export const objectLifetimeProps = z.object({
   scenario: z.enum(LIFETIME_SCENARIO_NAMES),
 });
 
+/**
+ * Code tracer: a short Python program stepped line by line, showing which
+ * line runs next, every variable's value and what has been printed so far.
+ * The steps are recorded ahead of time by running the program for real
+ * (scripts/content/trace.py, CPython's sys.settrace), never written by hand.
+ * An optional `predict` question asks the student to guess the output before
+ * the trace opens.
+ */
+export const codeTracerStep = z.object({
+  /** 1-based line about to run; 0 once the program has finished. */
+  line: z.number().int().min(0),
+  /** Variable name → Python repr, in the order they were created. */
+  vars: z.array(z.tuple([z.string(), z.string()])).max(30),
+  /** Everything printed so far. */
+  output: z.string(),
+  /** What's happening at this step, e.g. "nilai >= 75 → True". */
+  note: z.string().default(""),
+});
+
+export const codeTracerProps = z
+  .object({
+    title: z.string().default(""),
+    code: z.string().min(1).max(4000),
+    /** What the program reads with input(), shown above the trace. */
+    stdin: z.string().default(""),
+    steps: z.array(codeTracerStep).min(1).max(400),
+    predict: z
+      .object({
+        question: z.string().min(1),
+        options: z.array(z.string()).min(2).max(5),
+        /** Index into options. */
+        answer: z.number().int().min(0),
+        explanation: z.string().default(""),
+      })
+      .optional(),
+  })
+  .refine((d) => !d.predict || d.predict.answer < d.predict.options.length, "predict.answer must point at one of the options")
+  .refine((d) => d.steps.every((s) => s.line <= d.code.split("\n").length), "a step points past the last line");
+
 /** Discriminated union stored as the VISUALIZATION block's data payload. */
 export const visualizationDataSchema = z.discriminatedUnion("component", [
   z.object({ component: z.literal("sorting_visualizer"), props: sortingVisualizerProps }),
@@ -106,6 +145,7 @@ export const visualizationDataSchema = z.discriminatedUnion("component", [
   z.object({ component: z.literal("pole_zero_explorer"), props: poleZeroExplorerProps }),
   z.object({ component: z.literal("em_widget"), props: emWidgetProps }),
   z.object({ component: z.literal("object_lifetime"), props: objectLifetimeProps }),
+  z.object({ component: z.literal("code_tracer"), props: codeTracerProps }),
 ]);
 
 export type VisualizationData = z.infer<typeof visualizationDataSchema>;
@@ -120,6 +160,7 @@ export const VIZ_LABELS: Record<VizComponentName, string> = {
   pole_zero_explorer: "Pole-zero explorer",
   em_widget: "Electromagnetics widget",
   object_lifetime: "C++ object lifetime",
+  code_tracer: "Python code tracer",
 };
 
 export const vizDefaultProps: { [K in VizComponentName]: Extract<VisualizationData, { component: K }>["props"] } = {
@@ -136,6 +177,19 @@ export const vizDefaultProps: { [K in VizComponentName]: Extract<VisualizationDa
   pole_zero_explorer: { zeta: 0.3, omegaN: 2 },
   em_widget: { widget: "unit_vector_explorer", height: 700, caption: "" },
   object_lifetime: { scenario: "scope" },
+  // Recorded by scripts/content/trace.py, like every trace.
+  code_tracer: {
+    title: "",
+    code: 'nilai = 80\nif nilai >= 75:\n    print("Lulus")\nprint("Selesai")',
+    stdin: "",
+    steps: [
+      { line: 1, vars: [], output: "", note: "" },
+      { line: 2, vars: [["nilai", "80"]], output: "", note: "nilai >= 75 → True" },
+      { line: 3, vars: [["nilai", "80"]], output: "", note: "" },
+      { line: 4, vars: [["nilai", "80"]], output: "Lulus\n", note: "" },
+      { line: 0, vars: [["nilai", "80"]], output: "Lulus\nSelesai\n", note: "" },
+    ],
+  },
 };
 
 export const defaultVisualizationData: VisualizationData = {

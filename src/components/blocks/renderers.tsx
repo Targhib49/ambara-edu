@@ -19,7 +19,7 @@ import { PdfFlipViewer } from "./PdfFlipViewer";
 
 function MarkdownRenderer({ markdown }: { markdown: string }) {
   return (
-    <div className="prose prose-zinc max-w-none">
+    <div className="prose prose-zinc max-w-none prose-code:rounded prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-code:font-normal prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none [&_pre_code]:bg-transparent [&_pre_code]:p-0">
       <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
         {markdown}
       </ReactMarkdown>

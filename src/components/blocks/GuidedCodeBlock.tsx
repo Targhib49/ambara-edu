@@ -5,19 +5,28 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { EditorView, basicSetup } from "codemirror";
 import { cpp } from "@codemirror/lang-cpp";
+import { python } from "@codemirror/lang-python";
 import { useT } from "@/lib/i18n/client";
 import { failedCodeChecks, type GuidedCode } from "@/lib/blocks/guided";
 import { saveGuidedCode } from "@/lib/actions/guided";
 import { ExampleDiff } from "@/components/projects/CheckFeedback";
 import { normalizeOutput } from "./CppEditorBlock";
+import { runProject, tidyPythonError } from "@/lib/pyodideWorker";
 import type { CppRunResult } from "@/app/api/run/cpp/route";
+
+/**
+ * One run's result, whichever language ran it. Python has no compile step, so
+ * `compiled` is always true there; an exception lands in `error` (the
+ * traceback's last lines) instead of a signal.
+ */
+type RunResult = CppRunResult & { error: string | null };
 
 export type GuidedProgress = { code: string; stepStartCode: string; passedSteps: number };
 
 type Panel =
-  | { kind: "run"; result: CppRunResult }
-  | { kind: "failed"; reason: "cooldown" | "unavailable" }
-  | { kind: "checkFailed"; result: CppRunResult; outputOk: boolean; codeProblems: string[]; stdin: string; expected: string }
+  | { kind: "run"; result: RunResult }
+  | { kind: "failed"; reason: "cooldown" | "unavailable" | "timeout"; message?: string }
+  | { kind: "checkFailed"; result: RunResult; outputOk: boolean; codeProblems: string[]; stdin: string; expected: string }
   | { kind: "passed" };
 
 type SaveState = "saved" | "dirty" | "saving" | "error";
@@ -30,8 +39,9 @@ const btn = "rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs text
 const AUTOSAVE_MS = 2500;
 
 /**
- * A guided exercise in a lesson: the steps above, one C++ file below. "Check
- * step" compiles and runs the program on the server (/api/run/cpp), compares
+ * A guided exercise in a lesson: the steps above, one file below. "Check
+ * step" runs the program — C++ is compiled on the server (/api/run/cpp),
+ * Python runs in the browser's Pyodide worker — compares
  * what it prints with the step's target and, if the step says so, looks for
  * what the code must contain. Passing opens the next step with the code as it
  * is — the program grows step by step.
@@ -52,6 +62,8 @@ export function GuidedCodeBlock({
 }) {
   const t = useT();
   const total = data.steps.length;
+  const isPython = data.language === "python";
+  const fileName = isPython ? "main.py" : "main.cpp";
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const stepsRef = useRef<HTMLOListElement>(null);
@@ -100,7 +112,7 @@ export function GuidedCodeBlock({
       doc: initial?.code ?? data.starterCode,
       extensions: [
         basicSetup,
-        cpp(),
+        isPython ? python() : cpp(),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged || preview) return;
           setSaveState("dirty");
@@ -128,14 +140,24 @@ export function GuidedCodeBlock({
     return () => window.removeEventListener("pagehide", flush);
   }, []);
 
-  async function compileAndRun(input: string): Promise<CppRunResult | Panel> {
+  async function compileAndRun(input: string): Promise<RunResult | Panel> {
+    const code = viewRef.current?.state.doc.toString() ?? "";
+    if (isPython) {
+      try {
+        const [run] = await runProject({ "main.py": code }, [{ input }], "main.py");
+        return { compiled: true, compileOutput: "", stdout: run.output, stderr: "", exitCode: run.error ? 1 : 0, signal: "", error: run.error && tidyPythonError(run.error) };
+      } catch (e) {
+        // The worker is killed after 30 s (an endless loop, usually) and says so.
+        return { kind: "failed", reason: "timeout", message: e instanceof Error ? e.message : String(e) };
+      }
+    }
     try {
       const response = await fetch("/api/run/cpp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: viewRef.current?.state.doc.toString() ?? "", stdin: input }),
+        body: JSON.stringify({ code, stdin: input }),
       });
-      if (response.ok) return (await response.json()) as CppRunResult;
+      if (response.ok) return { ...((await response.json()) as CppRunResult), error: null };
       return { kind: "failed", reason: response.status === 429 ? "cooldown" : "unavailable" };
     } catch {
       return { kind: "failed", reason: "unavailable" };
@@ -157,8 +179,8 @@ export function GuidedCodeBlock({
     setBusy(null);
     if ("kind" in result) return setPanel(result);
 
-    const outputOk = result.compiled && !result.signal && normalizeOutput(result.stdout) === normalizeOutput(current.expectedOutput);
-    const codeProblems = result.compiled ? failedCodeChecks(viewRef.current?.state.doc.toString() ?? "", current.codeChecks) : [];
+    const outputOk = result.compiled && !result.signal && !result.error && normalizeOutput(result.stdout) === normalizeOutput(current.expectedOutput);
+    const codeProblems = result.compiled ? failedCodeChecks(viewRef.current?.state.doc.toString() ?? "", current.codeChecks, data.language) : [];
     if (!outputOk || codeProblems.length) {
       setPanel({ kind: "checkFailed", result, outputOk, codeProblems, stdin: current.stdin, expected: current.expectedOutput });
       return;
@@ -285,7 +307,7 @@ export function GuidedCodeBlock({
       {/* The one file. */}
       <div className="border-t border-zinc-200">
         <div className="flex items-center gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-500">
-          <span className="font-mono text-zinc-700">main.cpp</span>
+          <span className="font-mono text-zinc-700">{fileName}</span>
           <span className="ml-auto">
             {preview ? t("guided.previewNote") : t(`project.save.${saveState}`)}
           </span>
@@ -296,7 +318,7 @@ export function GuidedCodeBlock({
       {showInput && (
         <div className="border-t border-zinc-200 bg-zinc-50 px-3 py-2">
           <label className="block text-xs font-medium text-zinc-600">
-            {t("cpp.inputLabel")}
+            {t(isPython ? "guided.inputLabelPy" : "cpp.inputLabel")}
             <textarea
               value={stdin}
               onChange={(e) => setStdin(e.target.value)}
@@ -313,14 +335,14 @@ export function GuidedCodeBlock({
           <button
             onClick={check}
             disabled={busy !== null}
-            title={t("guided.checkTitle")}
+            title={t(isPython ? "guided.checkTitlePy" : "guided.checkTitle")}
             className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
           >
             {busy === "check" ? t("project.checking") : t("guided.check")}
           </button>
         )}
-        <button onClick={run} disabled={busy !== null} title={t("guided.runShortcut")} className={btn}>
-          {busy === "run" ? t("cpp.compiling") : t("project.run")}
+        <button onClick={run} disabled={busy !== null} title={t("guided.runShortcut", { file: fileName })} className={btn}>
+          {busy === "run" ? t(isPython ? "code.running" : "cpp.compiling") : t("project.run")}
         </button>
         <button onClick={restore} disabled={busy !== null} title={t("guided.restoreTitle")} className={btn}>
           {t("project.restore")}
@@ -328,7 +350,7 @@ export function GuidedCodeBlock({
         <button onClick={() => setShowInput((v) => !v)} aria-expanded={showInput} className={btn}>
           {t("cpp.inputToggle")}
         </button>
-        <span className="ml-auto text-xs text-zinc-400">{t("cpp.runsOnServer")}</span>
+        <span className="ml-auto text-xs text-zinc-400">{t(isPython ? "guided.runsInBrowser" : "cpp.runsOnServer")}</span>
       </div>
 
       {panel && <ResultPanel panel={panel} />}
@@ -341,7 +363,7 @@ function ResultPanel({ panel }: { panel: Panel }) {
   if (panel.kind === "failed") {
     return (
       <p role="alert" className="border-t border-zinc-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-        {t(panel.reason === "cooldown" ? "cpp.cooldown" : "cpp.unavailable")}
+        {panel.reason === "timeout" ? panel.message : t(panel.reason === "cooldown" ? "cpp.cooldown" : "cpp.unavailable")}
       </p>
     );
   }
@@ -364,6 +386,8 @@ function ResultPanel({ panel }: { panel: Panel }) {
           <p>{t("guided.notCompiled")}</p>
         ) : result.signal ? (
           <p>{t("guided.crashed", { signal: result.signal })}</p>
+        ) : result.error ? (
+          <p>{t("guided.pyError")}</p>
         ) : !panel.outputOk ? (
           <ExampleDiff
             run={{ kind: "example", label: "", input: panel.stdin, expectedOutput: panel.expected, output: result.stdout, error: null, passed: false }}
@@ -379,7 +403,7 @@ function ResultPanel({ panel }: { panel: Panel }) {
           </>
         )}
       </div>
-      {(!result.compiled || result.signal) && (
+      {(!result.compiled || result.signal || result.error) && (
         <div className="-mx-4 -mb-3 mt-3">
           <RunOutput result={result} />
         </div>
@@ -388,7 +412,7 @@ function ResultPanel({ panel }: { panel: Panel }) {
   );
 }
 
-function RunOutput({ result }: { result: CppRunResult }) {
+function RunOutput({ result }: { result: RunResult }) {
   const t = useT();
   return (
     <pre className="max-h-72 overflow-auto border-t border-zinc-200 bg-zinc-900 px-4 py-3 text-xs leading-relaxed whitespace-pre-wrap">
@@ -402,9 +426,15 @@ function RunOutput({ result }: { result: CppRunResult }) {
         </>
       ) : (
         <>
-          {result.stdout === "" && result.stderr === "" && <span className="italic text-zinc-500">{t("code.noOutput")}</span>}
+          {result.stdout === "" && result.stderr === "" && !result.error && <span className="italic text-zinc-500">{t("code.noOutput")}</span>}
           <span className="text-zinc-100">{result.stdout}</span>
           {result.stderr && <span className="text-red-400">{result.stderr}</span>}
+          {result.error && (
+            <span className="text-red-400">
+              {result.stdout ? "\n" : ""}
+              {result.error}
+            </span>
+          )}
           {result.signal && (
             <span className="text-red-400">
               {"\n"}

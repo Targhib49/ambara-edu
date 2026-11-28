@@ -166,6 +166,31 @@ export async function runProject(
   }));
 }
 
+/**
+ * A Pyodide traceback as a beginner should see it: the frames from Pyodide's
+ * own machinery (/lib/python3xx.zip/_pyodide/...) removed, "<exec>" named
+ * main.py, and — for a syntax error, which never ran — no "Traceback" header,
+ * the way CPython prints it in a terminal.
+ */
+export function tidyPythonError(error: string): string {
+  const out: string[] = [];
+  let keep = true;
+  for (const line of error.replace(/\n+$/, "").split("\n")) {
+    if (/^\s{2}File "/.test(line)) {
+      keep = !/^\s{2}File "\/lib\/python/.test(line);
+      if (keep) out.push(line.replace('File "<exec>"', 'File "main.py"'));
+    } else if (/^\s{4}/.test(line)) {
+      if (keep) out.push(line);
+    } else {
+      keep = true;
+      out.push(line);
+    }
+  }
+  const last = out[out.length - 1] ?? "";
+  if (/^(SyntaxError|IndentationError|TabError)\b/.test(last) && out[0]?.startsWith("Traceback")) out.shift();
+  return out.join("\n");
+}
+
 /** Judge-style comparison: trailing spaces on a line and trailing blank lines don't count. */
 export function outputsMatch(actual: string, expected: string): boolean {
   return normalizeOutput(actual) === normalizeOutput(expected);

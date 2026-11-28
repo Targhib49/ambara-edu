@@ -31,7 +31,7 @@ enum BlockType {
   CODE_EDITOR
   VISUALIZATION
   VIDEO_EMBED
-  // A short step-by-step coding exercise in one file (C++ for now): a guide
+  // A short step-by-step coding exercise in one file (C++ or Python): a guide
   // above an editor, each step checked by what the program prints.
   GUIDED_CODE
   // later phases append: QUIZ_REF
